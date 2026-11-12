@@ -652,19 +652,54 @@ async function addNote(code) {
 }
 
 // ---------- REPORTS ----------
+// Payments by Jewish year and month (refunds left out)
+function hebYears() {
+  const Y = {};
+  JD.payments.forEach(p => {
+    if (!validD(p[2]) || p[9]) return;
+    const h = HEB.parts(p[2]); if (!h) return;
+    const y = Y[h.y] || (Y[h.y] = { y: h.y, t: 0, n: 0, m: {} });
+    const m = y.m[h.m] || (y.m[h.m] = { t: 0, n: 0 });
+    y.t += p[3]; y.n++; m.t += p[3]; m.n++;
+  });
+  return Object.values(Y).sort((a, b) => b.y - a.y);
+}
 function vReports() {
-  const byYear = {}, byCamp = {}, cy = todayS().slice(0, 4);
-  JD.payments.forEach(p => { const y = validD(p[2]) ? p[2].slice(0, 4) : '?'; byYear[y] = (byYear[y] || 0) + p[3]; const k = p[6] || 0; byCamp[k] = byCamp[k] || { t: 0, n: 0, last: '' }; byCamp[k].t += p[3]; byCamp[k].n++; if ((p[2] || '') > byCamp[k].last) byCamp[k].last = p[2]; });
-  const years = Object.keys(byYear).filter(y => y !== '?').sort().reverse().slice(0, 8);
+  const byCamp = {};
+  JD.payments.forEach(p => { const k = p[6] || 0; byCamp[k] = byCamp[k] || { t: 0, n: 0, last: '' }; byCamp[k].t += p[3]; byCamp[k].n++; if ((p[2] || '') > byCamp[k].last) byCamp[k].last = p[2]; });
+  const HY = hebYears(), shown = HY.slice(0, ui.repN || 6), max = Math.max(...HY.map(y => y.t), 1);
+  const now = HEB.parts(todayS());
   const camps = Object.entries(byCamp).sort((a, b) => b[1].last.localeCompare(a[1].last)).slice(0, 15);
   const top = [...IDX.yg.entries()].sort((a, b) => b[1].total - a[1].total).slice(0, 25);
   const lapsed = [...IDX.yg.entries()].filter(([, g]) => g.last && g.last < addMonths(todayS(), -12) && g.last >= addMonths(todayS(), -36)).sort((a, b) => b[1].total - a[1].total).slice(0, 25);
-  const max = Math.max(...years.map(y => byYear[y]), 1);
-  $('#main').innerHTML = `<h2>באריכטן – ${esc(JD.companyName)}</h2><p class="sub">באזירט אויף דער לעצטער JLS דאטא.</p>
-  <div class="cols"><div><h3>באצאלט יעדעס יאר</h3><table><tbody>${years.map(y => `<tr><td class="num" style="width:60px">${y}</td><td><div class="bar" style="height:14px"><i style="width:${byYear[y] / max * 100}%"></i></div></td><td class="num" style="width:110px"><b>${money(byYear[y])}</b></td></tr>`).join('')}</tbody></table>
-  <h3>קאמפעינס (לעצטע)</h3><table><thead><tr><th>קאמפעין</th><th>באצאלונגען</th><th>סך הכל</th></tr></thead><tbody>${camps.map(([k, v]) => `<tr><td>${esc(+k ? (JD.campaigns[k] || '#' + k) : 'אן קאמפעין')}</td><td class="num">${v.n}</td><td class="num">${money(v.t)}</td></tr>`).join('')}</tbody></table></div>
-  <div><h3>גרעסטע נדבנים</h3><table><thead><tr><th>נאמען</th><th>סך הכל</th><th>לעצטע</th></tr></thead><tbody>${top.map(([c, g]) => `<tr><td><a class="name" onclick="openAcct(${c})">${esc(acctName(c))}</a></td><td class="num">${money(g.total)}</td><td class="num">${fmtD(g.last)}</td></tr>`).join('')}</tbody></table>
-  <h3>האבן אויפגעהערט געבן (1–3 יאר)</h3><table><thead><tr><th>נאמען</th><th>סך הכל</th><th>לעצטע</th></tr></thead><tbody>${lapsed.map(([c, g]) => `<tr><td><a class="name" onclick="openAcct(${c})">${esc(acctName(c))}</a></td><td class="num">${money(g.total)}</td><td class="num">${fmtD(g.last)}</td></tr>`).join('') || '<tr><td colspan="3" class="sub">קיינער</td></tr>'}</tbody></table></div></div>`;
+  $('#main').innerHTML = `<div class="row"><div><h2>באריכטן – ${esc(JD.companyName)}</h2><p class="sub">באזירט אויף דער לעצטער JLS דאטא (${new Date(JD.importedAt).toLocaleDateString()}). ריפאנדס זענען נישט גערעכנט.</p></div><div class="spacer"></div><button class="btn ghost" onclick="xlsReports()">⬇ Excel</button></div>
+  <h3>לויט אידישע יארן</h3>
+  ${shown.map(y => `<div class="yrcard"><div class="row" style="margin:0 0 8px"><b class="yr">${HEB.gem(y.y)}</b><div class="bar" style="flex:1;height:12px;margin:0"><i style="width:${y.t / max * 100}%"></i></div><b class="num">${money(y.t)}</b><span class="sub" style="margin:0">${y.n.toLocaleString()} נדבות</span></div>
+   <div class="mgrid" style="--n:${HEB.monthsOf(y.y).length + 1}">${HEB.monthsOf(y.y).map(m => { const v = y.m[m]; const cur = now && now.y === y.y && now.m === m; return `<div class="mbox${v ? '' : ' empty0'}${cur ? ' cur' : ''}"><span>${HEB.MONTHS[m]}</span><b>${v ? money(v.t) : '—'}</b><small>${v ? v.n + ' נדבות' : ''}</small></div>`; }).join('')}
+    <div class="mbox tot"><span>ס"ה ${HEB.gem(y.y)}</span><b>${money(y.t)}</b><small>${y.n} נדבות</small></div></div></div>`).join('') || '<div class="empty">קיין באצאלונגען</div>'}
+  ${HY.length > shown.length ? `<div class="more"><button class="btn ghost" onclick="ui.repN=(ui.repN||6)+6;vReports()">ווייז נאך יארן (${HY.length - shown.length})</button></div>` : ''}
+  <div class="cols"><div>
+  <h3>קאמפעינס (לעצטע)</h3><table><thead><tr><th>קאמפעין</th><th>באצאלונגען</th><th>סך הכל</th></tr></thead><tbody>${camps.map(([k, v]) => `<tr><td>${esc(+k ? (JD.campaigns[k] || '#' + k) : 'אן קאמפעין')}</td><td class="num">${v.n}</td><td class="num">${money(v.t)}</td></tr>`).join('')}</tbody></table>
+  <h3>האבן אויפגעהערט געבן (1–3 יאר)</h3><table><thead><tr><th>נאמען</th><th>סך הכל</th><th>לעצטע</th></tr></thead><tbody>${lapsed.map(([c, g]) => `<tr><td><a class="name" onclick="openAcct(${c})">${esc(acctName(c))}</a></td><td class="num">${money(g.total)}</td><td class="num">${fmtD(g.last)}</td></tr>`).join('') || '<tr><td colspan="3" class="sub">קיינער</td></tr>'}</tbody></table></div>
+  <div><h3>גרעסטע נדבנים</h3><table><thead><tr><th>נאמען</th><th>סך הכל</th><th>לעצטע</th></tr></thead><tbody>${top.map(([c, g]) => `<tr><td><a class="name" onclick="openAcct(${c})">${esc(acctName(c))}</a></td><td class="num">${money(g.total)}</td><td class="num">${fmtD(g.last)}</td></tr>`).join('')}</tbody></table></div></div>`;
+}
+function xlsReports() {
+  const HY = hebYears(), M = HEB.MONTHS;
+  const cols = ['Tishri', 'Heshvan', 'Kislev', 'Tevet', 'Shevat', 'Adar', 'Adar II', 'Nisan', 'Iyar', 'Sivan', 'Tamuz', 'Av', 'Elul'];
+  const val = (y, m) => { if (m === 'Adar') { const a = y.m['Adar'] || y.m['Adar I']; return a ? r2(a.t) : ''; } const v = y.m[m]; return v ? r2(v.t) : ''; };
+  const cnt = (y, m) => { if (m === 'Adar') { const a = y.m['Adar'] || y.m['Adar I']; return a ? a.n : ''; } const v = y.m[m]; return v ? v.n : ''; };
+  const head = ['יאר'].concat(cols.map(m => m === 'Adar' ? 'אדר / אדר א\'' : M[m]), ['ס"ה']);
+  const top = [...IDX.yg.entries()].sort((a, b) => b[1].total - a[1].total).slice(0, 200);
+  const lapsed = [...IDX.yg.entries()].filter(([, g]) => g.last && g.last < addMonths(todayS(), -12) && g.last >= addMonths(todayS(), -36)).sort((a, b) => b[1].total - a[1].total);
+  const byCamp = {}; JD.payments.forEach(p => { const k = p[6] || 0; byCamp[k] = byCamp[k] || { t: 0, n: 0, last: '' }; byCamp[k].t += p[3]; byCamp[k].n++; if ((p[2] || '') > byCamp[k].last) byCamp[k].last = p[2]; });
+  const who = c => { const a = IDX.by.get(c) || {}; return [c, a.h || a.n || '', a.n || '', ((a.ph || [])[0] || [])[1] || '']; };
+  xlsx([
+    { name: 'סכומים לויט חדשים', rows: [head].concat(HY.map(y => [HEB.gem(y.y)].concat(cols.map(m => val(y, m)), [r2(y.t)]))) },
+    { name: 'צאל נדבות לויט חדשים', rows: [head].concat(HY.map(y => [HEB.gem(y.y)].concat(cols.map(m => cnt(y, m)), [y.n]))) },
+    { name: 'קאמפעינס', rows: [['קאמפעין', 'באצאלונגען', 'סך הכל', 'לעצטע']].concat(Object.entries(byCamp).sort((a, b) => b[1].last.localeCompare(a[1].last)).map(([k, v]) => [+k ? (JD.campaigns[k] || '#' + k) : 'אן קאמפעין', v.n, r2(v.t), v.last])) },
+    { name: 'גרעסטע נדבנים', rows: [['#', 'נאמען', 'English', 'טעלעפאן', 'סך הכל', 'וויפיל מאל', 'לעצטע']].concat(top.map(([c, g]) => who(c).concat([r2(g.total), g.count, g.last]))) },
+    { name: 'אויפגעהערט געבן', rows: [['#', 'נאמען', 'English', 'טעלעפאן', 'סך הכל', 'וויפיל מאל', 'לעצטע']].concat(lapsed.map(([c, g]) => who(c).concat([r2(g.total), g.count, g.last]))) }
+  ], 'reports-' + todayS() + '.xlsx');
 }
 
 // ---------- SETTINGS (admin only) ----------

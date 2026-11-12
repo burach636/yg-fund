@@ -158,3 +158,17 @@ table.acclist td.num{font-size:15px!important}
 .hcol.t4{background:#f7f3fc;border-top-color:#8a63c2}
 a.callb{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:var(--greenbg);border:1px solid #bfe0cc;text-decoration:none;font-size:13px;vertical-align:middle;cursor:pointer}
 a.callb:hover{background:#d3eedd;border-color:var(--green)}
+/* reports: Jewish years with month boxes */
+.yrcard{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:12px}
+.yrcard .yr{font-size:22px;color:var(--navy);min-width:70px}
+.mgrid{display:grid;grid-template-columns:repeat(var(--n,13),minmax(0,1fr));gap:5px}
+@media(max-width:1000px){.mgrid{grid-template-columns:repeat(4,1fr)}}
+.mbox{background:#faf7f0;border:1px solid var(--line);border-radius:10px;padding:6px 8px;display:flex;flex-direction:column;gap:1px}
+.mbox span{font-size:12px;color:var(--muted);font-weight:600}
+.mbox b{font-size:14px;white-space:nowrap;color:var(--navy);font-variant-numeric:tabular-nums}
+.mbox small{font-size:11px;color:var(--muted)}
+.mbox.empty0 b{color:#c9c2b2}
+.mbox.cur{border-color:var(--gold);background:#fff8e6}
+.mbox.tot{background:var(--navy);border-color:var(--navy)}
+.mbox.tot span,.mbox.tot small{color:var(--gold2)}
+.mbox.tot b{color:#fff}
