@@ -384,7 +384,16 @@ async function rcSendMail(p, to) {
   const pdf = await rcPdf(d);
   const body = mailFill(s.mailBody || MAIL_BODY_DEF, d);
   const html = `<div dir="rtl" style="font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#222">${esc(body).replace(/\n/g, '<br>')}</div>`;
-  const { data, error } = await sb.functions.invoke('email', { body: { to, subject: mailFill(s.mailSubject || MAIL_SUBJ_DEF, d), html, pdf, filename: 'Receipt-' + d.code + '-' + d.date + '.pdf' } });
+  const payload = { to, subject: mailFill(s.mailSubject || MAIL_SUBJ_DEF, d), html, pdf, filename: 'Receipt-' + d.code + '-' + d.date + '.pdf' };
+  // The function may have been created as "email" or "EMAIL" (names are case-sensitive): try the last one that worked first
+  let fn = '', res;
+  for (const name of [...new Set([localStorage.getItem('yg_mailfn') || 'email', 'email', 'EMAIL'])]) {
+    res = await sb.functions.invoke(name, { body: payload });
+    const st = res.error && res.error.context && res.error.context.status;
+    if (!res.error || (st && st !== 404)) { fn = name; break; }
+  }
+  if (fn) try { localStorage.setItem('yg_mailfn', fn); } catch (e) { }
+  const { data, error } = res;
   if (error) {
     let m = error.message || String(error), st = error.context && error.context.status;
     try { const j = await error.context.json(); if (j && j.error) m = j.error; } catch (e) { }
