@@ -147,9 +147,12 @@ async function boot() {
   }
   const { data } = await sb.auth.getSession();
   if (recovering) { if (data.session) { vNewPw(); } else { vLogin(); $('#lerr').textContent = 'דער לינק האט נישט געארבעט. פרובירט נאכאמאל "פארגעסן דעם פאסווארט?"'; } return; }
+  // Idle longer than 10 minutes (also while the browser was closed) -> log out
+  if (data.session && lastActive() && Date.now() - lastActive() > IDLE_MS) { try { sessionStorage.setItem('yg_idle', '1'); } catch (e) { } await sb.auth.signOut().catch(() => { }); vLogin(); return; }
   if (data.session) await afterLogin(data.session); else vLogin();
 }
 async function afterLogin(session) {
+  markActive();
   myEmail = session.user.email || '';
   let setupErr = null;
   try { await loadTeam(); } catch (e) { TEAM = []; setupErr = e; }
@@ -185,6 +188,24 @@ async function start() {
   render();
   if (started) return; started = true;
   setInterval(poll, 15000);
+  idleWatch();
+}
+// ---------- automatic log out after 10 minutes without use ----------
+const IDLE_MS = 10 * 60 * 1000;
+function markActive() { try { localStorage.setItem('yg_act', String(Date.now())); } catch (e) { } }
+function lastActive() { try { return +localStorage.getItem('yg_act') || 0; } catch (e) { return 0; } }
+function idleWatch() {
+  let t = 0, warned = false;
+  ['mousemove', 'mousedown', 'keydown', 'scroll', 'wheel', 'touchstart'].forEach(ev => window.addEventListener(ev, () => {
+    const n = Date.now(); if (n - t > 15000) { t = n; markActive(); warned = false; }
+  }, { passive: true, capture: true }));
+  setInterval(() => {
+    if (document.body.classList.contains('locked')) return;
+    if ($('#busy').classList.contains('on')) { markActive(); return; }   // a long job (JLS update, sending) is running
+    const idle = Date.now() - lastActive();   // shared by all open tabs
+    if (idle > IDLE_MS) { try { sessionStorage.setItem('yg_idle', '1'); } catch (e) { } logout(); }
+    else if (idle > IDLE_MS - 60000 && !warned) { warned = true; toast('⏳ אין א מינוט ווערט איר ארויסגעלאגט – רירט די מויז צו בלייבן'); }
+  }, 10000);
 }
 function setupUser() {
   $('#whoBox').innerHTML = `👤 <b>${esc(me)}</b>${isAdmin() ? ' <span class="tag ask">Admin</span>' : ''} <button class="btn ghost sm" onclick="callSetup()">📞 Phone</button> <button class="btn ghost sm" onclick="pwForm()">🔑 Password</button> <button class="btn ghost sm" onclick="logout()">Log out</button>`;
@@ -194,7 +215,7 @@ const isAdmin = () => !!(TEAM.find(a => a.email.toLowerCase() === myEmail.toLowe
 async function logout() { try { await sb.auth.signOut(); } catch (e) { } location.hash = ''; location.reload(); }
 function loginShell(inner) {
   document.body.classList.add('locked');
-  $('#main').innerHTML = `<div class="welcome" style="max-width:460px"><div class="logo3d big"><div class="in"><img src="logo.png" alt=""><i class="shine"></i></div></div>${inner}</div>`;
+  $('#main').innerHTML = `<div class="welcome loginbg" style="max-width:460px"><div class="logo3d big"><div class="in"><img src="logo.png" alt=""><i class="shine"></i></div></div><div class="ltitle">ישיבה גדולה ומתיבתא תו"י מהרי"ט ד'סאטמאר<small>YG Fund</small></div>${inner}</div>`;
 }
 function vLogin(mode) {
   const signup = mode === 'signup';
@@ -208,6 +229,7 @@ function vLogin(mode) {
     ${signup ? '<a class="name" onclick="vLogin()">איך האב שוין א פאסווארט</a>' : '<a class="name" onclick="vLogin(\'signup\')">ערשטע מאל דא?</a><a class="name" onclick="forgotPw()">פארגעסן דעם פאסווארט?</a>'}
    </div></div>`);
   let last = ''; try { last = localStorage.getItem('yg_last') || ''; } catch (e) { }
+  try { if (sessionStorage.getItem('yg_idle')) { sessionStorage.removeItem('yg_idle'); $('#lerr').innerHTML = '<span style="color:var(--navy)">⏳ מ\'האט אייך ארויסגעלאגט נאך 10 מינוט אן ניצן. לאגט אריין נאכאמאל.</span>'; } } catch (e) { }
   if (last) $('#le').value = last;
   const go2 = async () => {
     const email = $('#le').value.trim(), password = $('#lp').value;
