@@ -50,7 +50,7 @@ async function handle(req: Request): Promise<Response> {
     // because a large request body to the function does not get through from the owner's network.
     const pdfPath = String(b.pdfPath || '');
     if (!pdf && pdfPath) {
-      if (!/^receipts\/[\w.\-]+\.pdf$/.test(pdfPath)) return json({ error: 'bad pdf path' }, 400);
+      if (!/^receipts\/[\w.\-]+\.(pdf|bin)$/.test(pdfPath)) return json({ error: 'bad pdf path' }, 400);
       const r0 = await fetch(ENV('SUPABASE_URL') + '/storage/v1/object/jls/' + pdfPath, { headers: svcHeaders() });
       if (!r0.ok) return json({ error: 'PDF not found in Storage (' + r0.status + ')' }, 400);
       pdf = b64(new Uint8Array(await r0.arrayBuffer()));

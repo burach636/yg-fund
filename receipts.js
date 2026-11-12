@@ -368,9 +368,9 @@ async function rcPdf(d) {
     if (fr.contentDocument.fonts) await fr.contentDocument.fonts.ready;
     await Promise.all([...fr.contentDocument.images].map(im => im.complete ? 0 : new Promise(r => { im.onload = im.onerror = r; })));
     const pg = fr.contentDocument.querySelector('.pg'); pg.style.margin = '0'; pg.style.boxShadow = 'none';
-    const canvas = await window.html2canvas(pg, { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false });
+    const canvas = await window.html2canvas(pg, { scale: 1.7, useCORS: true, backgroundColor: '#ffffff', logging: false });
     const pdf = new window.jspdf.jsPDF({ unit: 'in', format: 'letter' });
-    pdf.addImage(canvas.toDataURL('image/jpeg', 0.82), 'JPEG', 0, 0, 8.5, 11);
+    pdf.addImage(canvas.toDataURL('image/jpeg', 0.75), 'JPEG', 0, 0, 8.5, 11);
     return pdf.output('blob');
   } finally { fr.parentNode.removeChild(fr); }
 }
@@ -383,9 +383,15 @@ async function rcSendMail(p, to) {
   if (!to) throw new Error('קיין אימעיל ביי ' + (d.top || d.eng));
   const pdf = await rcPdf(d);
   // Upload the PDF to Storage first; the function only gets its path (a big request body to the function does not get through)
-  const pdfPath = 'receipts/' + String(d.key).replace(/[^\w.-]/g, '_') + '-' + Date.now() + '.pdf';
-  const up = await sb.storage.from('jls').upload(pdfPath, pdf, { contentType: 'application/pdf', upsert: true });
-  if (up.error) throw new Error('ארויפלייגן דעם PDF: ' + up.error.message);
+  // Sent as a plain binary file (.bin) – some filters drop PDF uploads – and retried up to 3 times
+  const pdfPath = 'receipts/' + String(d.key).replace(/[^\w.-]/g, '_') + '-' + Date.now() + '.bin';
+  let up;
+  for (let k = 1; k <= 3; k++) {
+    up = await sb.storage.from('jls').upload(pdfPath, pdf, { contentType: 'application/octet-stream', upsert: true });
+    if (!up.error) break;
+    if (k < 3) await new Promise(r => setTimeout(r, 1500 * k));
+  }
+  if (up.error) throw new Error('ארויפלייגן דעם PDF (3 מאל פרובירט): ' + up.error.message);
   const body = mailFill(s.mailBody || MAIL_BODY_DEF, d);
   const html = `<div dir="rtl" style="font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#222">${esc(body).replace(/\n/g, '<br>')}</div>`;
   const payload = { to, subject: mailFill(s.mailSubject || MAIL_SUBJ_DEF, d), html, pdfPath, filename: 'Receipt-' + d.code + '-' + d.date + '.pdf' };
