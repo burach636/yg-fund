@@ -21,7 +21,8 @@ Backend is **Supabase** (project `qrudivrakwoathgbzrwd`).
   - The parser extracts a slim dataset: all accounts (names in English and Hebrew, default address, phones), plus payments and pledges **only for company 32 = "YG Fund"**.
   - The dataset is gzipped and uploaded to Supabase Storage at bucket `jls`, file `jls.json.gz`. Table `jls_meta` holds a version counter, and clients reload when it changes.
   - Real numbers from the file: 21,104 accounts, 8,111 YG payments, 4,365 YG pledges, 1,380 YG donors (564 of them gave only once).
-- **NEVER** read or import the JLS tables `CCTransactions`, `MCCInfo` or `MChecking`, the columns `Members.SSNumF` and `Members.SSNumW`, or the tables `Users` and `MWebLogin`. These hold card, bank, SSN and password data.
+- **NEVER** read or import the JLS tables `CCTransactions` or `MChecking`, the columns `Members.SSNumF` and `Members.SSNumW`, or the tables `Users` and `MWebLogin`. These hold card, bank, SSN and password data.
+- `MCCInfo` (recurring credit-card plans): the owner explicitly allowed (2026-11) reading **only** `Code, ChargeFreq, StartDate, EndDate, Amount, CampaignNum, TempOnly`, filtered by `CompanyNum`, into `JD.ccplans`. **Never** decode `CCNum, Name, ExpDate, Last4, TrackInfo, Address, Zip, Note, Comments, CreditID` or any other column. The Jet reader decodes only the columns listed, so keep that list exact. Reports project the upcoming charges (`ccCharges`, 24 months ahead) in green.
 - **App data** (to-dos, notes, call marks, assignments, settings) is an append-only event log in table `events`, with columns (k, eid, p jsonb, by, at).
   - Clients replay the log with `applyEvent`. The rule is `state[k][eid] = Object.assign(state[k][eid] || {}, p)`.
   - Event kinds: `acct` (per-account settings: freq, nextAsk, assigned, vip, notes, lastAsk, shul), `task`, `fr`, `frin`, `frex`, `shul`, `rcpt`, `call` (id = `code|YYYY-MM`), `hist` (notes/history), `settings` (id `s`).

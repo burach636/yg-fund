@@ -349,7 +349,7 @@ async function doImport(buf, name, source) {
 function importDialog() {
   modal(`<h2>דערהיינטיג פון JLS</h2>
   <p class="sub">לייגט אריין א פרישע <b>Tuition.mdb</b> (אדער א ZIP מיט איר). עס ווערט דערהיינטיגט ביי <b>אלע באניצער</b>. אייערע To-Do'ס, נאטיצן און רימיינדערס ווערן <b>נישט</b> אויסגעמעקט.</p>
-  <p class="sub">💡 די MDB פייל אליין ווערט נישט ארויפגעלייגט. די פראגראם נעמט פון איר נאר וואס מ'דארף (נעמען, אדרעסן, טעלעפאנען, YG Fund באצאלונגען און פלעדזשעס). קיינמאל נישט קרעדיט קארטלעך אדער באנק אינפארמאציע.</p>
+  <p class="sub">💡 די MDB פייל אליין ווערט נישט ארויפגעלייגט. די פראגראם נעמט פון איר נאר וואס מ'דארף (נעמען, אדרעסן, טעלעפאנען, YG Fund באצאלונגען און פלעדזשעס). פון די אנגעשטעלטע קרעדיט קארדס נאר ווער, וויפיל און ווען – קיינמאל נישט קיין קארטל נומער אדער באנק אינפארמאציע.</p>
   <label class="drop" id="dz">⬇️ לאזט די פייל אראפ דא, אדער קליקט צו אויסוועלן<input type="file" accept=".mdb,.zip" id="fpick" hidden></label>
   <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn ghost" onclick="closeM()">צומאכן</button></div>`, 'narrow');
   $('#fpick').onchange = e => { const f = e.target.files[0]; if (f) { closeM(); importFile(f); } };
@@ -664,10 +664,42 @@ function hebYears() {
   });
   return Object.values(Y).sort((a, b) => b.y - a.y);
 }
-// Still to come: open JLS charges (pledges / scheduled credit-card installments) due from today on, not on hold
+// Credit-card plans from JLS (MCCInfo schedule columns): [code, freq, start, end, amount, campaign]
+// ChargeFreq is free text in JLS; unknown values are counted as monthly and listed on the reports page.
+const CC_HORIZON = 24;   // months ahead
+function ccStep(f) {
+  f = (f || '').toLowerCase();
+  if (/once|one ?time|single|איינמאל/.test(f)) return null;
+  if (/bi.?week|2 ?week|every other week/.test(f)) return { d: 14 };
+  if (/week|וואך/.test(f)) return { d: 7 };
+  if (/dail|day/.test(f)) return { d: 1 };
+  if (/quarter|3 ?month/.test(f)) return { m: 3 };
+  if (/semi|half|6 ?month|bi.?annual/.test(f)) return { m: 6 };
+  if (/bi.?month|2 ?month/.test(f)) return { m: 2 };
+  if (/year|annual|yearly|יאר/.test(f)) return { m: 12 };
+  return { m: 1, guess: !/month|חודש/.test(f) };
+}
+function ccCharges() {
+  const t = todayS(), until = addMonths(t, CC_HORIZON), out = [];
+  (JD.ccplans || []).forEach(p => {
+    const [code, freq, start, end, amt, camp] = p;
+    if (!validD(start) || !IDX.by.has(code) || (validD(end) && end < t)) return;
+    const st = ccStep(freq), last = validD(end) && end < until ? end : until;
+    const push = d => out.push([null, code, d, amt, 0, amt, camp, '💳 ' + (freq || 'קרעדיט קארד'), '', 0]);
+    if (!st) { if (start >= t && start <= last) push(start); return; }
+    for (let k = 0, d = start; k < 5000 && d <= last; k++) {
+      d = st.m ? addMonths(start, k * st.m) : addDays(start, k * st.d);
+      if (d >= t && d <= last) push(d);
+    }
+  });
+  return out;
+}
+function ccFreqs() { const m = {}; (JD.ccplans || []).forEach(p => { const k = p[1] || '—'; m[k] = (m[k] || 0) + 1; }); return m; }
+// Still to come: open JLS charges (pledges, not on hold) due from today on + upcoming credit-card plan charges
 function expPledges(hy, m) {
   const t = todayS();
-  return JD.pledges.filter(c => !c[9] && c[5] > 0.009 && validD(c[2]) && c[2] >= t && IDX.by.has(c[1]) && (hy == null || (() => { const h = HEB.parts(c[2]); return h && h.y === hy && (!m || h.m === m); })()))
+  return JD.pledges.filter(c => !c[9] && c[5] > 0.009 && validD(c[2]) && c[2] >= t && IDX.by.has(c[1])).concat(ccCharges())
+    .filter(c => hy == null || (() => { const h = HEB.parts(c[2]); return h && h.y === hy && (!m || h.m === m); })())
     .sort((a, b) => a[2].localeCompare(b[2]));
 }
 function expYears() {
@@ -695,6 +727,7 @@ function vReports() {
   $('#main').innerHTML = `<div class="row"><div><h2>באריכטן – ${esc(JD.companyName)}</h2><p class="sub">באזירט אויף דער לעצטער JLS דאטא (${new Date(JD.importedAt).toLocaleDateString()}). ריפאנדס זענען נישט גערעכנט.</p></div><div class="spacer"></div><button class="btn ghost" onclick="xlsReports()">⬇ Excel</button></div>
   <div class="row" style="margin:18px 0 8px"><h3 style="margin:0">לויט אידישע יארן</h3><div class="spacer"></div>
    <label style="font-size:13px;display:flex;gap:6px;align-items:center"><input type="checkbox" ${useExp ? 'checked' : ''} onchange="ui.repExp=this.checked;vReports()"> רעכן אויך וואס איז שוין אנגעשטעלט אויף די קומענדיגע חדשים (קרעדיט קארד / פלעדזשעס אין JLS)${expAll ? ' – <b class="num" style="color:var(--green)">' + money(expAll) + '</b>' : ''}</label></div>
+  ${useExp ? (JD.ccplans ? (() => { const F = ccFreqs(), n = JD.ccplans.length, odd = Object.keys(F).filter(k => (ccStep(k) || {}).guess); return `<p class="sub">💳 ${n} קרעדיט קארד פלאנען פון JLS (${Object.entries(F).map(([k, v]) => esc(k) + ': ' + v).join(' · ')}), גערעכנט ${CC_HORIZON} חדשים פאראויס.${odd.length ? ' ⚠️ נישט באקאנט ווי אפט (גערעכנט ווי יעדן חודש): ' + odd.map(esc).join(', ') : ''}</p>`; })() : '<p class="sub">💳 צו זען די קרעדיט קארדס: דריקט <b>"⟳ דערהיינטיג פון JLS"</b> איינמאל.</p>') : ''}
   ${shown.map(y => { const e = ex(y); return `<div class="yrcard"><div class="row" style="margin:0 0 8px"><b class="yr">${HEB.gem(y.y)}</b><div class="bar" style="flex:1;height:12px;margin:0;display:flex"><i style="width:${y.t / max * 100}%"></i><i class="expbar" style="width:${e.t / max * 100}%"></i></div><b class="num">${money(y.t)}</b>${e.t ? `<b class="num" style="color:var(--green)">+${money(e.t)}</b>` : ''}<span class="sub" style="margin:0">${y.n.toLocaleString()} נדבות</span></div>
    <div class="mgrid" style="--n:${HEB.monthsOf(y.y).length + 1}">${HEB.monthsOf(y.y).map(m => { const v = y.m[m], w = e.m[m]; const cur = now && now.y === y.y && now.m === m; return `<div class="mbox${v || w ? ' click' : ' empty0'}${!v && w ? ' exp' : ''}${cur ? ' cur' : ''}"${v || w ? ` onclick="monthDonors(${y.y},'${m}')" title="ווייז די נדבנים"` : ''}><span>${HEB.MONTHS[m]}</span><b>${v ? money(v.t) : w ? money(w.t) : '—'}</b><small>${v ? v.n + ' נדבות' : w ? w.n + ' אנגעשטעלט' : ''}</small>${v && w ? `<small class="expl">+${money(w.t)} אנגעשטעלט</small>` : ''}</div>`; }).join('')}
     <div class="mbox tot click" onclick="monthDonors(${y.y},'')" title="ווייז די נדבנים פון גאנצן יאר"><span>ס"ה ${HEB.gem(y.y)}</span><b>${money(y.t + e.t)}</b><small>${e.t ? money(y.t) + ' + ' + money(e.t) + ' אנגעשטעלט' : y.n + ' נדבות'}</small></div></div></div>`; }).join('') || '<div class="empty">קיין באצאלונגען</div>'}

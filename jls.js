@@ -1,5 +1,6 @@
 /* Jet 4 (.mdb) reader + JLS extractor. Works in browser and Node.
-   Never reads credit-card, bank, SSN or password tables/columns. */
+   Never reads card numbers, bank, SSN or password data. The only credit-card table touched is MCCInfo,
+   and from it only the schedule columns (Code, ChargeFreq, StartDate, EndDate, Amount, CampaignNum, TempOnly). */
 (function (root) {
   'use strict';
   const PG = 4096;
@@ -225,6 +226,16 @@
     step('פלעדזשעס (' + (out.companyName || company) + ')...');
     for (const r of db.rows(db.table('MCharges'), ['ChargeNum', 'Code', 'DueDate', 'Amount', 'Paid', 'BalanceDue', 'CampaignNum', 'Desc', 'Solicitor', 'Hold', 'Note'], { col: 'Company', test: isCo }))
       out.pledges.push([r.ChargeNum, r.Code, r.DueDate || '', r.Amount || 0, r.Paid || 0, r.BalanceDue || 0, r.CampaignNum || 0, clean(r.Desc), clean(r.Solicitor), r.Hold ? 1 : 0, clean(r.Note).slice(0, 200)]);
+
+    // Recurring credit-card plans (the owner asked for this, 2026-11). From MCCInfo ONLY these schedule
+    // columns are decoded; the card number, name, expiry, Last4, track data, address, zip, notes and
+    // comments are never read (the reader decodes only the columns listed here).
+    step('קרעדיט קארד פלאנען...');
+    out.ccplans = [];
+    try {
+      for (const r of db.rows(db.table('MCCInfo'), ['Code', 'ChargeFreq', 'StartDate', 'EndDate', 'Amount', 'CampaignNum', 'TempOnly'], { col: 'CompanyNum', test: isCo }))
+        if (r.Code != null && !r.TempOnly && (r.Amount || 0) > 0) out.ccplans.push([r.Code, clean(r.ChargeFreq), r.StartDate || '', r.EndDate || '', r.Amount || 0, r.CampaignNum || 0]);
+    } catch (e) { /* optional */ }
 
     step('קאמפעינס...');
     for (const r of db.rows(db.table('Campaigns'), ['CampaignNum', 'CampaignName', 'CampaignNameH']))
