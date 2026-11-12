@@ -297,15 +297,33 @@ function shulSel(id, cur) {
 }
 
 // ---------- 📞 click to call (per computer) ----------
-// The way to dial is saved on this computer only: 'tel:{num}' opens the office phone program
-// (softphone / Phone Link / RingCentral...), or an http URL for desk phones with "click to dial".
+// The way to dial is saved on this computer only (localStorage, never in the site's code):
+//  'tel:{num}'                      opens the office phone program (softphone / Phone Link ...)
+//  'http://IP/servlet?key=number=…' Yealink desk phone
+//  '<url>POSTJLSPOST<body>'         the "CALL URL" line from JLS (e.g. TekLink click-to-call): HTTP POST of <body>
+//  any other http(s) URL            opened as a GET
+// Placeholders: {num} = +18455551234, {digits} / %PhoneNum% = 8455551234
 const callTpl = () => { try { return localStorage.getItem('yg_call') || 'tel:{num}'; } catch (e) { return 'tel:{num}'; } };
 const callNum = n => { const d = String(n || '').replace(/\D/g, ''); return d.length === 10 ? '1' + d : d; };
+const callFill = (t, d) => t.split('{num}').join('+' + d).split('{digits}').join(d.slice(-10)).split('%PhoneNum%').join(d.slice(-10));
+const callIsPost = t => t.includes('POSTJLSPOST');
 function callBtn(num, code) {
   const d = callNum(num); if (d.length < 7) return '';
-  return `<a class="callb" title="קאל ${esc(num)}" href="${esc(callTpl().replace('{num}', '+' + d).replace('{digits}', d.slice(-10)))}" onclick="return dial(this,${+code || 0})">📞</a>`;
+  const t = callTpl(), href = callIsPost(t) ? 'tel:+' + d : callFill(t, d);
+  return `<a class="callb" title="קאל ${esc(num)}" href="${esc(href)}" data-n="${d}" onclick="return dial(this,${+code || 0})">📞</a>`;
 }
 function dial(el, code) {
+  const t = callTpl(), d = el.dataset.n || '';
+  if (callIsPost(t)) {   // JLS-style CALL URL: POST the form fields in a small window that closes itself
+    const [url, body] = t.split('POSTJLSPOST');
+    const w = window.open('', 'ygdial', 'width=380,height=200');
+    const f = document.createElement('form'); f.method = 'POST'; f.action = url.trim(); f.target = 'ygdial'; f.style.display = 'none';
+    new URLSearchParams(callFill(body, d)).forEach((v, k) => { const i = document.createElement('input'); i.type = 'hidden'; i.name = k; i.value = v; f.appendChild(i); });
+    document.body.appendChild(f); f.submit(); f.remove();
+    if (w) setTimeout(() => { try { w.close(); } catch (e) { } }, 6000);
+    toast('📞 קאלט... אייער טעלעפאן וועט קלינגען, הייבט אויף');
+    return false;
+  }
   const url = el.getAttribute('href');
   if (/^https?:/i.test(url)) {   // desk phone: send the dial request in a small window that closes itself
     const w = window.open(url, 'ygdial', 'width=320,height=160');
@@ -318,29 +336,35 @@ function dial(el, code) {
 }
 function callSetup() {
   const t = callTpl(), yl = t.match(/^http:\/\/([^/]+)\/servlet\?key=number=\{digits\}$/);
-  const mode = t === 'tel:{num}' ? 'tel' : yl ? 'yealink' : 'custom';
+  const mode = callIsPost(t) ? 'jls' : t === 'tel:{num}' ? 'tel' : yl ? 'yealink' : 'custom';
   modal(`<h2>📞 קאלן פון דעם קאמפיוטער</h2>
-   <p class="sub">ווען מען דריקט 📞 לעבן א נדבן, קאלט עס אים דורך אייער אפיס טעלעפאן. די איינשטעלונג איז נאר פאר <b>דעם</b> קאמפיוטער.</p>
+   <p class="sub">ווען מען דריקט 📞 לעבן א נדבן, קאלט עס אים דורך אייער אפיס טעלעפאן. די איינשטעלונג איז נאר פאר <b>דעם</b> קאמפיוטער, און ווערט נישט ארויפגעלייגט.</p>
    <label class="f">וועלכער טעלעפאן<select id="cs" onchange="callMode(this.value)">
-    <option value="yealink" ${mode === 'yealink' ? 'selected' : ''}>Yealink טעלעפאן אויפן טיש</option>
+    <option value="jls" ${mode === 'jls' ? 'selected' : ''}>CALL URL פון JLS (TekLink א.א.וו.)</option>
+    <option value="yealink" ${mode === 'yealink' ? 'selected' : ''}>Yealink טעלעפאן אויפן טיש (IP)</option>
     <option value="tel" ${mode === 'tel' ? 'selected' : ''}>טעלעפאן פראגראם אויפן קאמפיוטער (tel:)</option>
     <option value="custom" ${mode === 'custom' ? 'selected' : ''}>אנדערש (לינק)</option></select></label>
+   <div id="c_jl" style="margin-top:10px"><label class="f">CALL URL – פעיסט אריין די גאנצע שורה פונקט ווי אין JLS<textarea id="cjl" rows="3" style="direction:ltr;font-size:12px">${esc(mode === 'jls' ? t : '')}</textarea></label></div>
    <div id="c_yl" style="margin-top:10px"><label class="f">IP פון דעם Yealink טעלעפאן (למשל 192.168.1.50)<input id="cip" style="direction:ltr" value="${esc(yl ? yl[1] : '')}" placeholder="192.168.1.50"></label>
     <p class="sub" style="margin-top:6px">💡 צו געפינען: דריקט אויפן טעלעפאן <b>OK</b> (אדער Menu > Status), דארט שטייט IPv4.</p></div>
    <div id="c_cu" style="margin-top:10px"><label class="f">לינק ({num} = +18455551234, {digits} = 8455551234)<input id="cu" style="direction:ltr" value="${esc(mode === 'custom' ? t : '')}"></label></div>
    <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn ghost" onclick="closeM()">צוריק</button><button class="btn" onclick="callSave()">היט אפ</button></div>`, 'narrow');
   callMode(mode);
 }
-function callMode(m) { $('#c_yl').style.display = m === 'yealink' ? '' : 'none'; $('#c_cu').style.display = m === 'custom' ? '' : 'none'; }
+function callMode(m) { $('#c_jl').style.display = m === 'jls' ? '' : 'none'; $('#c_yl').style.display = m === 'yealink' ? '' : 'none'; $('#c_cu').style.display = m === 'custom' ? '' : 'none'; }
 function callSave() {
   const m = $('#cs').value; let v = 'tel:{num}';
-  if (m === 'yealink') {
+  if (m === 'jls') {
+    v = $('#cjl').value.replace(/\s+/g, '').replace(/^CALL ?URL:?/i, '');
+    if (!/^https:\/\/[^\s]+POSTJLSPOST.+/.test(v) && !/^https?:\/\//.test(v)) { toast('⚠️ פעיסט אריין די CALL URL שורה פון JLS'); return; }
+    if (!/%PhoneNum%|\{digits\}|\{num\}/.test(v)) { toast('⚠️ אין דער שורה פעלט %PhoneNum%'); return; }
+  } else if (m === 'yealink') {
     const ip = $('#cip').value.trim().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
     if (!/^[\w.-]+(:\d+)?$/.test(ip)) { toast('⚠️ שרייבט דעם IP פון דעם טעלעפאן'); return; }
     v = 'http://' + ip + '/servlet?key=number={digits}';
   } else if (m === 'custom') {
     v = $('#cu').value.trim();
-    if (!v.includes('{num}') && !v.includes('{digits}')) { toast('⚠️ דער לינק מוז האבן {num} אדער {digits}'); return; }
+    if (!/%PhoneNum%|\{digits\}|\{num\}/.test(v)) { toast('⚠️ דער לינק מוז האבן {num} אדער {digits}'); return; }
   }
   try { localStorage.setItem('yg_call', v); } catch (e) { }
   closeM(); render(); toast('✓ אפגעהיטן – פרובירט א 📞');

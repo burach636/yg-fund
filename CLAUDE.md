@@ -71,6 +71,7 @@ Backend is **Supabase** (project `qrudivrakwoathgbzrwd`).
 
 ## Click to call
 - `callBtn(num, code)` in sections.js puts a 📞 link next to phones. The link template is per computer (localStorage `yg_call`, header button "📞 טעלעפאן"): Yealink preset = `http://<phone IP>/servlet?key=number={digits}` (the owner's office phone; needs Action URI Allow IP List on the phone), default `tel:{num}` (opens the office softphone), or an http click-to-dial URL for desk phones (`{num}` = +1…, `{digits}` = 10 digits), opened in a small window that closes itself.
+- The owner's office uses **TekLink** click-to-call: the JLS "CALL URL" line `https://users.theteklink.com/lic/clicktocall/v1/callPOSTJLSPOST<body>` means HTTP POST of `<body>` (`license_key=…&connect=%PhoneNum%`, PhoneNum = 10 digits). The app sends it as a hidden form POST into a small popup. The license key lives only in each computer's localStorage – **never commit it**.
 
 ## Testing
 There is no test framework. Run `node --check app.js` and similar for each file.
