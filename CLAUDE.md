@@ -48,7 +48,7 @@ Backend is **Supabase** (project `qrudivrakwoathgbzrwd`).
 - `cal.js`: Hebrew calendar helpers (Intl `en-u-ca-hebrew`), Hebrew numerals, and a dual Hebrew/English date picker. Use `dateField(id, value, {clear})` together with `initDateFields(root)`. The `modal()` function calls it automatically.
 - `receipts.js` (view `rcpt`): printable receipts copied from the user's Word mail-merge template. `receipt-bg.jpg` is the template's background image; `RC_BOX` holds the exact text-box positions (inches) from the .docx. One Letter page per JLS payment, opened in a new window and printed. Printed marks: event kind `rcpt` (id = PaymentNum). Every 2 weeks (same periods as the fundraisers) `ensureRcptTask` adds a to-do with fixed id `rcpt-<periodFrom>` and `rc: {from, to}`. Settings `rcptBy`, `rcptSuffix`, `rcptWho`.
 - `xlsx.js`: tiny .xlsx writer, `xlsx([{name, rows}], file)`. All "⬇ Excel" buttons use it (donors list, one donor, pledges, fundraisers with 5 sheets, one 2-week period, shul donors).
-- `jls.js`: the Jet 4 reader and `JLS.extract(bytes, company)`.
+- `jls.js`: the Jet 4 reader, `JLS.extract(bytes, company)`, and `JLS.schema(bytes)` (table + column names and row counts only, no values; Settings > "🔍 JLS טאבעלעס"). The reader decodes only the columns asked for.
 - `style.css`, `logo.png` (the yeshiva's logo; never alter it), `icon.png`.
 
 ## UX rules the user asked for

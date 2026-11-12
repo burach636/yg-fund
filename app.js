@@ -775,6 +775,9 @@ function vSettings() {
    <h3>אריבערנעמען פון דער דעסקטאפ ווערסיע</h3>
    <p class="sub">אויב איר האט שוין געארבעט מיט דער דעסקטאפ ווערסיע: קלייבט די פייל <span class="path">data\\log.jsonl</span>, און אלע To-Do'ס, נאטיצן און רימיינדערס פון דארט קומען אריבער.</p>
    <label class="btn ghost sm">📥 קלייב log.jsonl<input type="file" accept=".jsonl,.txt" hidden onchange="importDesktopLog(this.files[0])"></label>
+   <h3>🔍 JLS טאבעלעס (נאר נעמען)</h3>
+   <p class="sub">ווייזט די נעמען פון אלע טאבעלעס און קאלומס אין Tuition.mdb – <b>נישט</b> קיין שום אינפארמאציע פון זיי. עס בלייבט אויף דעם קאמפיוטער.</p>
+   <label class="btn ghost sm">🔍 קלייב Tuition.mdb<input type="file" accept=".mdb,.zip" hidden onchange="jlsSchema(this.files[0])"></label>
    <h3>📱 SMS פון סעלפאון</h3>
    <p class="sub">שיקט א טעקסט צום SMS נומער פון דער סיסטעם. נאר די סעלפאונס וואס שטייען אין דער ליסטע פון באניצער באקומען אן ענטפער.</p>
    <table><tbody>${[['שווארץ', 'אלע אינפא (נאמען, טעלעפאן, אדרעס, נדבות)'], ['טעלעפאן שווארץ', 'טעלעפאן נומערן'], ['אדרעס שווארץ', 'אדרעס'], ['געגעבן שווארץ', 'וויפיל ער האט געגעבן די לעצטע יאר'], ['באלאנס שווארץ', 'אפענער פלעדזש'], ['היינט', 'מיינע To-Do פאר היינט'], ['פלעדזשעס', 'פלעדזשעס צו קאלן דעם חודש'], ['געקאלט שווארץ', 'מערקט אן אז מ\'האט געקאלט'], ['טאדו קויפן פאפיר', 'נייע זאך אין מיין To-Do'], ['נאטיץ שווארץ: וועט געבן נאך פסח', 'נאטיץ ביי דעם נדבן'], ['שול', 'קומענדיגע שול'], ['?', 'די ליסטע']].map(([c, d]) => `<tr><td><b>${esc(c)}</b></td><td style="font-size:13px">${esc(d)}</td></tr>`).join('')}</tbody></table>
@@ -824,6 +827,23 @@ async function importDesktopLog(file) {
   busy('נעמט אריבער ' + evs.length + ' ענדערונגען...');
   try { for (let i = 0; i < evs.length; i += 500) await q(sb.from('events').insert(evs.slice(i, i + 500))); await pullLog(); busy(false); render(); toast('✓ אריבערגענומען ' + evs.length + ' ענדערונגען'); }
   catch (e) { busy(false); toast('⚠️ ' + (e.message || e)); }
+}
+async function jlsSchema(file) {
+  if (!file) return;
+  try {
+    busy('לייענט די נעמען פון די טאבעלעס...');
+    let buf = new Uint8Array(await file.arrayBuffer());
+    if (buf[0] === 0x50 && buf[1] === 0x4B) buf = await unzipMdb(buf);
+    await new Promise(r => setTimeout(r, 30));
+    const L = JLS.schema(buf); buf = null;
+    busy(false);
+    const hot = t => /cc|credit|card|recur|sched|auto|charge|plan|install/i.test(t.name + ' ' + t.cols.join(' '));
+    const txt = L.map(t => (hot(t) ? '* ' : '') + t.name + ' (' + t.rows + '): ' + t.cols.join(', ')).join('\n');
+    window._schemaTxt = txt;
+    modal(`<div class="row"><h2 style="margin:0">🔍 JLS טאבעלעס (${L.length})</h2><div class="spacer"></div><button class="btn sm" onclick="navigator.clipboard.writeText(window._schemaTxt).then(()=>toast('✓ קאפירט'))">📋 קאפיר אלעס</button><button class="btn ghost sm" onclick="closeM()">✕</button></div>
+     <p class="sub">נאר נעמען פון טאבעלעס און קאלומס, און וויפיל שורות. ★ = מעגליך שייך צו קרעדיט קארדס / פלאנען.</p>
+     <div class="scroll" style="max-height:65vh"><table><thead><tr><th>טאבעלע</th><th>שורות</th><th>קאלומס</th></tr></thead><tbody>${L.map(t => `<tr style="${hot(t) ? 'background:#fff8e6' : ''}"><td class="ltr"><b>${hot(t) ? '★ ' : ''}${esc(t.name)}</b></td><td class="num">${t.rows}</td><td class="ltr" style="font-size:12px;white-space:normal">${esc(t.cols.join(', '))}</td></tr>`).join('')}</tbody></table></div>`);
+  } catch (e) { busy(false); toast('⚠️ ' + errMsg(e)); }
 }
 async function saveSettings() {
   const old = SET().company || 32, nc = +$('#sc').value || 32;

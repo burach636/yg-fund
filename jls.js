@@ -241,6 +241,20 @@
     return out;
   }
 
-  const api = { Jet, extract };
+  // Names only: every table with its column names/types and row count. Reads no values at all.
+  const TYPES = { 1: 'yes/no', 2: 'byte', 3: 'int', 4: 'long', 5: 'money', 6: 'float', 7: 'double', 8: 'date', 9: 'binary', 10: 'text', 11: 'ole', 12: 'memo', 15: 'guid', 16: 'numeric' };
+  function schema(bytes) {
+    const db = new Jet(bytes), out = [];
+    for (const name of Object.keys(db.tables).sort()) {
+      try {
+        const t = db.table(name);
+        let n = 0; for (const _ of db.rows(t, [])) n++;
+        out.push({ name, rows: n, cols: t.cols.map(c => c.name + ':' + (TYPES[c.type] || c.type)) });
+      } catch (e) { out.push({ name, rows: -1, cols: [] }); }
+    }
+    return out;
+  }
+
+  const api = { Jet, extract, schema };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.JLS = api;
 })(this);
