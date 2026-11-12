@@ -69,7 +69,7 @@ Backend is **Supabase** (project `qrudivrakwoathgbzrwd`).
 - Test locally: copy to `.mts` and run with `node --experimental-strip-types` against a mocked `fetch` (exports `handle`, `answer`, `load`).
 
 ## Click to call
-- `callBtn(num, code)` in sections.js puts a 📞 link next to phones. The link template is per computer (localStorage `yg_call`, header button "📞 טעלעפאן"): default `tel:{num}` (opens the office softphone), or an http click-to-dial URL for desk phones (`{num}` = +1…, `{digits}` = 10 digits), opened in a small window that closes itself.
+- `callBtn(num, code)` in sections.js puts a 📞 link next to phones. The link template is per computer (localStorage `yg_call`, header button "📞 טעלעפאן"): Yealink preset = `http://<phone IP>/servlet?key=number={digits}` (the owner's office phone; needs Action URI Allow IP List on the phone), default `tel:{num}` (opens the office softphone), or an http click-to-dial URL for desk phones (`{num}` = +1…, `{digits}` = 10 digits), opened in a small window that closes itself.
 
 ## Testing
 There is no test framework. Run `node --check app.js` and similar for each file.

@@ -317,19 +317,31 @@ function dial(el, code) {
   return true;
 }
 function callSetup() {
-  const t = callTpl();
+  const t = callTpl(), yl = t.match(/^http:\/\/([^/]+)\/servlet\?key=number=\{digits\}$/);
+  const mode = t === 'tel:{num}' ? 'tel' : yl ? 'yealink' : 'custom';
   modal(`<h2>📞 קאלן פון דעם קאמפיוטער</h2>
    <p class="sub">ווען מען דריקט 📞 לעבן א נדבן, קאלט עס אים דורך אייער אפיס טעלעפאן. די איינשטעלונג איז נאר פאר <b>דעם</b> קאמפיוטער.</p>
-   <label class="f">ווי אזוי<select id="cs" onchange="document.getElementById('cu').value=this.value||document.getElementById('cu').value">
-    <option value="tel:{num}" ${t === 'tel:{num}' ? 'selected' : ''}>טעלעפאן פראגראם אויפן קאמפיוטער (tel:)</option>
-    <option value="callto:{num}" ${t === 'callto:{num}' ? 'selected' : ''}>callto: (עלטערע פראגראמען)</option>
-    <option value="" ${!/^(tel|callto):\{num\}$/.test(t) ? 'selected' : ''}>א טעלעפאן אויפן טיש (לינק פון דער טעלעפאן פירמע)</option></select></label>
-   <label class="f" style="margin-top:10px">לינק ({num} = +18455551234, {digits} = 8455551234)<input id="cu" style="direction:ltr" value="${esc(t)}"></label>
+   <label class="f">וועלכער טעלעפאן<select id="cs" onchange="callMode(this.value)">
+    <option value="yealink" ${mode === 'yealink' ? 'selected' : ''}>Yealink טעלעפאן אויפן טיש</option>
+    <option value="tel" ${mode === 'tel' ? 'selected' : ''}>טעלעפאן פראגראם אויפן קאמפיוטער (tel:)</option>
+    <option value="custom" ${mode === 'custom' ? 'selected' : ''}>אנדערש (לינק)</option></select></label>
+   <div id="c_yl" style="margin-top:10px"><label class="f">IP פון דעם Yealink טעלעפאן (למשל 192.168.1.50)<input id="cip" style="direction:ltr" value="${esc(yl ? yl[1] : '')}" placeholder="192.168.1.50"></label>
+    <p class="sub" style="margin-top:6px">💡 צו געפינען: דריקט אויפן טעלעפאן <b>OK</b> (אדער Menu > Status), דארט שטייט IPv4.</p></div>
+   <div id="c_cu" style="margin-top:10px"><label class="f">לינק ({num} = +18455551234, {digits} = 8455551234)<input id="cu" style="direction:ltr" value="${esc(mode === 'custom' ? t : '')}"></label></div>
    <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn ghost" onclick="closeM()">צוריק</button><button class="btn" onclick="callSave()">היט אפ</button></div>`, 'narrow');
+  callMode(mode);
 }
+function callMode(m) { $('#c_yl').style.display = m === 'yealink' ? '' : 'none'; $('#c_cu').style.display = m === 'custom' ? '' : 'none'; }
 function callSave() {
-  const v = $('#cu').value.trim() || 'tel:{num}';
-  if (!v.includes('{num}') && !v.includes('{digits}')) { toast('⚠️ דער לינק מוז האבן {num} אדער {digits}'); return; }
+  const m = $('#cs').value; let v = 'tel:{num}';
+  if (m === 'yealink') {
+    const ip = $('#cip').value.trim().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+    if (!/^[\w.-]+(:\d+)?$/.test(ip)) { toast('⚠️ שרייבט דעם IP פון דעם טעלעפאן'); return; }
+    v = 'http://' + ip + '/servlet?key=number={digits}';
+  } else if (m === 'custom') {
+    v = $('#cu').value.trim();
+    if (!v.includes('{num}') && !v.includes('{digits}')) { toast('⚠️ דער לינק מוז האבן {num} אדער {digits}'); return; }
+  }
   try { localStorage.setItem('yg_call', v); } catch (e) { }
-  closeM(); render(); toast('✓ אפגעהיטן');
+  closeM(); render(); toast('✓ אפגעהיטן – פרובירט א 📞');
 }
