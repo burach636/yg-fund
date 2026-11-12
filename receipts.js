@@ -66,7 +66,7 @@ function vRcpt() {
   const sel = L.filter(rcIsSel), total = sel.reduce((t, p) => t + rcData(p).amt, 0);
   const unprintedAll = rcItems().filter(p => p[2] >= F.start && !rcPrinted(p)).length;
   window._rcL = L;
-  $('#main').innerHTML = rcTabs() + `<div class="row"><div><p class="sub">קלייבט פון ווען ביז ווען, קוקט איבער די ליסטע, און דריקט "פרינט". יעדע רעסיט איז א בלאט (Letter). נאכן דרוקן מערקט מען זיי אן אלס געדרוקט, כדי זיי זאלן נישט ארויסקומען נאכאמאל.</p></div><div class="spacer"></div>
+  $('#main').innerHTML = rcTabs() + rcMailErrBox() + `<div class="row"><div><p class="sub">קלייבט פון ווען ביז ווען, קוקט איבער די ליסטע, און דריקט "פרינט". יעדע רעסיט איז א בלאט (Letter). נאכן דרוקן מערקט מען זיי אן אלס געדרוקט, כדי זיי זאלן נישט ארויסקומען נאכאמאל.</p></div><div class="spacer"></div>
    <button class="btn ghost" onclick="rcSettings()">⚙️ איינשטעלונגען</button><button class="btn ghost" onclick="rcExcel()">⬇ Excel</button></div>
   <div class="box" style="margin-bottom:14px"><div class="row" style="margin:0;align-items:flex-end">
    <label class="f">פון${dateField('rcf', r.from)}</label><label class="f">ביז${dateField('rct', r.to)}</label>
@@ -412,6 +412,7 @@ async function rcMailGo(i) {
     busy('שיקט...'); await rcSendMail(p, to); busy(false); closeM(); render(); toast('✓ געשיקט צו ' + to);
   } catch (e) {
     busy(false);
+    rcMailErr(e);
     modal(`<h2>⚠️ דער אימעיל איז נישט אוועקגעגאנגען</h2><p>דאס האט דער סערווער געענטפערט:</p>
      <pre id="merr" style="direction:ltr;text-align:left;background:#faf7f0;border:1px solid var(--line);border-radius:8px;padding:10px;white-space:pre-wrap;font-size:13px">${esc(e.message || String(e))}</pre>
      <div class="row" style="justify-content:flex-end"><button class="btn ghost sm" onclick="navigator.clipboard.writeText(document.getElementById('merr').textContent).then(()=>toast('✓ קאפירט'))">📋 קאפיר</button><button class="btn" onclick="closeM()">גוט</button></div>`, 'narrow');
@@ -423,11 +424,19 @@ async function rcMailSel() {
   let ok = 0; const bad = [];
   for (let k = 0; k < L.length; k++) {
     busy('שיקט ' + (k + 1) + ' פון ' + L.length + '...');
-    try { await rcSendMail(L[k]); ok++; } catch (e) { bad.push(acctName(L[k][1]) + ': ' + (e.message || e)); if (/provider|not set|not allowed|logged|function|fetch/i.test(e.message || '')) break; }
+    try { await rcSendMail(L[k]); ok++; } catch (e) { rcMailErr(e); bad.push(acctName(L[k][1]) + ': ' + (e.message || e)); if (/provider|not set|not allowed|logged|function|fetch/i.test(e.message || '')) break; }
   }
   busy(false); render();
   if (bad.length) modal(`<h2>✉️ ${ok} געשיקט, ${bad.length} נישט</h2><div class="scroll" style="max-height:50vh;font-size:13px">${bad.map(esc).join('<br>')}</div><div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn" onclick="closeM()">גוט</button></div>`, 'narrow');
   else toast('✓ ' + ok + ' רעסיטס געשיקט');
+}
+// Keep the last e-mail error on the page (and on this computer) until it is closed
+function rcMailErr(e) { const t = new Date().toLocaleString() + '\n' + (e && e.message || String(e)); try { localStorage.setItem('yg_mailerr', t); } catch (x) { } }
+function rcMailErrBox() {
+  let t = ''; try { t = localStorage.getItem('yg_mailerr') || ''; } catch (x) { }
+  return t ? `<div class="box" style="border-color:#e9c4c0;background:var(--redbg);margin-bottom:12px"><div class="row" style="margin:0"><b style="color:var(--red)">⚠️ דער לעצטער אימעיל טעות:</b><div class="spacer"></div>
+    <button class="btn ghost sm" onclick="navigator.clipboard.writeText(document.getElementById('merrb').textContent).then(()=>toast('✓ קאפירט'))">📋 קאפיר</button><button class="btn ghost sm" onclick="try{localStorage.removeItem('yg_mailerr')}catch(e){};render()">✕</button></div>
+    <pre id="merrb" style="direction:ltr;text-align:left;white-space:pre-wrap;font-size:13px;margin:6px 0 0">${esc(t)}</pre></div>` : '';
 }
 function mailSettingsHTML() {
   const s = SET();
