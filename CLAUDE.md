@@ -35,12 +35,12 @@ Backend is **Supabase** (project `qrudivrakwoathgbzrwd`).
 - `index.html`: the page shell. It loads supabase-js from the jsdelivr CDN, then `config.js`, `jls.js`, `cal.js`, `sections.js` and `app.js`.
 - `sections.js` (v1.2, loaded before app.js, functions only): Home dashboard (default view `home`), To-Do list (`todo`), fundraiser accounts (`fund`), shuls (`shuls`).
   - Tasks: `who` + optional `who2` (two users); `priv: true` + `owner` (email) = private. Always write tasks via `emitTask`, which keeps priv/owner on every event. SETUP.sql section 5 makes RLS hide priv events from others.
-  - Fundraisers: `fr` events (payments to them), `frin` (income not in JLS). Settings `frPct` (default 40), `frStart` (default RH 5787 = 2026-09-12). Income = JLS payments (not refunded) from frStart; 14-day periods from frStart.
+  - Fundraisers: `fr` events (payments to them), `frin` (income not in JLS), `frex` (amounts with no percentage, subtracted from that period's income before the %). Settings `frPct` (default 40), `frStart` (default RH 5787 = 2026-09-12). Income = JLS payments (not refunded) from frStart; 14-day periods from frStart.
   - Shuls: `shul` events (name, addr, notes, ord, paused, del). Setting `shulStart` (a Wednesday); every 14 days the next active shul in `ord`. Per-account `acct.shul`.
 - `app.js`: all UI and logic. Views:
   - Today (to-do list, auto "ask again" schedule)
   - Monthly pledges (call list that resets each month)
-  - Accounts (search across all ~21k)
+  - Accounts / "נדבות" (search across all ~21k; default filter YG donors; default sort A-B by Hebrew last name `lh` = JLS `LNameH`, falling back to the last word of the Hebrew name until a re-import)
   - Account modal (payments, pledges, history, tasks, per-account settings)
   - Reports
   - Settings (admin only)

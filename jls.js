@@ -200,7 +200,7 @@
       'TitleEnglishW', 'FNameW', 'TitleW', 'FNameWH', 'NotActive', 'CompanyName'])) {
       if (r.Code == null) continue;
       acc.set(r.Code, { c: r.Code, n: join(r.TitleEnglish, r.FName, r.LName), h: join(r.Title, r.FNameH, r.LNameH),
-        w: join(r.TitleEnglishW, r.FNameW), wh: join(r.TitleW, r.FNameWH), ln: clean(r.LName), co: clean(r.CompanyName),
+        w: join(r.TitleEnglishW, r.FNameW), wh: join(r.TitleW, r.FNameWH), ln: clean(r.LName), lh: clean(r.LNameH), co: clean(r.CompanyName),
         x: r.NotActive ? 1 : 0, a: '', ph: [] });
     }
     step('אדרעסן...');

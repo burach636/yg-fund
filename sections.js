@@ -42,8 +42,6 @@ function vHome() {
     <div class="row" style="margin-top:8px"><button class="btn gold sm" onclick="taskForm()">+ נייע זאך</button><button class="btn ghost sm" onclick="go('todo')">די גאנצע ליסטע</button></div></div>
    <div><h3>שולן – קומענדיגע מיטוואכן</h3>
     ${sh.length ? `<table><tbody>${sh.map(v => `<tr><td style="white-space:nowrap">${fmtDual(v.date)}</td><td><b>${esc(v.s.name)}</b><br><span class="ltr" style="font-size:12px;color:var(--muted)">${esc(v.s.addr || '')}</span></td></tr>`).join('')}</tbody></table>` : '<div class="empty">נאך קיין שולן. <a class="name" onclick="go(\'shuls\')">לייגט צו</a></div>'}
-    <h3>פאנדרעיזינג – די לעצטע תקופות</h3>
-    ${F.periods.length ? `<table><thead><tr><th>תקופה</th><th>אריינגעקומען</th><th>${F.pct}%</th></tr></thead><tbody>${F.periods.slice(-3).reverse().map(p => `<tr><td style="font-size:13px">${fmtD(p.from)} – ${fmtD(p.to)}</td><td class="num">${money(p.income)}</td><td class="num"><b>${money(p.owed)}</b></td></tr>`).join('')}</tbody></table>` : `<div class="empty">הייבט זיך אן ${fmtD(F.start)}</div>`}
    </div></div>`;
 }
 
@@ -87,40 +85,45 @@ function fundCalc() {
   const income = [];
   if (JD) JD.payments.forEach(p => { if (validD(p[2]) && p[2] >= start && p[2] <= t && !p[9]) income.push({ d: p[2], amt: p[3], code: p[1], src: 'JLS' }); });
   Object.entries(S.frin).forEach(([id, x]) => { if (!x.del && x.date >= start) income.push({ d: x.date, amt: +x.amt || 0, note: x.note, id, src: 'app' }); });
+  const exempt = Object.entries(S.frex || {}).filter(([, x]) => !x.del && x.date >= start).map(([id, x]) => Object.assign({ id }, x, { amt: +x.amt || 0 })).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
   const paid = Object.entries(S.fr).filter(([, x]) => !x.del).map(([id, x]) => Object.assign({ id }, x)).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
   const periods = [];
   if (t >= start) {
     const n = Math.floor(daysBetween(start, t) / 14);
-    for (let k = 0; k <= n; k++) periods.push({ k, from: addDays(start, 14 * k), to: addDays(start, 14 * k + 13), income: 0, count: 0, owed: 0, paid: 0, bal: 0 });
+    for (let k = 0; k <= n; k++) periods.push({ k, from: addDays(start, 14 * k), to: addDays(start, 14 * k + 13), income: 0, count: 0, ex: 0, owed: 0, paid: 0, bal: 0 });
   }
   income.forEach(i => { const p = periods[Math.floor(daysBetween(start, i.d) / 14)]; if (p) { p.income += i.amt; p.count++; } });
+  exempt.forEach(e => { const p = periods[Math.floor(daysBetween(start, e.date) / 14)]; if (p) p.ex += e.amt; });
   let cumO = 0, cumP = 0;
   periods.forEach(p => {
-    p.owed = p.income * pct / 100;
+    p.owed = (p.income - p.ex) * pct / 100;
     p.paid = paid.filter(x => x.date >= p.from && x.date <= p.to).reduce((s, x) => s + (+x.amt || 0), 0);
     cumO += p.owed; cumP += p.paid; p.bal = cumO - cumP;
   });
-  const totPaid = paid.reduce((s, x) => s + (+x.amt || 0), 0), totIn = income.reduce((s, i) => s + i.amt, 0);
-  return { pct, start, income, paid, periods, totIn, totOwed: totIn * pct / 100, totPaid, balance: totIn * pct / 100 - totPaid, cur: periods[periods.length - 1] };
+  const totPaid = paid.reduce((s, x) => s + (+x.amt || 0), 0), totIn = income.reduce((s, i) => s + i.amt, 0), totEx = exempt.reduce((s, x) => s + x.amt, 0);
+  const totOwed = (totIn - totEx) * pct / 100;
+  return { pct, start, income, paid, exempt, periods, totIn, totEx, totOwed, totPaid, balance: totOwed - totPaid, cur: periods[periods.length - 1] };
 }
 function vFund() {
   const F = fundCalc();
   $('#main').innerHTML = `<div class="row"><div><h2>פאנדרעיזינג חשבונות</h2><p class="sub">פון יעדן דאלער וואס קומט אריין זינט ${fmtDual(F.start)} באקומען די פאנדרעיזערס <b>${F.pct}%</b>. עס ווערט אויסגערעכנט יעדע 2 וואכן. די באצאלונגען צו זיי ווערן אראפגערעכנט.</p></div><div class="spacer"></div>
-   <button class="btn ghost" onclick="fundSettings()">⚙️ ${F.pct}% · ${fmtD(F.start)}</button><button class="btn ghost" onclick="frInForm()">+ אריינקומען (נישט אין JLS)</button><button class="btn gold" onclick="frForm()">+ באצאלט די פאנדרעיזערס</button></div>
+   <button class="btn ghost" onclick="fundSettings()">⚙️ ${F.pct}% · ${fmtD(F.start)}</button><button class="btn ghost" onclick="frInForm()">+ אריינקומען (נישט אין JLS)</button><button class="btn ghost" onclick="frExForm()">+ סכום אן פראצענט</button><button class="btn gold" onclick="frForm()">+ באצאלט די פאנדרעיזערס</button></div>
   <div class="stats">
    <div class="stat"><b>${money(F.totIn)}</b><span>אריינגעקומען זינט ${fmtD(F.start)}</span></div>
+   ${F.totEx ? `<div class="stat"><b>${money(F.totEx)}</b><span>אן פראצענט (אראפגערעכנט)</span></div>` : ''}
    <div class="stat"><b>${money(F.totOwed)}</b><span>${F.pct}% קומט די פאנדרעיזערס</span></div>
    <div class="stat"><b>${money(F.totPaid)}</b><span>שוין באצאלט (${F.paid.length} מאל)</span></div>
    <div class="stat"><b class="${F.balance > 0.009 ? 'bal' : 'zero'}">${money(F.balance)}</b><span>${F.balance >= 0 ? 'נאך שולדיג' : 'איבערבאצאלט'}</span></div></div>
   <p class="sub">💡 די JLS באצאלונגען זענען ביז דער לעצטער דערהיינטיגונג (${new Date(JD.importedAt).toLocaleDateString()}). דערהיינטיגט פון JLS כדי עס זאל זיין גענוי.</p>
   <div class="cols"><div><h3>יעדע 2 וואכן</h3>
-   <table><thead><tr><th>תקופה</th><th>באצאל.</th><th>אריינגעקומען</th><th>${F.pct}%</th><th>באצאלט</th><th>באלאנס</th><th></th></tr></thead><tbody>
-   ${F.periods.slice().reverse().map(p => `<tr><td style="font-size:13px;white-space:nowrap">${fmtD(p.from)} –<br>${fmtD(p.to)}${p === F.cur ? ' <span class="tag ask">יעצט</span>' : ''}</td><td class="num">${p.count}</td><td class="num">${money(p.income)}</td><td class="num"><b>${money(p.owed)}</b></td><td class="num">${p.paid ? money(p.paid) : ''}</td><td class="num ${p.bal > 0.009 ? 'bal' : 'zero'}">${money(p.bal)}</td><td><button class="btn ghost sm" onclick="frPeriod(${p.k})">ווייז</button></td></tr>`).join('') || `<tr><td colspan="7" class="empty">הייבט זיך אן ${fmtD(F.start)}</td></tr>`}
+   <table><thead><tr><th>תקופה</th><th>באצאל.</th><th>אריינגעקומען</th>${F.totEx ? '<th>אן %</th>' : ''}<th>${F.pct}%</th><th>באצאלט</th><th>באלאנס</th><th></th></tr></thead><tbody>
+   ${F.periods.slice().reverse().map(p => `<tr><td style="font-size:13px;white-space:nowrap">${fmtD(p.from)} –<br>${fmtD(p.to)}${p === F.cur ? ' <span class="tag ask">יעצט</span>' : ''}</td><td class="num">${p.count}</td><td class="num">${money(p.income)}</td>${F.totEx ? `<td class="num">${p.ex ? '−' + money(p.ex) : ''}</td>` : ''}<td class="num"><b>${money(p.owed)}</b></td><td class="num">${p.paid ? money(p.paid) : ''}</td><td class="num ${p.bal > 0.009 ? 'bal' : 'zero'}">${money(p.bal)}</td><td><button class="btn ghost sm" onclick="frPeriod(${p.k})">ווייז</button></td></tr>`).join('') || `<tr><td colspan="8" class="empty">הייבט זיך אן ${fmtD(F.start)}</td></tr>`}
    </tbody></table></div>
   <div><h3>באצאלונגען צו די פאנדרעיזערס</h3>
    <table><thead><tr><th>טאג</th><th>סכום</th><th>צו וועמען</th><th>נאטיץ</th><th></th></tr></thead><tbody>
    ${F.paid.map(x => `<tr><td class="num">${fmtD(x.date)}</td><td class="num"><b>${money(x.amt)}</b></td><td>${esc(x.to || '')}</td><td style="font-size:13px">${esc(x.note || '')}<br><small class="dim">${esc(x.by || '')}</small></td><td><button class="btn ghost sm" onclick="frForm('${x.id}')">ענדער</button></td></tr>`).join('') || '<tr><td colspan="5" class="empty">נאך גארנישט באצאלט</td></tr>'}
    </tbody></table>
+   ${F.exempt.length ? `<h3>סכומים אן פראצענט</h3><table><tbody>${F.exempt.map(x => `<tr><td class="num">${fmtD(x.date)}</td><td class="num">−${money(x.amt)}</td><td style="font-size:13px">${esc(x.note || '')}</td><td><button class="btn ghost sm" onclick="frExForm('${x.id}')">ענדער</button></td></tr>`).join('')}</tbody></table>` : ''}
    ${Object.values(S.frin).some(x => !x.del) ? `<h3>אריינקומען וואס איז נישט אין JLS</h3><table><tbody>${Object.entries(S.frin).filter(([, x]) => !x.del).sort((a, b) => b[1].date.localeCompare(a[1].date)).map(([id, x]) => `<tr><td class="num">${fmtD(x.date)}</td><td class="num">${money(x.amt)}</td><td style="font-size:13px">${esc(x.note || '')}</td><td><button class="btn ghost sm" onclick="frInForm('${id}')">ענדער</button></td></tr>`).join('')}</tbody></table>` : ''}
   </div></div>`;
 }
@@ -128,7 +131,7 @@ function frPeriod(k) {
   const F = fundCalc(), p = F.periods[k]; if (!p) return;
   const L = F.income.filter(i => i.d >= p.from && i.d <= p.to).sort((a, b) => a.d.localeCompare(b.d));
   modal(`<div class="row"><h2 style="margin:0">${fmtD(p.from)} – ${fmtD(p.to)}</h2><div class="spacer"></div><button class="btn ghost sm" onclick="closeM()">✕</button></div>
-   <p class="sub">${p.count} באצאלונגען · ${money(p.income)} · ${F.pct}% = <b>${money(p.owed)}</b></p>
+   <p class="sub">${p.count} באצאלונגען · ${money(p.income)}${p.ex ? ' · אן פראצענט: −' + money(p.ex) : ''} · ${F.pct}% = <b>${money(p.owed)}</b></p>
    <div class="scroll" style="max-height:60vh"><table><thead><tr><th>טאג</th><th>נאמען</th><th>סכום</th><th>${F.pct}%</th></tr></thead><tbody>
    ${L.map(i => `<tr><td class="num">${fmtD(i.d)}</td><td>${i.code ? `<a class="name" onclick="closeM();openAcct(${i.code})">${esc(acctName(i.code))}</a>` : esc(i.note || 'אריינקומען')}</td><td class="num">${money(i.amt)}</td><td class="num">${money(i.amt * F.pct / 100)}</td></tr>`).join('') || '<tr><td colspan="4" class="empty">גארנישט</td></tr>'}
    </tbody></table></div>`);
@@ -160,6 +163,20 @@ function frInForm(id) {
 async function frInSave(id) {
   const amt = +$('#ia').value; if (!amt) { $('#ia').focus(); return; }
   await emit('frin', id || uid(), { date: $('#id_').value || todayS(), amt, note: $('#in_').value.trim(), del: false });
+  closeM(); render(); toast('✓ אפגעהיטן');
+}
+function frExForm(id) {
+  const x = id ? S.frex[id] : { date: todayS(), amt: '', note: '' };
+  modal(`<h2>סכום אן פראצענט</h2><p class="sub">אויף דעם סכום באקומען די פאנדרעיזערס <b>נישט</b> קיין פראצענט. עס ווערט אראפגערעכנט פון דעם אריינגעקומענעם געלט אין די 2 וואכן פון דעם טאג.</p><div class="grid2">
+   <label class="f">טאג${dateField('xd', x.date)}</label>
+   <label class="f">סכום $<input id="xa" type="number" step="0.01" value="${esc(x.amt)}"></label>
+   <label class="f" style="grid-column:1/-1">פאר וואס / נאטיץ<input id="xn" value="${esc(x.note || '')}"></label></div>
+   <div class="row" style="justify-content:flex-end;margin-top:14px">${id ? `<button class="btn red" onclick="frDel('frex','${id}')">אויסמעקן</button><div class="spacer"></div>` : ''}<button class="btn ghost" onclick="closeM()">צוריק</button><button class="btn" onclick="frExSave('${id || ''}')">היט אפ</button></div>`, 'narrow');
+  setTimeout(() => $('#xa').focus(), 50);
+}
+async function frExSave(id) {
+  const amt = +$('#xa').value; if (!amt) { $('#xa').focus(); return; }
+  await emit('frex', id || uid(), { date: $('#xd').value || todayS(), amt, note: $('#xn').value.trim(), del: false });
   closeM(); render(); toast('✓ אפגעהיטן');
 }
 async function frDel(k, id) { if (!confirm('אויסמעקן?')) return; await emit(k, id, { del: true }); closeM(); render(); }

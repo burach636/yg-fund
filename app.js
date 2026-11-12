@@ -2,7 +2,7 @@
 'use strict';
 const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const money = n => '$' + Math.round(Number(n || 0)).toLocaleString('en-US');
+const money = n => { const v = Math.round(Number(n || 0)); return (v < 0 ? '-$' : '$') + Math.abs(v).toLocaleString('en-US'); };
 const pad = n => String(n).padStart(2, '0');
 const iso = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
 const parse = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
@@ -47,9 +47,9 @@ async function gunzip(blob) { const s = blob.stream().pipeThrough(new Decompress
 // ---------- state ----------
 let JD = null;            // imported JLS data
 let IDX = null;           // derived indexes
-let S = { acct: {}, task: {}, call: {}, hist: {}, fr: {}, frin: {}, shul: {}, settings: { s: { users: ['באניצער 1', 'באניצער 2', 'באניצער 3'], defFreq: 'm12', maxYears: 5 } } };
+let S = { acct: {}, task: {}, call: {}, hist: {}, fr: {}, frin: {}, frex: {}, shul: {}, settings: { s: { users: ['באניצער 1', 'באניצער 2', 'באניצער 3'], defFreq: 'm12', maxYears: 5 } } };
 let status = {}, me = '', view = 'home';
-let ui = { todayF: 'all', todayN: 50, accQ: '', accF: 'all', accN: 100, accShul: '', todoF: 'mine', todoDone: false };
+let ui = { todayF: 'all', todayN: 50, accQ: '', accF: 'yg', accN: 100, accSort: 'abc', accShul: '', todoF: 'mine', todoDone: false };
 const SET = () => S.settings.s;
 
 function applyEvent(ev) {
@@ -87,12 +87,19 @@ async function loadTeam() {
 }
 
 // ---------- derived indexes ----------
+// Sort key: Hebrew last name (LNameH from JLS; before re-import, the last word of the Hebrew name), else English last name.
+// The leading '0'/'1' puts Hebrew names first, English-only names after them.
+function hebLast(a) {
+  const lh = a.lh || (a.h ? a.h.trim().split(/\s+/).pop() : '');
+  return lh ? '0' + lh + ' ' + (a.h || '') : '1' + (a.ln || a.n || '').toLowerCase() + ' ' + (a.n || '').toLowerCase();
+}
 function buildIndex() {
   const by = new Map(), yg = new Map(), pl = new Map();
   const prank = d => { d = (d || '').toLowerCase(); if (/cel|mobile|סעל/.test(d)) return /mother|wife|מאמע/.test(d) ? 1 : 0; if (/home|היים/.test(d)) return 2; return 3; };
   JD.accounts.forEach(a => {
     a.ph.sort((x, y) => prank(x[0]) - prank(y[0]));
     by.set(a.c, a);
+    a._k = hebLast(a);
     a._s = (a.n + ' ' + a.h + ' ' + a.w + ' ' + a.wh + ' ' + a.a + ' ' + a.co + ' #' + a.c + ' ' + a.ph.map(p => p[1] + ' ' + p[1].replace(/\D/g, '')).join(' ')).toLowerCase();
   });
   const today = todayS();
@@ -561,7 +568,8 @@ function filterAccounts() {
   if (f === 'active') L = L.filter(a => !a.x);
   if (f === 'once') L = L.filter(a => ask(a.c).freq === 'once');
   if (ui.accShul) L = L.filter(a => (S.acct[a.c] || {}).shul === ui.accShul);
-  L.sort((x, y) => ((IDX.yg.get(y.c) || {}).total || 0) - ((IDX.yg.get(x.c) || {}).total || 0) || x.ln.localeCompare(y.ln));
+  if (ui.accSort === 'total') L.sort((x, y) => ((IDX.yg.get(y.c) || {}).total || 0) - ((IDX.yg.get(x.c) || {}).total || 0) || x._k.localeCompare(y._k, 'he'));
+  else L.sort((x, y) => x._k.localeCompare(y._k, 'he') || (x.h || x.n).localeCompare(y.h || y.n, 'he'));
   return L;
 }
 function vAccounts() {
@@ -571,8 +579,8 @@ function vAccounts() {
   <div class="row"><input id="q" placeholder="🔍 זוך..." value="${esc(ui.accQ)}" style="flex:1;min-width:240px;font-size:16px">
   <div class="chips">${[['all', 'אלע'], ['yg', 'YG נדבנים'], ['bal', 'מיט באלאנס'], ['vip', '⭐ VIP'], ['mine', 'מיינע'], ['once', '🚫 איינמאליגע'], ['active', 'אקטיוו']].map(([k, l]) => `<button class="chip ${ui.accF === k ? 'on' : ''}" onclick="ui.accF='${k}';ui.accN=100;vAccounts()">${l}</button>`).join('')}</div>
   ${shulList().length ? `<select class="mini" onchange="ui.accShul=this.value;ui.accN=100;vAccounts()"><option value="">🕍 אלע שולן</option>${shulList().map(x => `<option value="${x.id}" ${x.id === ui.accShul ? 'selected' : ''}>🕍 ${esc(x.name)}</option>`).join('')}</select>` : ''}</div>
-  <p class="sub">${L.length.toLocaleString()} געפונען</p>
-  <table><thead><tr><th>#</th><th>נאמען</th><th>טעלעפאן</th><th>אדרעס</th><th>YG סך הכל</th><th>לעצטע</th><th>באלאנס</th><th>ווייטער בעטן</th><th>שול</th></tr></thead><tbody>
+  <div class="row" style="margin-bottom:6px"><span class="sub" style="margin:0">${L.length.toLocaleString()} געפונען · ריי:</span><div class="chips">${[['abc', 'א-ב (לעצטער נאמען)'], ['total', 'גרעסטע נדבנים']].map(([k, l]) => `<button class="chip ${ui.accSort === k ? 'on' : ''}" onclick="ui.accSort='${k}';vAccounts()">${l}</button>`).join('')}</div></div>
+  <table class="acclist"><thead><tr><th>#</th><th>נאמען</th><th>טעלעפאן</th><th>אדרעס</th><th>YG סך הכל</th><th>לעצטע</th><th>באלאנס</th><th>ווייטער בעטן</th><th>שול</th></tr></thead><tbody>
   ${L.slice(0, ui.accN).map(a => { const g = IDX.yg.get(a.c), p = IDX.pl.get(a.c), k = ask(a.c), st = S.acct[a.c] || {}; return `<tr>
    <td class="num" style="color:var(--muted)">${a.c}</td><td><a class="name" onclick="openAcct(${a.c})">${esc(a.h || a.n)}</a> ${st.vip ? '⭐' : ''} ${a.x ? '<span class="tag gray">נישט אקטיוו</span>' : ''}<div class="heb">${esc(a.h ? a.n : '')}</div></td>
    <td class="num" style="font-size:13px">${a.ph[0] ? esc(a.ph[0][1]) : ''}</td><td style="font-size:13px"><span class="ltr">${esc(a.a)}</span></td>
