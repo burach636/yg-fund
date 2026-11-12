@@ -147,3 +147,12 @@ table.acclist td{padding:13px 11px;font-size:15.5px!important;vertical-align:mid
 table.acclist a.name{font-size:17.5px}
 table.acclist .heb{font-size:14px}
 table.acclist td.num{font-size:15px!important}
+/* dashboard: each section its own light color */
+.tile.t1{background:#eaf2fd;border-top-color:#4a7fc1}
+.tile.t2{background:#e9f6ee;border-top-color:#3d9a62}
+.tile.t3{background:#fdf4e1;border-top-color:#c99a2e}
+.tile.t4{background:#f2ecfa;border-top-color:#8a63c2}
+.tile.t5{background:#fdecef;border-top-color:#c75a73}
+.hcol{border-radius:14px;padding:4px 14px 14px;border-top:4px solid}
+.hcol.t2{background:#f2faf5;border-top-color:#3d9a62}
+.hcol.t4{background:#f7f3fc;border-top-color:#8a63c2}

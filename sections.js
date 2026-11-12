@@ -26,21 +26,23 @@ function vHome() {
   const shuls = shulList();
   const next = sh[0];
   let sinceRH = 0; JD.payments.forEach(p => { if (p[2] >= F.start && p[2] <= t && !p[9]) sinceRH += p[3]; });
+  const rcNew = JD.payments.filter(p => validD(p[2]) && p[2] >= F.start && p[2] <= t && !p[9] && p[3] > 0 && IDX.by.has(p[1]) && !rcPrinted(p)).length;
   const askToday = todayItems('all').filter(x => x.kind === 'ask').length;
   $('#main').innerHTML = `
   <div class="row"><div><h2>שלום ${esc(me)}!</h2><p class="sub">${fmtDual(t)}</p></div></div>
   ${next ? `<div class="banner" onclick="go('shuls')">🕍 <div><b>${next.date === t ? 'היינט' : 'מיטוואך ' + fmtDual(next.date)}</b> גייט מען נאך געלט אין: <b class="big">${esc(next.s.name)}</b><br><span class="ltr">${esc(next.s.addr || '')}</span></div></div>` : ''}
   <div class="tiles">
-    <div class="tile" onclick="go('accounts')"><i>👥</i><h3>נדבות</h3><b>${IDX.yg.size.toLocaleString()}</b><span>נדבנים · ${money(sinceRH)} זינט ראש השנה</span><span>${askToday} צו בעטן היינט</span></div>
-    <div class="tile" onclick="go('todo')"><i>✅</i><h3>To-Do ליסטע</h3><b>${mineOpen.length}</b><span>מיינע אפענע זאכן</span>${late ? `<span class="bal">${late} שפעט!</span>` : '<span>&nbsp;</span>'}</div>
-    <div class="tile" onclick="go('fund')"><i>💵</i><h3>פאנדרעיזינג חשבונות</h3><b class="${F.balance > 0.009 ? 'bal' : 'zero'}">${money(F.balance)}</b><span>${F.balance >= 0 ? 'מ\'איז שולדיג די פאנדרעיזערס' : 'איבערבאצאלט'}</span><span>די 2 וואכן: ${money(F.cur ? F.cur.owed : 0)}</span></div>
-    <div class="tile" onclick="go('shuls')"><i>🕍</i><h3>שולן</h3><b>${shuls.length}</b><span>שולן אויף דער ליסטע</span><span>${next ? 'קומענדיג: ' + esc(next.s.name) : 'לייגט צו שולן'}</span></div>
+    <div class="tile t1" onclick="go('accounts')"><i>👥</i><h3>נדבות</h3><b>${IDX.yg.size.toLocaleString()}</b><span>נדבנים · ${money(sinceRH)} זינט ראש השנה</span><span>${askToday} צו בעטן היינט</span></div>
+    <div class="tile t2" onclick="go('todo')"><i>✅</i><h3>To-Do ליסטע</h3><b>${mineOpen.length}</b><span>מיינע אפענע זאכן</span>${late ? `<span class="bal">${late} שפעט!</span>` : '<span>&nbsp;</span>'}</div>
+    <div class="tile t3" onclick="go('fund')"><i>💵</i><h3>פאנדרעיזינג חשבונות</h3><b class="${F.balance > 0.009 ? 'bal' : 'zero'}">${money(F.balance)}</b><span>${F.balance >= 0 ? 'מ\'איז שולדיג די פאנדרעיזערס' : 'איבערבאצאלט'}</span><span>די 2 וואכן: ${money(F.cur ? F.cur.owed : 0)}</span></div>
+    <div class="tile t4" onclick="go('shuls')"><i>🕍</i><h3>שולן</h3><b>${shuls.length}</b><span>שולן אויף דער ליסטע</span><span>${next ? 'קומענדיג: ' + esc(next.s.name) : 'לייגט צו שולן'}</span></div>
+    <div class="tile t5" onclick="go('rcpt')"><i>🧾</i><h3>רעסיטס</h3><b>${rcNew}</b><span>נאך נישט געדרוקט</span><span>זינט ${fmtD(F.start)}</span></div>
   </div>
   <div class="cols">
-   <div><h3>מיינע To-Do פאר היינט</h3>
+   <div class="hcol t2"><h3>מיינע To-Do פאר היינט</h3>
     ${dueToday.slice(0, 8).map(([id, x]) => todoRow(id, x)).join('') || '<div class="empty">🎉 גארנישט פאר היינט</div>'}
     <div class="row" style="margin-top:8px"><button class="btn gold sm" onclick="taskForm()">+ נייע זאך</button><button class="btn ghost sm" onclick="go('todo')">די גאנצע ליסטע</button></div></div>
-   <div><h3>שולן – קומענדיגע מיטוואכן</h3>
+   <div class="hcol t4"><h3>שולן – קומענדיגע מיטוואכן</h3>
     ${sh.length ? `<table><tbody>${sh.map(v => `<tr><td style="white-space:nowrap">${fmtDual(v.date)}</td><td><b>${esc(v.s.name)}</b><br><span class="ltr" style="font-size:12px;color:var(--muted)">${esc(v.s.addr || '')}</span></td></tr>`).join('')}</tbody></table>` : '<div class="empty">נאך קיין שולן. <a class="name" onclick="go(\'shuls\')">לייגט צו</a></div>'}
    </div></div>`;
 }
@@ -54,7 +56,7 @@ function todoRow(id, x) {
     ${a ? `· <a class="name" onclick="openAcct(${x.code})">${esc(a.h || a.n)}</a>` : ''} ${x.pri === 'hi' ? '<span class="tag hi">דרינגענד</span>' : ''}
     ${late ? `<span class="tag late">שפעט ${late} טעג</span>` : (x.due === t && !x.done ? '<span class="tag ask">היינט</span>' : '')}</div>
    <div class="m"><span>📅 ${x.due ? fmtDual(x.due) : 'אן א דאטום'}</span><span>👤 ${esc(taskWho(x))}</span>${x.note ? `<span>📝 ${esc(x.note)}</span>` : ''}${x.repeat && FREQ[x.repeat] ? `<span>🔁 ${FREQ[x.repeat][0]}</span>` : ''}${x.done ? `<span>✓ ${fmtD(x.doneAt)}</span>` : ''}</div></div>
-   <div class="acts">${x.done ? '' : `<button class="btn sm" onclick="taskDone('${id}')">✓ געטון</button>`}<button class="btn ghost sm" onclick="taskForm('${id}')">ענדער</button></div></div>`;
+   <div class="acts">${x.rc ? `<button class="btn gold sm" onclick="rcOpenTask('${id}')">🖨️ עפן רעסיטס</button>` : ''}${x.done ? '' : `<button class="btn sm" onclick="taskDone('${id}')">✓ געטון</button>`}<button class="btn ghost sm" onclick="taskForm('${id}')">ענדער</button></div></div>`;
 }
 function vTodo() {
   const all = Object.entries(S.task).filter(([, x]) => taskVisible(x));
