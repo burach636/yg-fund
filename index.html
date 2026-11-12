@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="yi" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>YG Fund – ישיבת מהרי"ט ד'סאטמאר</title>
+<link rel="icon" href="icon.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="locked">
+<header>
+  <div class="logo3d sm" title='ישיבת מהרי"ט ד&#39;סאטמאר'><div class="in"><img src="logo.png" alt='ישיבת מהרי"ט ד&#39;סאטמאר'><i class="shine"></i></div></div>
+  <div class="logo">YG Fund<small>פאנדרעיזינג סיסטעם</small></div>
+  <div class="spacer"></div>
+  <div class="imp" id="impInfo"></div>
+  <button class="btn gold" id="btnImport">⟳ דערהיינטיג פון JLS</button>
+  <div class="who" id="whoBox"></div>
+</header>
+<nav id="nav">
+  <button data-v="today" class="on">📋 היינט <span class="cnt" id="cToday"></span></button>
+  <button data-v="pledges">📞 פלעדזשעס דעם חודש <span class="cnt" id="cPl"></span></button>
+  <button data-v="accounts">👥 אקאונטס</button>
+  <button data-v="reports">📊 באריכטן</button>
+  <button data-v="settings">⚙️ סעטינגס</button>
+</nav>
+<main id="main"><div class="empty">לאדנט...</div></main>
+
+<div class="overlay" id="ov"><div class="modal" id="modal"></div></div>
+<div class="overlay" id="busy"><div class="modal busy"><div class="spin"></div><div id="busyTxt">ארבעט...</div></div></div>
+<div class="toast" id="toast"></div>
+<div class="dropmask" id="dropmask"><div>לאזט אראפ די Tuition.mdb דא</div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="jls.js"></script>
+<script src="cal.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
