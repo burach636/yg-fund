@@ -172,3 +172,5 @@ a.callb:hover{background:#d3eedd;border-color:var(--green)}
 .mbox.tot{background:var(--navy);border-color:var(--navy)}
 .mbox.tot span,.mbox.tot small{color:var(--gold2)}
 .mbox.tot b{color:#fff}
+.mbox.click{cursor:pointer;transition:.12s}
+.mbox.click:hover{border-color:var(--gold);transform:translateY(-1px);box-shadow:0 3px 10px rgba(20,40,75,.12)}

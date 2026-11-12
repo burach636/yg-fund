@@ -675,13 +675,40 @@ function vReports() {
   $('#main').innerHTML = `<div class="row"><div><h2>באריכטן – ${esc(JD.companyName)}</h2><p class="sub">באזירט אויף דער לעצטער JLS דאטא (${new Date(JD.importedAt).toLocaleDateString()}). ריפאנדס זענען נישט גערעכנט.</p></div><div class="spacer"></div><button class="btn ghost" onclick="xlsReports()">⬇ Excel</button></div>
   <h3>לויט אידישע יארן</h3>
   ${shown.map(y => `<div class="yrcard"><div class="row" style="margin:0 0 8px"><b class="yr">${HEB.gem(y.y)}</b><div class="bar" style="flex:1;height:12px;margin:0"><i style="width:${y.t / max * 100}%"></i></div><b class="num">${money(y.t)}</b><span class="sub" style="margin:0">${y.n.toLocaleString()} נדבות</span></div>
-   <div class="mgrid" style="--n:${HEB.monthsOf(y.y).length + 1}">${HEB.monthsOf(y.y).map(m => { const v = y.m[m]; const cur = now && now.y === y.y && now.m === m; return `<div class="mbox${v ? '' : ' empty0'}${cur ? ' cur' : ''}"><span>${HEB.MONTHS[m]}</span><b>${v ? money(v.t) : '—'}</b><small>${v ? v.n + ' נדבות' : ''}</small></div>`; }).join('')}
-    <div class="mbox tot"><span>ס"ה ${HEB.gem(y.y)}</span><b>${money(y.t)}</b><small>${y.n} נדבות</small></div></div></div>`).join('') || '<div class="empty">קיין באצאלונגען</div>'}
+   <div class="mgrid" style="--n:${HEB.monthsOf(y.y).length + 1}">${HEB.monthsOf(y.y).map(m => { const v = y.m[m]; const cur = now && now.y === y.y && now.m === m; return `<div class="mbox${v ? ' click' : ' empty0'}${cur ? ' cur' : ''}"${v ? ` onclick="monthDonors(${y.y},'${m}')" title="ווייז די נדבנים"` : ''}><span>${HEB.MONTHS[m]}</span><b>${v ? money(v.t) : '—'}</b><small>${v ? v.n + ' נדבות' : ''}</small></div>`; }).join('')}
+    <div class="mbox tot click" onclick="monthDonors(${y.y},'')" title="ווייז די נדבנים פון גאנצן יאר"><span>ס"ה ${HEB.gem(y.y)}</span><b>${money(y.t)}</b><small>${y.n} נדבות</small></div></div></div>`).join('') || '<div class="empty">קיין באצאלונגען</div>'}
   ${HY.length > shown.length ? `<div class="more"><button class="btn ghost" onclick="ui.repN=(ui.repN||6)+6;vReports()">ווייז נאך יארן (${HY.length - shown.length})</button></div>` : ''}
   <div class="cols"><div>
   <h3>קאמפעינס (לעצטע)</h3><table><thead><tr><th>קאמפעין</th><th>באצאלונגען</th><th>סך הכל</th></tr></thead><tbody>${camps.map(([k, v]) => `<tr><td>${esc(+k ? (JD.campaigns[k] || '#' + k) : 'אן קאמפעין')}</td><td class="num">${v.n}</td><td class="num">${money(v.t)}</td></tr>`).join('')}</tbody></table>
   <h3>האבן אויפגעהערט געבן (1–3 יאר)</h3><table><thead><tr><th>נאמען</th><th>סך הכל</th><th>לעצטע</th></tr></thead><tbody>${lapsed.map(([c, g]) => `<tr><td><a class="name" onclick="openAcct(${c})">${esc(acctName(c))}</a></td><td class="num">${money(g.total)}</td><td class="num">${fmtD(g.last)}</td></tr>`).join('') || '<tr><td colspan="3" class="sub">קיינער</td></tr>'}</tbody></table></div>
   <div><h3>גרעסטע נדבנים</h3><table><thead><tr><th>נאמען</th><th>סך הכל</th><th>לעצטע</th></tr></thead><tbody>${top.map(([c, g]) => `<tr><td><a class="name" onclick="openAcct(${c})">${esc(acctName(c))}</a></td><td class="num">${money(g.total)}</td><td class="num">${fmtD(g.last)}</td></tr>`).join('')}</tbody></table></div></div>`;
+}
+// Payments of one Hebrew month (or whole year when m is ''), grouped by donor
+function monthPays(hy, m) {
+  return JD.payments.filter(p => { if (!validD(p[2]) || p[9]) return false; const h = HEB.parts(p[2]); return h && h.y === hy && (!m || h.m === m); })
+    .sort((a, b) => a[2].localeCompare(b[2]));
+}
+function monthDonors(hy, m) {
+  const P = monthPays(hy, m), by = new Map();
+  P.forEach(p => { const d = by.get(p[1]) || by.set(p[1], { c: p[1], t: 0, n: 0, list: [] }).get(p[1]); d.t += p[3]; d.n++; d.list.push(p); });
+  const L = [...by.values()].sort((a, b) => b.t - a.t), tot = P.reduce((s, p) => s + p[3], 0);
+  const title = (m ? HEB.MONTHS[m] + ' ' : 'גאנץ יאר ') + HEB.gem(hy);
+  modal(`<div class="row"><div><h2 style="margin:0">📅 ${title}</h2><p class="sub" style="margin:2px 0 0">${L.length} נדבנים · ${P.length} נדבות · <b>${money(tot)}</b></p></div><div class="spacer"></div>
+   <button class="btn ghost sm" onclick="xlsMonth(${hy},'${m}')">⬇ Excel</button><button class="btn ghost sm" onclick="closeM()">✕</button></div>
+   <div class="scroll" style="max-height:65vh;margin-top:10px"><table><thead><tr><th>#</th><th>נאמען</th><th>טעלעפאן</th><th>נדבות</th><th>סך הכל</th></tr></thead><tbody>
+   ${L.map(d => { const a = IDX.by.get(d.c) || { n: '#' + d.c, h: '', ph: [] }; return `<tr><td class="num" style="color:var(--muted)">${d.c}</td><td><a class="name" onclick="closeM();openAcct(${d.c})">${esc(a.h || a.n)}</a><div class="heb">${esc(a.h ? a.n : '')}</div></td>
+    <td class="num" style="font-size:13px">${a.ph[0] ? callBtn(a.ph[0][1], d.c) + ' ' + esc(a.ph[0][1]) : ''}</td>
+    <td style="font-size:12.5px">${d.list.map(p => `${fmtD(p[2])}: <b class="num">${money(p[3])}</b>`).join('<br>')}</td><td class="num"><b>${money(d.t)}</b></td></tr>`; }).join('') || '<tr><td colspan="5" class="empty">גארנישט</td></tr>'}
+   </tbody></table></div>`);
+}
+function xlsMonth(hy, m) {
+  const P = monthPays(hy, m), by = new Map(), camp = n => JD.campaigns[n] || (n ? '#' + n : '');
+  P.forEach(p => { const d = by.get(p[1]) || by.set(p[1], { c: p[1], t: 0, n: 0 }).get(p[1]); d.t += p[3]; d.n++; });
+  const who = c => { const a = IDX.by.get(c) || {}; return [c, a.h || a.n || '', a.n || '', ((a.ph || [])[0] || [])[1] || '', a.a || '']; };
+  xlsx([
+    { name: 'נדבנים', rows: [['#', 'נאמען', 'English', 'טעלעפאן', 'אדרעס', 'וויפיל נדבות', 'סך הכל']].concat([...by.values()].sort((a, b) => b.t - a.t).map(d => who(d.c).concat([d.n, r2(d.t)]))) },
+    { name: 'אלע נדבות', rows: [['טאג', 'טאג (אידיש)', '#', 'נאמען', 'English', 'סכום', 'קאמפעין', 'סארט', 'טשעק', 'סאליסיטאר']].concat(P.map(p => { const a = IDX.by.get(p[1]) || {}; return [p[2], hebD(p[2]), p[1], a.h || a.n || '', a.n || '', r2(p[3]), camp(p[6]), p[4], p[5], p[7]]; })) }
+  ], 'donors-' + hy + (m ? '-' + m.replace(/\s+/g, '') : '') + '.xlsx');
 }
 function xlsReports() {
   const HY = hebYears(), M = HEB.MONTHS;
