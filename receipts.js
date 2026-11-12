@@ -78,12 +78,13 @@ function vRcpt() {
    <label style="font-size:13px;display:flex;gap:6px;align-items:center"><input type="checkbox" ${r.bg ? 'checked' : ''} onchange="ui.rc.bg=this.checked"> דרוק מיט דעם הינטערגרונט (אראפנעמען אויב איר דרוקט אויף פארגעדרוקטע פאפיר)</label></div></div>
   <div class="row"><b>${sel.length} רעסיטס אויסגעקליבן · ${money(total)}</b><div class="spacer"></div>
    <button class="btn ghost sm" onclick="rcAll(true)">קלייב אלע</button><button class="btn ghost sm" onclick="rcAll(false)">קיינער</button>
+   <button class="btn" ${sel.some(p => emailOf(p[1])) ? '' : 'disabled'} onclick="rcMailSel()">✉️ שיק אימעיל (${sel.filter(p => emailOf(p[1])).length})</button>
    <button class="btn gold" ${sel.length ? '' : 'disabled'} onclick="rcPrint()">🖨️ פרינט ${sel.length} רעסיטס</button></div>
   <table><thead><tr><th></th><th>טאג</th><th>נאמען</th><th>סכום</th><th>אדרעס</th><th>Received by</th><th></th></tr></thead><tbody>
   ${L.map((p, i) => { const d = rcData(p), a = IDX.by.get(p[1]); return `<tr style="${rcIsSel(p) ? '' : 'opacity:.5'}"><td><input type="checkbox" ${rcIsSel(p) ? 'checked' : ''} onchange="ui.rc.sel['${d.key}']=this.checked;vRcpt()"></td>
    <td class="num" style="font-size:13px">${fmtD(p[2])}</td><td><a class="name" onclick="openAcct(${p[1]})">${esc(a.h || a.n)}</a><div class="heb">${esc(a.h ? a.n : '')}</div></td>
-   <td class="num"><b>${money(d.amt)}</b>${p[10] ? `<br><span class="tag custom">פלעדזש</span> <small class="dim">באצאלט ${money(p[10][4])}</small>` : ''}</td><td style="font-size:13px">${a.a ? `<span class="ltr">${esc(a.a)}</span>` : '<span class="tag late">⚠️ קיין אדרעס</span>'}</td><td style="font-size:12px">${esc(d.by)}</td>
-   <td>${rcPrinted(p) ? `<span class="tag ok">✓ געדרוקט ${fmtD(rcPrinted(p))}</span>` : ''} ${d.edited ? '<span class="tag ask">✏️ געטוישט</span> ' : ''}<button class="btn ghost sm" title="פרינט נאר די רעסיט (אויך אן אלטע)" onclick="rcPrintOne(${i})">🖨️</button><button class="btn ghost sm" title="טויש דעם טעקסט" onclick="rcEdit(${i})">✏️</button><button class="btn ghost sm" title="קוק אן" onclick="rcPreview(${i})">👁</button></td></tr>`; }).join('') || '<tr><td colspan="7" class="empty">קיין נדבות אין די טעג</td></tr>'}
+   <td class="num"><b>${money(d.amt)}</b>${p[10] ? `<br><span class="tag custom">פלעדזש</span> <small class="dim">באצאלט ${money(p[10][4])}</small>` : ''}</td><td style="font-size:13px">${a.a ? `<span class="ltr">${esc(a.a)}</span>` : '<span class="tag late">⚠️ קיין אדרעס</span>'}</td><td style="font-size:12px">${esc(d.by)}${emailOf(p[1]) ? `<br><span class="ltr dim">✉️ ${esc(emailOf(p[1]))}</span>` : ''}</td>
+   <td>${rcPrinted(p) ? `<span class="tag ok">✓ געדרוקט ${fmtD(rcPrinted(p))}</span>` : ''} ${d.edited ? '<span class="tag ask">✏️ געטוישט</span> ' : ''}${rcEmailed(p) ? `<span class="tag ok">✉️ ${fmtD(rcEmailed(p))}</span> ` : ''}<button class="btn ghost sm" title="שיק אין אימעיל" onclick="rcMailOne(${i})">✉️</button><button class="btn ghost sm" title="פרינט נאר די רעסיט (אויך אן אלטע)" onclick="rcPrintOne(${i})">🖨️</button><button class="btn ghost sm" title="טויש דעם טעקסט" onclick="rcEdit(${i})">✏️</button><button class="btn ghost sm" title="קוק אן" onclick="rcPreview(${i})">👁</button></td></tr>`; }).join('') || '<tr><td colspan="7" class="empty">קיין נדבות אין די טעג</td></tr>'}
   </tbody></table>
   <p class="sub" style="margin-top:10px">💡 נאר וואס איז אין JLS (ביז ${new Date(JD.importedAt).toLocaleDateString()}). ביים דרוקן: Margins = None, Scale = 100%.</p>`;
   initDateFields($('#main'));
@@ -200,13 +201,14 @@ function rcSettings() {
    <label class="f">"Received by" (ליידיג = דער סאליסיטאר פון JLS)<input id="rsb" value="${esc(s.rcptBy || '')}"></label>
    <label class="f">נאכן נאמען (למשל הי"ו)<input id="rss" value="${esc(s.rcptSuffix != null ? s.rcptSuffix : 'הי"ו')}"></label>
    <label class="f">ווער באקומט די To-Do יעדע 2 וואכן<select id="rsw">${USERS().map(u => `<option ${u === rcWho() ? 'selected' : ''}>${esc(u)}</option>`).join('')}</select></label></div>
+   ${mailSettingsHTML()}
    <h3>קאמפעינס מיט רעסיט אויף דער גאנצער פלעדזש</h3>
    <p class="sub">ביי די קאמפעינס באקומט דער נדבן א רעסיט אויף דער <b>גאנצער פלעדזש</b>, אפילו ער האט נאך נישט אלעס באצאלט. (זיינע באצאלונגען צו דעם קאמפעין מאכן דעמאלט נישט קיין באזונדערע רעסיט.)</p>
    <div class="scroll" style="max-height:220px;border:1px solid var(--line);border-radius:8px;padding:6px 10px">${rcCampList().map(([n, name, cnt]) => `<label style="display:flex;gap:8px;align-items:center;font-size:14px;padding:3px 0"><input type="checkbox" class="rpc" value="${n}" ${rcPlCamps().has(n) ? 'checked' : ''}> ${esc(name)} <small class="dim">#${n} · ${cnt} פלעדזשעס</small></label>`).join('') || '<div class="sub">קיין קאמפעינס מיט פלעדזשעס</div>'}</div>
    <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn ghost" onclick="closeM()">צוריק</button><button class="btn" onclick="rcSaveSet()">היט אפ</button></div>`, 'narrow');
 }
 async function rcSaveSet() {
-  await emit('settings', 's', { rcptBy: $('#rsb').value.trim(), rcptSuffix: $('#rss').value.trim(), rcptWho: $('#rsw').value, rcptPlCamps: [...document.querySelectorAll('.rpc:checked')].map(x => +x.value) });
+  await emit('settings', 's', { rcptBy: $('#rsb').value.trim(), rcptSuffix: $('#rss').value.trim(), rcptWho: $('#rsw').value, rcptPlCamps: [...document.querySelectorAll('.rpc:checked')].map(x => +x.value), mailSubject: $('#msj').value.trim(), mailBody: $('#mbd').value.trim() });
   closeM(); render(); toast('✓ אפגעהיטן');
 }
 // Campaigns that have YG pledges, newest first: [num, name, count]
@@ -342,3 +344,83 @@ function stSettings() {
    <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn ghost" onclick="closeM()">צוריק</button><button class="btn" onclick="stSaveSet()">היט אפ</button></div>`, 'narrow');
 }
 async function stSaveSet() { await emit('settings', 's', { stmtTitle: $('#stt').value.trim(), stmtText: $('#stx').value.trim() }); closeM(); render(); toast('✓ אפגעהיטן'); }
+
+// ---------- ✉️ e-mail receipts (PDF attachment, sent by the Supabase function "email") ----------
+const MAIL_SUBJ_DEF = 'קבלה – Yeshivas Maharit Satmar – {amount}';
+const MAIL_BODY_DEF = 'לכבוד {name},\n\nא הארציגן יישר כח פאר אייער נדבה פון {amount} ({date}) לטובת ישיבתינו הק\'.\nבייגעלייגט איז די קבלה (receipt).\n\nבכבוד רב ובברכת התורה,\nהנהלת הישיבה\nYeshivas Maharit Satmar · P.O. Box 1367 · Monroe NY 10949 · 845.782.1380';
+const emailOf = c => { const st = S.acct[c] || {}; if (st.email != null && st.email !== '') return st.email; const a = IDX.by.get(+c); return a && a.em && a.em[0] || ''; };
+const rcEmailed = p => (S.rcpt[rcKey(p)] || {}).emailed;
+let _libs = null;
+function loadLibs() {   // html2canvas + jsPDF, only when the first e-mail is sent
+  if (_libs) return _libs;
+  const add = src => new Promise((ok, bad) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => bad(new Error('לאדן ' + src)); document.head.appendChild(s); });
+  return (_libs = Promise.all([add('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'), add('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')]).catch(e => { _libs = null; throw e; }));
+}
+// Render the same page that is printed into a one-page Letter PDF (base64 data URI)
+async function rcPdf(d) {
+  await loadLibs();
+  const fr = document.createElement('iframe');
+  fr.style.cssText = 'position:fixed;left:-10000px;top:0;width:8.5in;height:11in;border:0';
+  document.body.appendChild(fr);
+  try {
+    fr.contentDocument.open(); fr.contentDocument.write(rcDoc([d], (ui.rc || { bg: true }).bg !== false, false).replace('background:#888', 'background:#fff')); fr.contentDocument.close();
+    await new Promise(r => { const w = fr.contentWindow; if (w.document.readyState === 'complete') r(); else w.addEventListener('load', r); });
+    if (fr.contentDocument.fonts) await fr.contentDocument.fonts.ready;
+    await Promise.all([...fr.contentDocument.images].map(im => im.complete ? 0 : new Promise(r => { im.onload = im.onerror = r; })));
+    const pg = fr.contentDocument.querySelector('.pg'); pg.style.margin = '0'; pg.style.boxShadow = 'none';
+    const canvas = await window.html2canvas(pg, { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false });
+    const pdf = new window.jspdf.jsPDF({ unit: 'in', format: 'letter' });
+    pdf.addImage(canvas.toDataURL('image/jpeg', 0.82), 'JPEG', 0, 0, 8.5, 11);
+    return pdf.output('datauristring');
+  } finally { fr.parentNode.removeChild(fr); }
+}
+function mailFill(t, d) {
+  return t.split('{name}').join(d.top || d.eng).split('{amount}').join('$' + rcMoney(d.amt)).split('{date}').join(rcDate(d.date) + ' · ' + HEB.fmtHeb(d.date));
+}
+async function rcSendMail(p, to) {
+  const d = rcData(p), s = SET();
+  to = (to || emailOf(p[1])).trim();
+  if (!to) throw new Error('קיין אימעיל ביי ' + (d.top || d.eng));
+  const pdf = await rcPdf(d);
+  const body = mailFill(s.mailBody || MAIL_BODY_DEF, d);
+  const html = `<div dir="rtl" style="font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#222">${esc(body).replace(/\n/g, '<br>')}</div>`;
+  const { data, error } = await sb.functions.invoke('email', { body: { to, subject: mailFill(s.mailSubject || MAIL_SUBJ_DEF, d), html, pdf, filename: 'Receipt-' + d.code + '-' + d.date + '.pdf' } });
+  if (error) { let m = error.message; try { const j = await error.context.json(); if (j && j.error) m = j.error; } catch (e) { } throw new Error(m); }
+  if (data && data.error) throw new Error(data.error);
+  await emit('rcpt', rcKey(p), { emailed: todayS(), emailTo: to, by: me });
+  await emit('hist', uid(), { code: p[1], text: '✉️ רעסיט געשיקט צו ' + to + ' – ' + money(d.amt) });
+}
+function rcMailOne(i) {
+  const p = window._rcL[i]; if (!p) return;
+  const d = rcData(p), to = emailOf(p[1]);
+  modal(`<h2>✉️ שיק די רעסיט אין אימעיל</h2><p class="sub">${esc(d.top || d.eng)} · <b>$${rcMoney(d.amt)}</b> · ${fmtD(d.date)}</p>
+   <label class="f">צו וועלכן אימעיל<input id="mto" type="email" style="direction:ltr" value="${esc(to)}" placeholder="name@example.com"></label>
+   <label style="display:flex;gap:8px;align-items:center;font-size:13px;margin-top:8px"><input type="checkbox" id="msave" ${to ? '' : 'checked'}> היט אפ דעם אימעיל ביי דעם נדבן</label>
+   <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn ghost" onclick="closeM()">צוריק</button><button class="btn" id="msend" onclick="rcMailGo(${i})">✉️ שיק</button></div>`, 'narrow');
+}
+async function rcMailGo(i) {
+  const p = window._rcL[i], to = $('#mto').value.trim().toLowerCase();
+  if (!/^\S+@\S+\.\S+$/.test(to)) { toast('⚠️ דער אימעיל איז נישט ריכטיג'); return; }
+  $('#msend').disabled = true;
+  try {
+    if ($('#msave').checked && to !== emailOf(p[1])) await emit('acct', p[1], { email: to });
+    busy('שיקט...'); await rcSendMail(p, to); busy(false); closeM(); render(); toast('✓ געשיקט צו ' + to);
+  } catch (e) { busy(false); $('#msend').disabled = false; toast('⚠️ ' + (e.message || e)); }
+}
+async function rcMailSel() {
+  const L = rcList().filter(rcIsSel).filter(p => emailOf(p[1])); if (!L.length) { toast('קיינער פון די אויסגעקליבענע האט נישט קיין אימעיל'); return; }
+  if (!confirm('שיקן ' + L.length + ' רעסיטס אין אימעיל?')) return;
+  let ok = 0; const bad = [];
+  for (let k = 0; k < L.length; k++) {
+    busy('שיקט ' + (k + 1) + ' פון ' + L.length + '...');
+    try { await rcSendMail(L[k]); ok++; } catch (e) { bad.push(acctName(L[k][1]) + ': ' + (e.message || e)); if (/provider|not set|not allowed|logged|function|fetch/i.test(e.message || '')) break; }
+  }
+  busy(false); render();
+  if (bad.length) modal(`<h2>✉️ ${ok} געשיקט, ${bad.length} נישט</h2><div class="scroll" style="max-height:50vh;font-size:13px">${bad.map(esc).join('<br>')}</div><div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn" onclick="closeM()">גוט</button></div>`, 'narrow');
+  else toast('✓ ' + ok + ' רעסיטס געשיקט');
+}
+function mailSettingsHTML() {
+  const s = SET();
+  return `<h3>✉️ אימעיל</h3><div class="grid2"><label class="f" style="grid-column:1/-1">סאבדזשעקט ({name}, {amount}, {date})<input id="msj" value="${esc(s.mailSubject || MAIL_SUBJ_DEF)}"></label>
+   <label class="f" style="grid-column:1/-1">דער בריוו אין אימעיל<textarea id="mbd" rows="6">${esc(s.mailBody || MAIL_BODY_DEF)}</textarea></label></div>`;
+}

@@ -18,14 +18,14 @@ Backend is **Supabase** (project `qrudivrakwoathgbzrwd`).
 - **JLS Solutions** (the user's existing Windows donor software) stores everything in an Access/Jet 4 file, `Tuition.mdb` (~460 MB).
   - The user drags that file into the app (header button "דערהיינטיג פון JLS").
   - `jls.js` parses it **in the browser**. It is a pure-JS Jet 4 reader, tested on the real file.
-  - The parser extracts a slim dataset: all accounts (names in English and Hebrew, default address, phones), plus payments and pledges **only for company 32 = "YG Fund"** (pledge index 11 = DateE, entry date). Also `udf` ([code, type, value] from MAInfo, only UDF* types) and `camphits` ([campaign, code, 1 paid | 2 pledged] for all companies, last ~4 years).
+  - The parser extracts a slim dataset: all accounts (names in English and Hebrew, default address, phones), plus payments and pledges **only for company 32 = "YG Fund"** (pledge index 11 = DateE, entry date). Accounts get `em` (e-mails: MPhone values with @ and MAInfo values that look like e-mails). Also `udf` ([code, type, value] from MAInfo, only UDF* types) and `camphits` ([campaign, code, 1 paid | 2 pledged] for all companies, last ~4 years).
   - The dataset is gzipped and uploaded to Supabase Storage at bucket `jls`, file `jls.json.gz`. Table `jls_meta` holds a version counter, and clients reload when it changes.
   - Real numbers from the file: 21,104 accounts, 8,111 YG payments, 4,365 YG pledges, 1,380 YG donors (564 of them gave only once).
 - **NEVER** read or import the JLS tables `CCTransactions` or `MChecking`, the columns `Members.SSNumF` and `Members.SSNumW`, or the tables `Users` and `MWebLogin`. These hold card, bank, SSN and password data.
 - `MCCInfo` (recurring credit-card plans): the owner explicitly allowed (2026-11) reading **only** `Code, ChargeFreq, StartDate, EndDate, Amount, CampaignNum, TempOnly`, filtered by `CompanyNum`, into `JD.ccplans`. **Never** decode `CCNum, Name, ExpDate, Last4, TrackInfo, Address, Zip, Note, Comments, CreditID` or any other column. The Jet reader decodes only the columns listed, so keep that list exact. Reports project the upcoming charges (`ccCharges`, 24 months ahead) in green.
 - **App data** (to-dos, notes, call marks, assignments, settings) is an append-only event log in table `events`, with columns (k, eid, p jsonb, by, at).
   - Clients replay the log with `applyEvent`. The rule is `state[k][eid] = Object.assign(state[k][eid] || {}, p)`.
-  - Event kinds: `acct` (per-account settings: freq, nextAsk, assigned, vip, notes, lastAsk, shul, tags[]), `task`, `fr`, `frin`, `frex`, `shul`, `rcpt` (printed, ed = hand-edited receipt text), `stmt` (id = code: sent, bal), `jrep` (report definitions), `call` (id = `code|YYYY-MM`), `hist` (notes/history), `settings` (id `s`).
+  - Event kinds: `acct` (per-account settings: freq, nextAsk, assigned, vip, notes, lastAsk, shul, tags[], email), `task`, `fr`, `frin`, `frex`, `shul`, `rcpt` (printed, ed = hand-edited receipt text, emailed, emailTo), `stmt` (id = code: sent, bal), `jrep` (report definitions), `call` (id = `code|YYYY-MM`), `hist` (notes/history), `settings` (id `s`).
   - Clients poll every 15 s.
 - **Users**: Supabase Auth with email and password.
   - Access is allowed only for emails listed in table `team` (email, name, is_admin). RLS uses `is_team()` and `is_admin()`.
@@ -71,6 +71,11 @@ Backend is **Supabase** (project `qrudivrakwoathgbzrwd`).
 - Works with **Telnyx** (JSON webhook, Ed25519 signature `TELNYX_PUBLIC_KEY`, reply via API `TELNYX_API_KEY`) or **Twilio** (form webhook, HMAC `TWILIO_AUTH_TOKEN`, TwiML reply). Requests without a valid signature get 403. Secrets live only in Supabase > Edge Functions > Secrets.
 - Only phones in `team.phone` (SETUP.sql section 6) get answers. Commands (Yiddish/English): a plain name = info, `טעלעפאן`, `אדרעס`, `געגעבן` (last 12 months), `באלאנס`, `היינט`, `פלעדזשעס`, `געקאלט`, `טאדו`/`+` (new task for the sender), `נאטיץ name: text`, `שול`, `?`. Several matches → list of `#code`.
 - Test locally: copy to `.mts` and run with `node --experimental-strip-types` against a mocked `fetch` (exports `handle`, `answer`, `load`).
+
+## E-mail receipts (v1.8)
+- `supabase/functions/email/index.ts`: Edge Function `email`, deployed with **Verify JWT ON**; checks the caller is in `team` via RLS (caller's token + `SUPABASE_ANON_KEY`), then sends through **Resend** (`RESEND_API_KEY`) or **Brevo** (`BREVO_API_KEY`) from `EMAIL_FROM` (optional `EMAIL_REPLY_TO`). Secrets only in Supabase.
+- receipts.js: `emailOf(code)` = `acct.email` or JLS `a.em[0]`; `rcPdf(d)` renders the printed receipt page in a hidden iframe with html2canvas 1.4.1 + jsPDF 2.5.1 (cdnjs, loaded on first use) into a Letter PDF; `rcSendMail` calls `sb.functions.invoke('email')`, then writes `rcpt.emailed` and a history note. ✉️ per row and bulk "✉️ שיק אימעיל". Subject/body settings `mailSubject`/`mailBody` with {name} {amount} {date}.
+- Test: copy the function to `.mts` and run with `node --experimental-strip-types` against a mocked `fetch`; in Playwright route cdnjs to the npm copies (the sandbox cannot reach cdnjs).
 
 ## Click to call
 - `callBtn(num, code)` in sections.js puts a 📞 link next to phones. The link template is per computer (localStorage `yg_call`, header button "📞 טעלעפאן"): Yealink preset = `http(s)://<phone IP>/servlet?key=number={digits}` (owner's phone is at 192.168.0.242; http refused, try https) (the owner's office phone; needs Action URI Allow IP List on the phone), default `tel:{num}` (opens the office softphone), or an http click-to-dial URL for desk phones (`{num}` = +1…, `{digits}` = 10 digits), opened in a small window that closes itself.

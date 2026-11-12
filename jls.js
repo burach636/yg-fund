@@ -214,9 +214,17 @@
     step('טעלעפאנען...');
     for (const r of db.rows(db.table('MPhone'), ['Code', 'Phone', 'Desc', 'Default', 'NoSMS'])) {
       const a = acc.get(r.Code); if (!a || !clean(r.Phone)) continue;
+      if (clean(r.Phone).includes('@')) { (a.em || (a.em = [])).push(clean(r.Phone).toLowerCase()); continue; }   // e-mail kept in the phone list
       const item = [clean(r.Desc), fmtPhone(r.Phone)];
       if (r.Default) a.ph.unshift(item); else a.ph.push(item);
     }
+    step('אימעילס...');
+    try {
+      for (const r of db.rows(db.table('MAInfo'), ['Code', 'Value'], { col: 'Value', test: v => /\S+@\S+\.\S+/.test(v || '') })) {
+        const a = acc.get(r.Code), e = clean(r.Value).toLowerCase();
+        if (a && !(a.em || []).includes(e)) (a.em || (a.em = [])).push(e);
+      }
+    } catch (e) { /* optional */ }
 
     step('באצאלונגען (' + (out.companyName || company) + ')...');
     const isCo = v => v === company;

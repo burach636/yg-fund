@@ -100,7 +100,7 @@ function buildIndex() {
     a.ph.sort((x, y) => prank(x[0]) - prank(y[0]));
     by.set(a.c, a);
     a._k = hebLast(a);
-    a._s = (a.n + ' ' + a.h + ' ' + a.w + ' ' + a.wh + ' ' + a.a + ' ' + a.co + ' #' + a.c + ' ' + a.ph.map(p => p[1] + ' ' + p[1].replace(/\D/g, '')).join(' ')).toLowerCase();
+    a._s = (a.n + ' ' + a.h + ' ' + a.w + ' ' + a.wh + ' ' + a.a + ' ' + a.co + ' #' + a.c + ' ' + (a.em || []).join(' ') + ' ' + ((S.acct[a.c] || {}).email || '') + ' ' + a.ph.map(p => p[1] + ' ' + p[1].replace(/\D/g, '')).join(' ')).toLowerCase();
   });
   const today = todayS();
   JD.payments.forEach(p => {
@@ -630,12 +630,14 @@ function openAcct(code) {
   <div class="cols"><div class="box"><div class="k">פון JLS</div>
    ${a.w || a.wh ? `<div style="margin:4px 0">👩 <b>${esc(a.wh || a.w)}</b> <span class="heb">${esc(a.wh ? a.w : '')}</span></div>` : ''}
    <div style="margin:6px 0">🏠 <span class="ltr">${esc(a.a || '—')}</span></div>
+   ${(a.em || []).map(e => `<div style="margin:4px 0">✉️ <span class="ltr">${esc(e)}</span></div>`).join('')}
    ${a.ph.map(x => `<div class="ph"><span>${esc(x[0] || 'טעלעפאן')}</span><span class="num">${esc(x[1])} ${callBtn(x[1], code)}</span></div>`).join('')}
    ${a.co ? `<div class="sub" style="margin-top:6px">${esc(a.co)}</div>` : ''}
    ${a.x ? '<span class="tag gray">נישט אקטיוו אין JLS</span>' : ''}</div>
   <div class="box"><div class="k">מיינע איינשטעלונגען</div><div class="grid2" style="margin-top:6px">
    <label class="f">ווי אפט בעטן<select id="af">${Object.entries(FREQ).map(([kk, v]) => `<option value="${kk}" ${kk === k.freq ? 'selected' : ''}>${v[0]}</option>`).join('')}</select></label>
    <label class="f">ווייטער בעטן${dateField('an', st.nextAsk || '', { clear: true })}</label>
+   <label class="f" style="grid-column:1/-1">✉️ אימעיל<input id="aem" type="email" style="direction:ltr" value="${esc(emailOf(code))}" placeholder="${esc((a.em || [])[0] || 'name@example.com')}"></label>
    <label class="f">אחראי<select id="aa"><option value="">נישט צוגעטיילט</option>${USERS().map(u => `<option ${u === st.assigned ? 'selected' : ''}>${esc(u)}</option>`).join('')}</select></label>
    <div style="grid-column:1/-1"><div class="k" style="margin-bottom:4px">🏷️ פלאגס (וועלכע סארט מענטש)</div>${tagEditor(code)}</div>
    <label class="f">🕍 געטראפן אין שול${shulSel('ash', st.shul || '')}</label>
@@ -646,7 +648,7 @@ function openAcct(code) {
   <div class="scroll">${tabBody[acctTab]}</div>`);
 }
 async function saveAcct(code) {
-  await emit('acct', code, { freq: $('#af').value, nextAsk: $('#an').value, assigned: $('#aa').value, vip: !!$('#av').value, notes: $('#ao').value, shul: $('#ash').value });
+  await emit('acct', code, { freq: $('#af').value, nextAsk: $('#an').value, assigned: $('#aa').value, vip: !!$('#av').value, notes: $('#ao').value, shul: $('#ash').value, email: $('#aem').value.trim().toLowerCase() === ((IDX.by.get(code) || {}).em || [])[0] ? '' : $('#aem').value.trim().toLowerCase() });
   openAcct(code); render(); toast('✓ אפגעהיטן');
 }
 async function addNote(code) {
