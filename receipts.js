@@ -397,7 +397,7 @@ async function rcSendMail(p, to) {
   if (error) {
     let m = error.message || String(error), st = error.context && error.context.status;
     try { const j = await error.context.json(); if (j && j.error) m = j.error; } catch (e) { }
-    if (st === 404 || /not found|FunctionsFetchError|Failed to send/i.test(m)) m = 'די פונקציע "email" איז נישט געפונען אין Supabase (צי איז זי Deploy\'ט מיט דעם נאמען email?) – ' + m;
+    if (st === 404 || /not found|FunctionsFetchError|Failed to send/i.test(m)) m = 'די פונקציע האט נישט געענטפערט: אדער זי איז נישט אויפגעשטעלט, אדער זי איז אראפגעפאלן (קוקט אין Supabase > Edge Functions > EMAIL > Logs) – ' + m;
     throw new Error((st ? '[' + st + '] ' : '') + m);
   }
   if (data && data.error) throw new Error(data.error);

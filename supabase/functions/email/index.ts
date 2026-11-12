@@ -11,10 +11,11 @@
 //                    with Gmail it defaults to "Yeshivas Maharit Satmar <GMAIL_USER>")
 //   EMAIL_REPLY_TO   optional reply-to address
 
+import nodemailer from 'npm:nodemailer@6.9.16';
+
 const ENV = (k: string) => (globalThis as any).Deno?.env.get(k) || (globalThis as any).process?.env?.[k] || '';
 const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type', 'Access-Control-Allow-Methods': 'POST, OPTIONS' };
 const json = (o: any, status = 200) => new Response(JSON.stringify(o), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
-const NODEMAILER = 'npm:nodemailer@6.9.16';
 const EMAIL_RE = /^[^\s@<>"']+@[^\s@<>"']+\.[^\s@<>"']+$/;
 
 async function isTeam(auth: string) {
@@ -28,7 +29,10 @@ function parseFrom(f: string) { const m = f.match(/^\s*(.*?)\s*<([^>]+)>\s*$/); 
 
 async function handle(req: Request): Promise<Response> {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
-  if (req.method !== 'POST') return json({ error: 'POST only' }, 405);
+  if (req.method !== 'POST') {
+    const provider = ENV('GMAIL_USER') && ENV('GMAIL_APP_PASSWORD') ? 'gmail' : ENV('RESEND_API_KEY') ? 'resend' : ENV('BREVO_API_KEY') ? 'brevo' : 'none';
+    return json({ error: 'POST only', provider, gmailUser: ENV('GMAIL_USER') ? 'set' : 'missing', gmailPassword: ENV('GMAIL_APP_PASSWORD') ? 'set' : 'missing' }, 405);
+  }
   const auth = req.headers.get('authorization') || '';
   if (!auth.startsWith('Bearer ')) return json({ error: 'not logged in' }, 401);
   try {
@@ -43,9 +47,11 @@ async function handle(req: Request): Promise<Response> {
     const from = ENV('EMAIL_FROM') || (gUser ? 'Yeshivas Maharit Satmar <' + gUser + '>' : ''), replyTo = ENV('EMAIL_REPLY_TO');
     if (!from) return json({ error: 'EMAIL_FROM is not set' }, 500);
     if (gUser && gPass) {   // Gmail over SMTP (port 465, TLS)
-      const nodemailer = (await import(NODEMAILER)).default;
-      const tr = nodemailer.createTransport({ host: 'smtp.gmail.com', port: 465, secure: true, auth: { user: gUser, pass: gPass } });
-      await tr.sendMail({ from, to, subject, html, ...(replyTo ? { replyTo } : {}), attachments: pdf ? [{ filename, content: pdf, encoding: 'base64', contentType: 'application/pdf' }] : [] });
+      const tr = nodemailer.createTransport({ host: 'smtp.gmail.com', port: 465, secure: true, auth: { user: gUser, pass: gPass }, connectionTimeout: 12000, greetingTimeout: 8000, socketTimeout: 15000 });
+      const timeout = new Promise((_, bad) => setTimeout(() => bad(new Error('Gmail did not answer within 20 seconds (timeout)')), 20000));
+      try {
+        await Promise.race([tr.sendMail({ from, to, subject, html, ...(replyTo ? { replyTo } : {}), attachments: pdf ? [{ filename, content: pdf, encoding: 'base64', contentType: 'application/pdf' }] : [] }), timeout]);
+      } catch (e) { return json({ error: 'Gmail: ' + String((e as any)?.message || e) }, 502); }
       return json({ ok: true });
     }
     let r: Response;
