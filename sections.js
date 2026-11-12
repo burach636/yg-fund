@@ -107,7 +107,7 @@ function fundCalc() {
 function vFund() {
   const F = fundCalc();
   $('#main').innerHTML = `<div class="row"><div><h2>פאנדרעיזינג חשבונות</h2><p class="sub">פון יעדן דאלער וואס קומט אריין זינט ${fmtDual(F.start)} באקומען די פאנדרעיזערס <b>${F.pct}%</b>. עס ווערט אויסגערעכנט יעדע 2 וואכן. די באצאלונגען צו זיי ווערן אראפגערעכנט.</p></div><div class="spacer"></div>
-   <button class="btn ghost" onclick="fundSettings()">⚙️ ${F.pct}% · ${fmtD(F.start)}</button><button class="btn ghost" onclick="frInForm()">+ אריינקומען (נישט אין JLS)</button><button class="btn ghost" onclick="frExForm()">+ סכום אן פראצענט</button><button class="btn gold" onclick="frForm()">+ באצאלט די פאנדרעיזערס</button></div>
+   <button class="btn ghost" onclick="xlsFund()">⬇ Excel</button><button class="btn ghost" onclick="fundSettings()">⚙️ ${F.pct}% · ${fmtD(F.start)}</button><button class="btn ghost" onclick="frInForm()">+ אריינקומען (נישט אין JLS)</button><button class="btn ghost" onclick="frExForm()">+ סכום אן פראצענט</button><button class="btn gold" onclick="frForm()">+ באצאלט די פאנדרעיזערס</button></div>
   <div class="stats">
    <div class="stat"><b>${money(F.totIn)}</b><span>אריינגעקומען זינט ${fmtD(F.start)}</span></div>
    ${F.totEx ? `<div class="stat"><b>${money(F.totEx)}</b><span>אן פראצענט (אראפגערעכנט)</span></div>` : ''}
@@ -131,6 +131,7 @@ function frPeriod(k) {
   const F = fundCalc(), p = F.periods[k]; if (!p) return;
   const L = F.income.filter(i => i.d >= p.from && i.d <= p.to).sort((a, b) => a.d.localeCompare(b.d));
   modal(`<div class="row"><h2 style="margin:0">${fmtD(p.from)} – ${fmtD(p.to)}</h2><div class="spacer"></div><button class="btn ghost sm" onclick="closeM()">✕</button></div>
+   <div class="row"><button class="btn ghost sm" onclick="xlsPeriod(${k})">⬇ Excel</button></div>
    <p class="sub">${p.count} באצאלונגען · ${money(p.income)}${p.ex ? ' · אן פראצענט: −' + money(p.ex) : ''} · ${F.pct}% = <b>${money(p.owed)}</b></p>
    <div class="scroll" style="max-height:60vh"><table><thead><tr><th>טאג</th><th>נאמען</th><th>סכום</th><th>${F.pct}%</th></tr></thead><tbody>
    ${L.map(i => `<tr><td class="num">${fmtD(i.d)}</td><td>${i.code ? `<a class="name" onclick="closeM();openAcct(${i.code})">${esc(acctName(i.code))}</a>` : esc(i.note || 'אריינקומען')}</td><td class="num">${money(i.amt)}</td><td class="num">${money(i.amt * F.pct / 100)}</td></tr>`).join('') || '<tr><td colspan="4" class="empty">גארנישט</td></tr>'}
@@ -178,6 +179,28 @@ async function frExSave(id) {
   const amt = +$('#xa').value; if (!amt) { $('#xa').focus(); return; }
   await emit('frex', id || uid(), { date: $('#xd').value || todayS(), amt, note: $('#xn').value.trim(), del: false });
   closeM(); render(); toast('✓ אפגעהיטן');
+}
+// ---------- Excel downloads (fundraisers, shul) ----------
+function incomeRows(F, list) {
+  return [['טאג', 'טאג (אידיש)', '#', 'נאמען', 'English', 'סכום', F.pct + '%', 'פון']].concat(list.map(i => { const a = i.code ? IDX.by.get(i.code) : null; return [i.d, hebD(i.d), i.code || '', a ? (a.h || a.n) : (i.note || ''), a ? a.n : '', r2(i.amt), r2(i.amt * F.pct / 100), i.src === 'JLS' ? 'JLS' : 'מאנועל']; }));
+}
+function xlsFund() {
+  const F = fundCalc();
+  xlsx([
+    { name: 'סך הכל', rows: [['', 'סכום'], ['אריינגעקומען זינט ' + F.start, r2(F.totIn)], ['אן פראצענט', r2(F.totEx)], [F.pct + '% פאר די פאנדרעיזערס', r2(F.totOwed)], ['שוין באצאלט', r2(F.totPaid)], ['נאך שולדיג', r2(F.balance)], ['דערהיינטיגט פון JLS', new Date(JD.importedAt).toLocaleString()]], widths: [34, 20] },
+    { name: 'יעדע 2 וואכן', rows: [['פון', 'ביז', 'פון (אידיש)', 'ביז (אידיש)', 'באצאלונגען', 'אריינגעקומען', 'אן פראצענט', F.pct + '%', 'באצאלט', 'באלאנס']].concat(F.periods.map(p => [p.from, p.to, hebD(p.from), hebD(p.to), p.count, r2(p.income), r2(p.ex), r2(p.owed), r2(p.paid), r2(p.bal)])) },
+    { name: 'באצאלט פאנדרעיזערס', rows: [['טאג', 'טאג (אידיש)', 'סכום', 'צו וועמען', 'נאטיץ', 'ארייןגעלייגט דורך']].concat(F.paid.map(x => [x.date, hebD(x.date), r2(x.amt), x.to || '', x.note || '', x.by || ''])) },
+    { name: 'אן פראצענט', rows: [['טאג', 'טאג (אידיש)', 'סכום', 'נאטיץ']].concat(F.exempt.map(x => [x.date, hebD(x.date), r2(x.amt), x.note || ''])) },
+    { name: 'אלע אריינגעקומענע', rows: incomeRows(F, F.income.slice().sort((a, b) => a.d.localeCompare(b.d))) }
+  ], 'fundraising-' + todayS() + '.xlsx');
+}
+function xlsPeriod(k) {
+  const F = fundCalc(), p = F.periods[k]; if (!p) return;
+  xlsx([{ name: p.from + ' - ' + p.to, rows: incomeRows(F, F.income.filter(i => i.d >= p.from && i.d <= p.to).sort((a, b) => a.d.localeCompare(b.d))) }], 'fundraising-' + p.from + '.xlsx');
+}
+function xlsShul(id) {
+  const s = S.shul[id], L = Object.entries(S.acct).filter(([, st]) => st.shul === id).map(([c]) => +c).filter(c => IDX.by.has(c));
+  xlsx([{ name: s.name, rows: [['#', 'נאמען', 'English', 'טעלעפאן', 'אדרעס', 'YG סך הכל', 'לעצטע מתנה']].concat(L.map(c => { const a = IDX.by.get(c), g = IDX.yg.get(c) || {}; return [c, a.h || a.n, a.n, (a.ph[0] || [])[1], a.a, r2(g.total), g.last || '']; })) }], 'shul-' + todayS() + '.xlsx');
 }
 async function frDel(k, id) { if (!confirm('אויסמעקן?')) return; await emit(k, id, { del: true }); closeM(); render(); }
 function fundSettings() {
@@ -262,7 +285,7 @@ function shulDonors(id) {
   const s = S.shul[id], L = Object.entries(S.acct).filter(([, st]) => st.shul === id).map(([c]) => +c).filter(c => IDX.by.has(c))
     .sort((a, b) => ((IDX.yg.get(b) || {}).total || 0) - ((IDX.yg.get(a) || {}).total || 0));
   modal(`<div class="row"><div><h2 style="margin:0">🕍 ${esc(s.name)}</h2><span class="ltr sub">${esc(s.addr || '')}</span></div><div class="spacer"></div><button class="btn ghost sm" onclick="closeM()">✕</button></div>
-   <p class="sub">${L.length} נדבנים געטראפן אין דער שול</p>
+   <div class="row"><p class="sub" style="margin:0">${L.length} נדבנים געטראפן אין דער שול</p><div class="spacer"></div><button class="btn ghost sm" onclick="xlsShul('${id}')">⬇ Excel</button></div>
    <div class="scroll" style="max-height:60vh"><table><thead><tr><th>נאמען</th><th>טעלעפאן</th><th>סך הכל</th><th>לעצטע</th></tr></thead><tbody>
    ${L.map(c => { const a = IDX.by.get(c), g = IDX.yg.get(c) || {}; return `<tr><td><a class="name" onclick="closeM();openAcct(${c})">${esc(a.h || a.n)}</a><div class="heb">${esc(a.h ? a.n : '')}</div></td><td class="num" style="font-size:13px">${a.ph[0] ? esc(a.ph[0][1]) : ''}</td><td class="num">${money(g.total)}</td><td class="num">${fmtD(g.last)}</td></tr>`; }).join('') || '<tr><td colspan="4" class="empty">נאך קיינער. עפנט א נדבן און קלייבט אויס די שול.</td></tr>'}
    </tbody></table></div>`);

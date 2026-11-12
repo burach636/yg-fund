@@ -32,7 +32,7 @@ Backend is **Supabase** (project `qrudivrakwoathgbzrwd`).
   - The free plan's email sending is rate-limited. To add a user without email, use **Supabase > Authentication > Users > Add user > Create new user** with **Auto Confirm User** checked.
 
 ## Files
-- `index.html`: the page shell. It loads supabase-js from the jsdelivr CDN, then `config.js`, `jls.js`, `cal.js`, `sections.js` and `app.js`.
+- `index.html`: the page shell. It loads supabase-js from the jsdelivr CDN, then `config.js`, `jls.js`, `cal.js`, `xlsx.js`, `sections.js` and `app.js`.
 - `sections.js` (v1.2, loaded before app.js, functions only): Home dashboard (default view `home`), To-Do list (`todo`), fundraiser accounts (`fund`), shuls (`shuls`).
   - Tasks: `who` + optional `who2` (two users); `priv: true` + `owner` (email) = private. Always write tasks via `emitTask`, which keeps priv/owner on every event. SETUP.sql section 5 makes RLS hide priv events from others.
   - Fundraisers: `fr` events (payments to them), `frin` (income not in JLS), `frex` (amounts with no percentage, subtracted from that period's income before the %). Settings `frPct` (default 40), `frStart` (default RH 5787 = 2026-09-12). Income = JLS payments (not refunded) from frStart; 14-day periods from frStart.
@@ -46,6 +46,7 @@ Backend is **Supabase** (project `qrudivrakwoathgbzrwd`).
   - Settings (admin only)
   - Login, signup, password recovery, and a setup self-check screen
 - `cal.js`: Hebrew calendar helpers (Intl `en-u-ca-hebrew`), Hebrew numerals, and a dual Hebrew/English date picker. Use `dateField(id, value, {clear})` together with `initDateFields(root)`. The `modal()` function calls it automatically.
+- `xlsx.js`: tiny .xlsx writer, `xlsx([{name, rows}], file)`. All "⬇ Excel" buttons use it (donors list, one donor, pledges, fundraisers with 5 sheets, one 2-week period, shul donors).
 - `jls.js`: the Jet 4 reader and `JLS.extract(bytes, company)`.
 - `style.css`, `logo.png` (the yeshiva's logo; never alter it), `icon.png`.
 

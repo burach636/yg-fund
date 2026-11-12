@@ -547,12 +547,10 @@ async function saveCall(c) {
   closeM(); render(); toast('✓ אפגעהיטן');
 }
 async function setCalled(c, v, quiet) { await emit('call', c + '|' + monthKey(), { v }); if (!quiet) render(); }
-function csv(rows, name) {
-  const s = '﻿' + rows.map(r => r.map(v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"').join(',')).join('\r\n');
-  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([s], { type: 'text/csv;charset=utf-8' })); a.download = name; document.body.appendChild(a); a.click(); a.remove();
-}
+const r2 = n => Math.round((+n || 0) * 100) / 100;
+const hebD = d => (d && d >= '1900') ? HEB.fmtHeb(d) : '';
 function csvPledges() {
-  csv([['Code', 'Name', 'Hebrew', 'Phone1', 'Phone2', 'Address', 'Due now', 'Open total', 'Last paid', 'Solicitor', 'Called']].concat(window._plRows.map(r => [r.c, r.a.n, r.a.h, (r.a.ph[0] || [])[1], (r.a.ph[1] || [])[1], r.a.a, r.g.dueNow.toFixed(2), r.g.open.toFixed(2), r.y ? r.y.last : '', r.g.sol, r.called ? 'Yes' : ''])), 'pledges-' + monthKey() + '.csv');
+  xlsx([{ name: 'פלעדזשעס', rows: [['#', 'נאמען', 'English', 'טעלעפאן 1', 'טעלעפאן 2', 'אדרעס', 'פעליג יעצט', 'סך הכל אפען', 'לעצטע באצאלונג', 'סאליסיטאר', 'ווער קאלט', 'געקאלט']].concat(window._plRows.map(r => [r.c, r.a.h || r.a.n, r.a.n, (r.a.ph[0] || [])[1], (r.a.ph[1] || [])[1], r.a.a, r2(r.g.dueNow), r2(r.g.open), r.y ? r.y.last : '', r.g.sol, r.st.assigned || '', r.called ? 'יא' : ''])) }], 'pledges-' + monthKey() + '.xlsx');
 }
 
 // ---------- ACCOUNTS ----------
@@ -592,7 +590,15 @@ function vAccounts() {
   let tm; qi.oninput = () => { clearTimeout(tm); tm = setTimeout(() => { ui.accQ = qi.value; ui.accN = 100; vAccounts(); }, 250); };
 }
 function csvAcc() {
-  csv([['Code', 'Name', 'Hebrew', 'Wife', 'Phone1', 'Phone2', 'Address', 'YG total', 'Last gift', 'Open balance', 'Next ask', 'VIP', 'Assigned', 'Shul']].concat(window._accL.map(a => { const g = IDX.yg.get(a.c) || {}, p = IDX.pl.get(a.c) || {}, st = S.acct[a.c] || {}; return [a.c, a.n, a.h, a.w, (a.ph[0] || [])[1], (a.ph[1] || [])[1], a.a, (g.total || 0).toFixed(2), g.last || '', (p.open || 0).toFixed(2), ask(a.c).next || '', st.vip ? 'Yes' : '', st.assigned || '', shulName(st.shul)]; })), 'accounts.csv');
+  xlsx([{ name: 'נדבנים', rows: [['#', 'נאמען', 'English', 'ווייב', 'טעלעפאן 1', 'טעלעפאן 2', 'אדרעס', 'YG סך הכל', 'וויפיל מאל', 'לעצטע מתנה', 'לעצטע סכום', 'אפענער באלאנס', 'ווייטער בעטן', 'VIP', 'אחראי', 'שול', 'נאטיצן']].concat(window._accL.map(a => { const g = IDX.yg.get(a.c) || {}, p = IDX.pl.get(a.c) || {}, st = S.acct[a.c] || {}; return [a.c, a.h || a.n, a.n, a.wh || a.w, (a.ph[0] || [])[1], (a.ph[1] || [])[1], a.a, r2(g.total), g.count || 0, g.last || '', g.last ? r2(g.lastAmt) : '', r2(p.open), ask(a.c).next || '', st.vip ? 'יא' : '', st.assigned || '', shulName(st.shul), st.notes || '']; })) }], 'nedavos-' + todayS() + '.xlsx');
+}
+// One donor: payments + pledges as two sheets
+function xlsAcct(code) {
+  const a = IDX.by.get(code), g = IDX.yg.get(code), p = IDX.pl.get(code), camp = n => JD.campaigns[n] || (n ? '#' + n : '');
+  xlsx([
+    { name: 'באצאלונגען', rows: [['טאג', 'טאג (אידיש)', 'סכום', 'קאמפעין', 'סארט', 'טשעק', 'סאליסיטאר', 'ריפאנד']].concat((g ? g.list : []).map(x => [x[2], hebD(x[2]), r2(x[3]), camp(x[6]), x[4], x[5], x[7], x[9] ? 'יא' : ''])) },
+    { name: 'פלעדזשעס', rows: [['פעליג', 'סכום', 'באצאלט', 'באלאנס', 'קאמפעין', 'באשרייבונג']].concat((p ? p.list : []).map(x => [x[2], r2(x[3]), r2(x[4]), r2(x[5]), camp(x[6]), x[7]])) }
+  ], (a.n || 'account').replace(/[^\w ]+/g, '').trim().replace(/ +/g, '-') + '-' + code + '.xlsx');
 }
 
 // ---------- ACCOUNT PAGE ----------
@@ -611,7 +617,7 @@ function openAcct(code) {
     hist: `<div class="row"><input id="hn" placeholder="שרייבט א נאטיץ..." style="flex:1"><button class="btn" onclick="addNote(${code})">צולייגן</button></div><div class="hist">${hist.map(h => `<div><small>${fmtD(h.d)} · ${esc(h.by || '')} ${h.src === 'JLS' ? '<span class="tag gray">JLS</span>' : ''}</small><br>${esc(h.t)}</div>`).join('') || '<div class="sub">נאך קיין היסטאריע</div>'}</div>`,
     tasks: `<div class="row"><button class="btn gold sm" onclick="taskForm(null,${code})">+ נייע ארבעט</button></div>${tasks.map(([id, x]) => `<div class="ph"><span>${x.done ? '✅' : '⬜'} ${esc(x.title)} <small class="heb">${fmtD(x.due)} · ${esc(x.who || '')}</small></span><button class="btn ghost sm" onclick="taskForm('${id}')">ענדער</button></div>`).join('') || '<div class="sub">קיין ארבעטן</div>'}`
   };
-  modal(`<div class="row" style="margin:0"><div><h2 style="margin:0">${esc(a.h || a.n)} ${st.vip ? '⭐' : ''}</h2><div class="heb" style="margin:0;font-size:16px">${esc(a.h ? a.n : '')}</div></div><div class="spacer"></div><span class="num" style="color:var(--muted)">#${code}</span><button class="btn ghost sm" onclick="closeM()">✕</button></div>
+  modal(`<div class="row" style="margin:0"><div><h2 style="margin:0">${esc(a.h || a.n)} ${st.vip ? '⭐' : ''}</h2><div class="heb" style="margin:0;font-size:16px">${esc(a.h ? a.n : '')}</div></div><div class="spacer"></div><span class="num" style="color:var(--muted)">#${code}</span><button class="btn ghost sm" onclick="xlsAcct(${code})">⬇ Excel</button><button class="btn ghost sm" onclick="closeM()">✕</button></div>
   <div class="stats" style="margin:14px 0">
    <div class="stat"><b>${g ? money(g.total) : '$0'}</b><span>${esc(JD.companyName)} סך הכל (${g ? g.count : 0})</span></div>
    <div class="stat"><b>${g && g.last ? money(g.lastAmt) : '—'}</b><span>לעצטע: ${g ? fmtD(g.last) : '—'}</span></div>
