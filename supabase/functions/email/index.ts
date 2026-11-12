@@ -3,13 +3,17 @@
 // caller is in table `team` (through RLS, with the caller's own token).
 //
 // Secrets (Supabase > Edge Functions > Secrets), never in the repo – set ONE provider:
+//   GMAIL_USER + GMAIL_APP_PASSWORD   (send from a Gmail account through smtp.gmail.com:465; needs 2-step
+//                                      verification and an App Password)   – the owner uses this
 //   RESEND_API_KEY   (resend.com)   or   BREVO_API_KEY (brevo.com)
-//   EMAIL_FROM       e.g.  Yeshivas Maharit Satmar <office@yourdomain.org>   (must be verified at the provider)
+//   EMAIL_FROM       e.g.  Yeshivas Maharit Satmar <office@yourdomain.org>   (must be verified at the provider;
+//                    with Gmail it defaults to "Yeshivas Maharit Satmar <GMAIL_USER>")
 //   EMAIL_REPLY_TO   optional reply-to address
 
 const ENV = (k: string) => (globalThis as any).Deno?.env.get(k) || (globalThis as any).process?.env?.[k] || '';
 const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type', 'Access-Control-Allow-Methods': 'POST, OPTIONS' };
 const json = (o: any, status = 200) => new Response(JSON.stringify(o), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
+const NODEMAILER = 'npm:nodemailer@6.9.16';
 const EMAIL_RE = /^[^\s@<>"']+@[^\s@<>"']+\.[^\s@<>"']+$/;
 
 async function isTeam(auth: string) {
@@ -34,8 +38,15 @@ async function handle(req: Request): Promise<Response> {
     const subject = String(b.subject || '').slice(0, 300), html = String(b.html || '').slice(0, 100000);
     const pdf = b.pdf ? String(b.pdf).replace(/^data:[^,]*,/, '') : '', filename = String(b.filename || 'receipt.pdf').replace(/[^\w.\- ]/g, '_');
     if (pdf.length > 7_000_000) return json({ error: 'attachment too big' }, 400);
-    const from = ENV('EMAIL_FROM'), replyTo = ENV('EMAIL_REPLY_TO');
+    const gUser = ENV('GMAIL_USER'), gPass = ENV('GMAIL_APP_PASSWORD').replace(/\s+/g, '');
+    const from = ENV('EMAIL_FROM') || (gUser ? 'Yeshivas Maharit Satmar <' + gUser + '>' : ''), replyTo = ENV('EMAIL_REPLY_TO');
     if (!from) return json({ error: 'EMAIL_FROM is not set' }, 500);
+    if (gUser && gPass) {   // Gmail over SMTP (port 465, TLS)
+      const nodemailer = (await import(NODEMAILER)).default;
+      const tr = nodemailer.createTransport({ host: 'smtp.gmail.com', port: 465, secure: true, auth: { user: gUser, pass: gPass } });
+      await tr.sendMail({ from, to, subject, html, ...(replyTo ? { replyTo } : {}), attachments: pdf ? [{ filename, content: pdf, encoding: 'base64', contentType: 'application/pdf' }] : [] });
+      return json({ ok: true });
+    }
     let r: Response;
     if (ENV('RESEND_API_KEY')) {
       r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { Authorization: 'Bearer ' + ENV('RESEND_API_KEY'), 'Content-Type': 'application/json' },
@@ -44,7 +55,7 @@ async function handle(req: Request): Promise<Response> {
       const f = parseFrom(from);
       r = await fetch('https://api.brevo.com/v3/smtp/email', { method: 'POST', headers: { 'api-key': ENV('BREVO_API_KEY'), 'Content-Type': 'application/json', accept: 'application/json' },
         body: JSON.stringify({ sender: f, to: [{ email: to }], subject, htmlContent: html, ...(replyTo ? { replyTo: { email: replyTo } } : {}), ...(pdf ? { attachment: [{ name: filename, content: pdf }] } : {}) }) });
-    } else return json({ error: 'no e-mail provider key is set (RESEND_API_KEY or BREVO_API_KEY)' }, 500);
+    } else return json({ error: 'no e-mail provider is set (GMAIL_USER + GMAIL_APP_PASSWORD, RESEND_API_KEY or BREVO_API_KEY)' }, 500);
     const txt = await r.text();
     if (!r.ok) return json({ error: 'provider ' + r.status + ': ' + txt.slice(0, 300) }, 502);
     return json({ ok: true });

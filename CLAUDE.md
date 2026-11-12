@@ -73,7 +73,7 @@ Backend is **Supabase** (project `qrudivrakwoathgbzrwd`).
 - Test locally: copy to `.mts` and run with `node --experimental-strip-types` against a mocked `fetch` (exports `handle`, `answer`, `load`).
 
 ## E-mail receipts (v1.8)
-- `supabase/functions/email/index.ts`: Edge Function `email`, deployed with **Verify JWT ON**; checks the caller is in `team` via RLS (caller's token + `SUPABASE_ANON_KEY`), then sends through **Resend** (`RESEND_API_KEY`) or **Brevo** (`BREVO_API_KEY`) from `EMAIL_FROM` (optional `EMAIL_REPLY_TO`). Secrets only in Supabase.
+- `supabase/functions/email/index.ts`: Edge Function `email`, deployed with **Verify JWT ON**; checks the caller is in `team` via RLS (caller's token + `SUPABASE_ANON_KEY`), then sends through **Gmail SMTP** (`GMAIL_USER` + `GMAIL_APP_PASSWORD`, smtp.gmail.com:465 via `npm:nodemailer` – the owner sends from bt.maharit@gmail.com; not yet verified live) or **Resend** (`RESEND_API_KEY`) or **Brevo** (`BREVO_API_KEY`), from `EMAIL_FROM` (optional `EMAIL_REPLY_TO`). Secrets only in Supabase.
 - receipts.js: `emailOf(code)` = `acct.email` or JLS `a.em[0]`; `rcPdf(d)` renders the printed receipt page in a hidden iframe with html2canvas 1.4.1 + jsPDF 2.5.1 (cdnjs, loaded on first use) into a Letter PDF; `rcSendMail` calls `sb.functions.invoke('email')`, then writes `rcpt.emailed` and a history note. ✉️ per row and bulk "✉️ שיק אימעיל". Subject/body settings `mailSubject`/`mailBody` with {name} {amount} {date}.
 - Test: copy the function to `.mts` and run with `node --experimental-strip-types` against a mocked `fetch`; in Playwright route cdnjs to the npm copies (the sandbox cannot reach cdnjs).
 
