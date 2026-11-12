@@ -59,7 +59,7 @@ function todoRow(id, x) {
     ${a ? `· <a class="name" onclick="openAcct(${x.code})">${esc(a.h || a.n)}</a>` : ''} ${x.pri === 'hi' ? '<span class="tag hi">דרינגענד</span>' : ''}
     ${late ? `<span class="tag late">שפעט ${late} טעג</span>` : (x.due === t && !x.done ? '<span class="tag ask">היינט</span>' : '')}</div>
    <div class="m"><span>📅 ${x.due ? fmtDual(x.due) : 'אן א דאטום'}</span><span>👤 ${esc(taskWho(x))}</span>${x.note ? `<span>📝 ${esc(x.note)}</span>` : ''}${x.repeat && FREQ[x.repeat] ? `<span>🔁 ${FREQ[x.repeat][0]}</span>` : ''}${x.done ? `<span>✓ ${fmtD(x.doneAt)}</span>` : ''}</div></div>
-   <div class="acts">${x.rc ? `<button class="btn gold sm" onclick="rcOpenTask('${id}')">🖨️ עפן רעסיטס</button>` : ''}${x.done ? '' : `<button class="btn sm" onclick="taskDone('${id}')">✓ געטון</button>`}<button class="btn ghost sm" onclick="taskForm('${id}')">ענדער</button></div></div>`;
+   <div class="acts">${x.rc ? `<button class="btn gold sm" onclick="rcOpenTask('${id}')">🖨️ עפן רעסיטס</button>` : ''}${x.fm ? `<button class="btn gold sm" onclick="frMailTask('${id}')">✉️ שיק צום אפיס</button>` : ''}${x.done ? '' : `<button class="btn sm" onclick="taskDone('${id}')">✓ געטון</button>`}<button class="btn ghost sm" onclick="taskForm('${id}')">ענדער</button></div></div>`;
 }
 function vTodo() {
   const all = Object.entries(S.task).filter(([, x]) => taskVisible(x));
@@ -112,7 +112,7 @@ function fundCalc() {
 function vFund() {
   const F = fundCalc();
   $('#main').innerHTML = `<div class="row"><div><h2>פאנדרעיזינג חשבונות</h2><p class="sub">פון יעדן דאלער וואס קומט אריין זינט ${fmtDual(F.start)} באקומען די פאנדרעיזערס <b>${F.pct}%</b>. עס ווערט אויסגערעכנט יעדע 2 וואכן. די באצאלונגען צו זיי ווערן אראפגערעכנט.</p></div><div class="spacer"></div>
-   <button class="btn ghost" onclick="xlsFund()">⬇ Excel</button><button class="btn ghost" onclick="fundSettings()">⚙️ ${F.pct}% · ${fmtD(F.start)}</button><button class="btn ghost" onclick="frInForm()">+ אריינקומען (נישט אין JLS)</button><button class="btn ghost" onclick="frExForm()">+ סכום אן פראצענט</button><button class="btn gold" onclick="frForm()">+ באצאלט די פאנדרעיזערס</button></div>
+   <button class="btn" onclick="frMailForm()">✉️ אימעיל צום אפיס</button><button class="btn ghost" onclick="xlsFund()">⬇ Excel</button><button class="btn ghost" onclick="fundSettings()">⚙️ ${F.pct}% · ${fmtD(F.start)}</button><button class="btn ghost" onclick="frInForm()">+ אריינקומען (נישט אין JLS)</button><button class="btn ghost" onclick="frExForm()">+ סכום אן פראצענט</button><button class="btn gold" onclick="frForm()">+ באצאלט די פאנדרעיזערס</button></div>
   <div class="stats">
    <div class="stat"><b>${money(F.totIn)}</b><span>אריינגעקומען זינט ${fmtD(F.start)}</span></div>
    ${F.totEx ? `<div class="stat"><b>${money(F.totEx)}</b><span>אן פראצענט (אראפגערעכנט)</span></div>` : ''}
@@ -122,7 +122,7 @@ function vFund() {
   <p class="sub">💡 די JLS באצאלונגען זענען ביז דער לעצטער דערהיינטיגונג (${new Date(JD.importedAt).toLocaleDateString()}). דערהיינטיגט פון JLS כדי עס זאל זיין גענוי.</p>
   <div class="cols"><div><h3>יעדע 2 וואכן</h3>
    <table><thead><tr><th>תקופה</th><th>באצאל.</th><th>אריינגעקומען</th>${F.totEx ? '<th>אן %</th>' : ''}<th>${F.pct}%</th><th>באצאלט</th><th>באלאנס</th><th></th></tr></thead><tbody>
-   ${F.periods.slice().reverse().map(p => `<tr><td style="font-size:13px;white-space:nowrap">${fmtD(p.from)} –<br>${fmtD(p.to)}${p === F.cur ? ' <span class="tag ask">יעצט</span>' : ''}</td><td class="num">${p.count}</td><td class="num">${money(p.income)}</td>${F.totEx ? `<td class="num">${p.ex ? '−' + money(p.ex) : ''}</td>` : ''}<td class="num"><b>${money(p.owed)}</b></td><td class="num">${p.paid ? money(p.paid) : ''}</td><td class="num ${p.bal > 0.009 ? 'bal' : 'zero'}">${money(p.bal)}</td><td><button class="btn ghost sm" onclick="frPeriod(${p.k})">ווייז</button></td></tr>`).join('') || `<tr><td colspan="8" class="empty">הייבט זיך אן ${fmtD(F.start)}</td></tr>`}
+   ${F.periods.slice().reverse().map(p => `<tr><td style="font-size:13px;white-space:nowrap">${fmtD(p.from)} –<br>${fmtD(p.to)}${p === F.cur ? ' <span class="tag ask">יעצט</span>' : ''}</td><td class="num">${p.count}</td><td class="num">${money(p.income)}</td>${F.totEx ? `<td class="num">${p.ex ? '−' + money(p.ex) : ''}</td>` : ''}<td class="num"><b>${money(p.owed)}</b></td><td class="num">${p.paid ? money(p.paid) : ''}</td><td class="num ${p.bal > 0.009 ? 'bal' : 'zero'}">${money(p.bal)}</td><td><button class="btn ghost sm" onclick="frPeriod(${p.k})">ווייז</button> <button class="btn ghost sm" title="שיק אימעיל צום אפיס" onclick="frMailForm(${p.k})">✉️</button>${(S.frmail[p.from] || {}).sent ? `<br><span class="tag ok">✉️ ${fmtD(S.frmail[p.from].sent)}</span>` : ''}</td></tr>`).join('') || `<tr><td colspan="8" class="empty">הייבט זיך אן ${fmtD(F.start)}</td></tr>`}
    </tbody></table></div>
   <div><h3>באצאלונגען צו די פאנדרעיזערס</h3>
    <table><thead><tr><th>טאג</th><th>סכום</th><th>צו וועמען</th><th>נאטיץ</th><th></th></tr></thead><tbody>
@@ -214,12 +214,18 @@ function fundSettings() {
    <label class="f">Percentage for the fundraisers<input id="fp" type="number" min="0" max="100" step="0.5" value="${F.pct}"></label>
    <label class="f">Starting from (first day of the first 2 weeks)${dateField('fs', F.start)}</label></div>
    <p class="sub" style="margin-top:8px">Rosh Hashana 5787 = ${fmtD(RH5787)}. Every 2 weeks from that day is a new period.</p>
-   <div class="row" style="justify-content:flex-end"><button class="btn ghost" onclick="closeM()">Back</button><button class="btn" onclick="fundSaveSet()">Save</button></div></div>`, 'narrow');
+   <h3>✉️ E-mail to the office (checks for the fundraisers)</h3>
+   <div class="grid2"><label class="f" style="grid-column:1/-1">Office e-mail(s) – several separated by commas<input id="fo" style="direction:ltr" value="${esc(SET().frOffice || '')}" placeholder="office@example.com"></label>
+   <label class="f" style="grid-column:1/-1">CC – more e-mails (optional), separated by commas<input id="fcc" style="direction:ltr" value="${esc(SET().frCc || '')}"></label>
+   <label class="f">Who gets the reminder every 2 weeks<select id="fw">${USERS().map(u => `<option ${u === frMailWho() ? 'selected' : ''}>${esc(u)}</option>`).join('')}</select></label>
+   <label class="f" style="grid-column:1/-1">Subject<input id="fsj" dir="auto" value="${esc(SET().frMailSubject || FR_SUBJ_DEF)}"></label>
+   <label class="f" style="grid-column:1/-1">Text ({from} {to} {count} {income} {exempt} {pct} {amount} {paid} {balance})<textarea id="fbd" dir="auto" rows="8">${esc(SET().frMailBody || FR_BODY_DEF)}</textarea></label></div>
+   <div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn ghost" onclick="closeM()">Back</button><button class="btn" onclick="fundSaveSet()">Save</button></div></div>`, 'narrow');
 }
 async function fundSaveSet() {
   const pct = +$('#fp').value; if (!(pct >= 0 && pct <= 100)) { $('#fp').focus(); return; }
-  await emit('settings', 's', { frPct: pct, frStart: $('#fs').value || RH5787 });
-  closeM(); render(); toast('✓ אפגעהיטן');
+  await emit('settings', 's', { frPct: pct, frStart: $('#fs').value || RH5787, frOffice: $('#fo').value.trim(), frCc: $('#fcc').value.trim(), frMailWho: $('#fw').value, frMailSubject: $('#fsj').value.trim(), frMailBody: $('#fbd').value.trim() });
+  closeM(); render(); toast('✓ Saved');
 }
 
 // ---------- SHULS ----------
@@ -393,3 +399,58 @@ function callSave() {
   try { localStorage.setItem('yg_call', v); } catch (e) { }
   closeM(); render(); toast('✓ Saved – try a 📞');
 }
+
+// ---------- ✉️ e-mail to the office: checks for the fundraisers' percentage, per 2-week period ----------
+const FR_SUBJ_DEF = 'טשעקס פאר די פאנדרעיזערס – {from} ביז {to}: {amount}';
+const FR_BODY_DEF = 'שלום,\n\nביטע מאכט טשעקס פאר די פאנדרעיזערס פאר די 2 וואכן {from} ביז {to}:\n\nאריינגעקומען: {income} ({count} באצאלונגען)\nאן פראצענט: {exempt}\n{pct}% פאר די פאנדרעיזערס: {amount}\n\nשוין באצאלט פאר די 2 וואכן: {paid}\nסך הכל נאך שולדיג ביז היינט: {balance}\n\nבייגעלייגט איז אן Excel מיט אלע באצאלונגען פון די 2 וואכן.\n\nא דאנק,\nYG Fund';
+const frMailWho = () => SET().frMailWho || ((TEAM.find(t => t.is_admin) || TEAM[0] || {}).name) || me;
+const frDay = s => { const [y, m, d] = s.split('-'); return HEB.fmtHeb(s) + ' (' + +m + '/' + +d + '/' + y + ')'; };
+function frFill(t, F, p) {
+  const v = { from: frDay(p.from), to: frDay(p.to), count: p.count, income: money(p.income), exempt: money(p.ex), pct: F.pct, amount: money(p.owed), paid: money(p.paid), balance: money(F.balance) };
+  return t.replace(/\{(\w+)\}/g, (m, k) => v[k] != null ? v[k] : m);
+}
+function frMailForm(k) {
+  const F = fundCalc();
+  if (k == null) k = Math.max(0, F.periods.length - 2);   // the last finished 2 weeks
+  const p = F.periods[k]; if (!p) { toast('נאך נישט קיין 2 וואכן'); return; }
+  const s = SET(), sent = S.frmail[p.from];
+  modal(`<h2>✉️ אימעיל צום אפיס – טשעקס פאר די פאנדרעיזערס</h2>
+   <p class="sub">${fmtD(p.from)} – ${fmtD(p.to)} · אריינגעקומען ${money(p.income)} · ${F.pct}% = <b>${money(p.owed)}</b>${sent && sent.sent ? ` · <span class="tag ok">✉️ שוין געשיקט ${fmtD(sent.sent)}</span>` : ''}</p>
+   <div class="grid2"><label class="f" style="grid-column:1/-1">צו (אפיס) – עטליכע מיט קאמעס<input id="fmt" style="direction:ltr" value="${esc(s.frOffice || '')}" placeholder="office@example.com"></label>
+   <label class="f" style="grid-column:1/-1">CC – נאך אימעילס (אפציאנאל), עטליכע מיט קאמעס<input id="fmc" style="direction:ltr" value="${esc(s.frCc || '')}" placeholder="name@example.com, other@example.com"></label>
+   <label class="f" style="grid-column:1/-1">סאבדזשעקט<input id="fms" value="${esc(frFill(s.frMailSubject || FR_SUBJ_DEF, F, p))}"></label>
+   <label class="f" style="grid-column:1/-1">דער בריוו<textarea id="fmb" rows="12">${esc(frFill(s.frMailBody || FR_BODY_DEF, F, p))}</textarea></label></div>
+   <label style="display:flex;gap:8px;align-items:center;font-size:13px;margin-top:8px"><input type="checkbox" id="fmx" checked> לייג צו אן Excel מיט אלע באצאלונגען פון די 2 וואכן</label>
+   <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn ghost" onclick="closeM()">צוריק</button><button class="btn" id="fmgo" onclick="frMailGo(${k})">✉️ שיק</button></div>`, 'narrow');
+}
+async function frMailGo(k) {
+  const F = fundCalc(), p = F.periods[k], to = $('#fmt').value.trim(), cc = $('#fmc').value.trim();
+  const okList = v => v.split(/[,;\s]+/).filter(Boolean).every(x => /^\S+@\S+\.\S+$/.test(x));
+  if (!to || !okList(to)) { toast('⚠️ שרייבט דעם אימעיל פון אפיס'); return; }
+  if (cc && !okList(cc)) { toast('⚠️ א CC אימעיל איז נישט ריכטיג'); return; }
+  $('#fmgo').disabled = true;
+  try {
+    busy('שיקט...');
+    let blob = null;
+    if ($('#fmx').checked) {
+      const L = F.income.filter(i => i.d >= p.from && i.d <= p.to).sort((a, b) => a.d.localeCompare(b.d));
+      blob = XLSX.make([
+        { name: 'סך הכל', rows: [['', 'סכום'], ['פון', p.from], ['ביז', p.to], ['באצאלונגען', p.count], ['אריינגעקומען', r2(p.income)], ['אן פראצענט', r2(p.ex)], [F.pct + '% פאר די פאנדרעיזערס', r2(p.owed)], ['שוין באצאלט פאר די 2 וואכן', r2(p.paid)], ['נאך שולדיג ביז היינט', r2(F.balance)]], widths: [32, 18] },
+        { name: 'באצאלונגען', rows: incomeRows(F, L) }]);
+    }
+    await mailSend(to, $('#fms').value.trim(), mailHtml($('#fmb').value), blob, 'Fundraisers-' + p.from + '-' + p.to + '.xlsx', 'fund-' + p.from, cc);
+    await emit('frmail', p.from, { sent: todayS(), to, cc, amount: r2(p.owed), by: me });
+    if (to !== (SET().frOffice || '') || cc !== (SET().frCc || '')) await emit('settings', 's', { frOffice: to, frCc: cc });
+    for (const [id, x] of Object.entries(S.task)) if (x.fm && x.fm.from === p.from && !x.done) await emitTask(id, { done: true, doneAt: todayS() });
+    busy(false); closeM(); render(); toast('✓ געשיקט צום אפיס');
+  } catch (e) { busy(false); $('#fmgo').disabled = false; rcMailErr(e); toast('⚠️ ' + (e.message || e)); }
+}
+// Every 2 weeks a to-do to send the office the e-mail for the 2 weeks that just ended (fixed id per period)
+async function ensureFundMailTask() {
+  if (!JD) return;
+  const F = fundCalc(), n = F.periods.length; if (n < 2) return;
+  const prev = F.periods[n - 2], id = 'frmail-' + prev.from;
+  if (S.task[id] || (S.frmail[prev.from] || {}).sent) return;
+  await emitTask(id, { title: '✉️ שיק אימעיל צום אפיס – טשעקס פאר די פאנדרעיזערס (' + fmtD(prev.from) + ' ביז ' + fmtD(prev.to) + ')', due: F.cur.from, who: frMailWho(), who2: '', code: '', pri: 'norm', note: '', repeat: '', done: false, priv: false, fm: { from: prev.from, to: prev.to } });
+}
+function frMailTask(id) { const x = S.task[id]; if (!x || !x.fm) return; const k = fundCalc().periods.findIndex(p => p.from === x.fm.from); go('fund'); frMailForm(k < 0 ? null : k); }

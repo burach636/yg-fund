@@ -25,6 +25,7 @@ async function isTeam(auth: string) {
   const rows = await r.json();
   return rows.length ? rows : null;   // RLS returns rows only to team members
 }
+function mimeOf(f: string) { return /\.xlsx$/i.test(f) ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : /\.pdf$/i.test(f) ? 'application/pdf' : 'application/octet-stream'; }
 function svcHeaders() { const k = ENV('SUPABASE_SERVICE_ROLE_KEY'); const h: Record<string, string> = { apikey: k }; if (!k.startsWith('sb_')) h.Authorization = 'Bearer ' + k; return h; }
 function b64(u: Uint8Array) { let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode(...u.subarray(i, i + 0x8000)); return btoa(s); }
 function parseFrom(f: string) { const m = f.match(/^\s*(.*?)\s*<([^>]+)>\s*$/); return m ? { name: m[1].replace(/^"|"$/g, ''), email: m[2] } : { name: '', email: f.trim() }; }
@@ -42,8 +43,14 @@ async function handle(req: Request): Promise<Response> {
   try {
     if (!(await isTeam(auth))) return json({ error: 'not allowed' }, 403);
     const b = await req.json();
-    const to = String(b.to || '').trim().toLowerCase();
-    if (!EMAIL_RE.test(to)) return json({ error: 'bad address: ' + to }, 400);
+    // one address, or several separated by commas / semicolons (e.g. the office)
+    const toList = String(b.to || '').split(/[,;\s]+/).map(x => x.trim().toLowerCase()).filter(Boolean).slice(0, 10);
+    const badTo = toList.find(x => !EMAIL_RE.test(x));
+    if (!toList.length || badTo) return json({ error: 'bad address: ' + (badTo || '(empty)') }, 400);
+    const to = toList.join(', ');
+    const ccList = String(b.cc || '').split(/[,;\s]+/).map(x => x.trim().toLowerCase()).filter(Boolean).slice(0, 10);
+    const badCc = ccList.find(x => !EMAIL_RE.test(x));
+    if (badCc) return json({ error: 'bad CC address: ' + badCc }, 400);
     const subject = String(b.subject || '').slice(0, 300), html = String(b.html || '').slice(0, 100000);
     let pdf = b.pdf ? String(b.pdf).replace(/^data:[^,]*,/, '') : '';
     // Preferred: the browser uploads the PDF to Storage (bucket jls, receipts/...) and sends only its path,
@@ -64,7 +71,7 @@ async function handle(req: Request): Promise<Response> {
       const tr = nodemailer.createTransport({ host: 'smtp.gmail.com', port: 465, secure: true, auth: { user: gUser, pass: gPass }, connectionTimeout: 12000, greetingTimeout: 8000, socketTimeout: 15000 });
       const timeout = new Promise((_, bad) => setTimeout(() => bad(new Error('Gmail did not answer within 20 seconds (timeout)')), 20000));
       try {
-        await Promise.race([tr.sendMail({ from, to, subject, html, ...(replyTo ? { replyTo } : {}), attachments: pdf ? [{ filename, content: pdf, encoding: 'base64', contentType: 'application/pdf' }] : [] }), timeout]);
+        await Promise.race([tr.sendMail({ from, to, ...(ccList.length ? { cc: ccList.join(', ') } : {}), subject, html, ...(replyTo ? { replyTo } : {}), attachments: pdf ? [{ filename, content: pdf, encoding: 'base64', contentType: mimeOf(filename) }] : [] }), timeout]);
       } catch (e) { return json({ error: 'Gmail: ' + String((e as any)?.message || e) }, 502); }
       await cleanup(pdfPath);
       return json({ ok: true });
@@ -72,11 +79,11 @@ async function handle(req: Request): Promise<Response> {
     let r: Response;
     if (ENV('RESEND_API_KEY')) {
       r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { Authorization: 'Bearer ' + ENV('RESEND_API_KEY'), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ from, to: [to], subject, html, ...(replyTo ? { reply_to: replyTo } : {}), ...(pdf ? { attachments: [{ filename, content: pdf }] } : {}) }) });
+        body: JSON.stringify({ from, to: toList, ...(ccList.length ? { cc: ccList } : {}), subject, html, ...(replyTo ? { reply_to: replyTo } : {}), ...(pdf ? { attachments: [{ filename, content: pdf }] } : {}) }) });
     } else if (ENV('BREVO_API_KEY')) {
       const f = parseFrom(from);
       r = await fetch('https://api.brevo.com/v3/smtp/email', { method: 'POST', headers: { 'api-key': ENV('BREVO_API_KEY'), 'Content-Type': 'application/json', accept: 'application/json' },
-        body: JSON.stringify({ sender: f, to: [{ email: to }], subject, htmlContent: html, ...(replyTo ? { replyTo: { email: replyTo } } : {}), ...(pdf ? { attachment: [{ name: filename, content: pdf }] } : {}) }) });
+        body: JSON.stringify({ sender: f, to: toList.map(email => ({ email })), ...(ccList.length ? { cc: ccList.map(email => ({ email })) } : {}), subject, htmlContent: html, ...(replyTo ? { replyTo: { email: replyTo } } : {}), ...(pdf ? { attachment: [{ name: filename, content: pdf }] } : {}) }) });
     } else return json({ error: 'no e-mail provider is set (GMAIL_USER + GMAIL_APP_PASSWORD, RESEND_API_KEY or BREVO_API_KEY)' }, 500);
     const txt = await r.text();
     if (!r.ok) return json({ error: 'provider ' + r.status + ': ' + txt.slice(0, 300) }, 502);

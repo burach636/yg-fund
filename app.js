@@ -47,7 +47,7 @@ async function gunzip(blob) { const s = blob.stream().pipeThrough(new Decompress
 // ---------- state ----------
 let JD = null;            // imported JLS data
 let IDX = null;           // derived indexes
-let S = { acct: {}, task: {}, call: {}, hist: {}, fr: {}, frin: {}, frex: {}, shul: {}, rcpt: {}, stmt: {}, jrep: {}, settings: { s: { users: ['באניצער 1', 'באניצער 2', 'באניצער 3'], defFreq: 'm12', maxYears: 5 } } };
+let S = { acct: {}, task: {}, call: {}, hist: {}, fr: {}, frin: {}, frex: {}, shul: {}, rcpt: {}, stmt: {}, frmail: {}, jrep: {}, settings: { s: { users: ['באניצער 1', 'באניצער 2', 'באניצער 3'], defFreq: 'm12', maxYears: 5 } } };
 let status = {}, me = '', view = 'home';
 let ui = { todayF: 'all', todayN: 50, accQ: '', accF: 'yg', accN: 100, accSort: 'abc', accShul: '', todoF: 'mine', todoDone: false };
 const SET = () => S.settings.s;
@@ -163,7 +163,7 @@ async function afterLogin(session) {
   }
   busy('לאדנט...');
   try { await pullLog(); await loadJLS(); } catch (e) { busy(false); toast('⚠️ ' + (e.message || e)); return; }
-  try { await ensureRcptTask(); } catch (e) { }
+  try { await ensureRcptTask(); await ensureFundMailTask(); } catch (e) { }
   busy(false);
   await start();
 }
@@ -310,7 +310,7 @@ async function saveNote(code) {
 async function poll() {
   try {
     const logCh = await pullLog();
-    await ensureRcptTask();
+    await ensureRcptTask(); await ensureFundMailTask();
     const m = await q(sb.from('jls_meta').select('version').eq('id', 1).single());
     const jlsCh = m.version && m.version !== jlsVersion;
     if (jlsCh) { await loadJLS(); toast('⟳ נייע JLS דאטא געלאדן'); }
@@ -470,7 +470,7 @@ function taskRow(x) {
   return `<div class="task"><div class="chk" title="געטון" onclick="${x.kind === 'ask' ? `askForm(${x.code})` : `taskDone('${x.id}')`}"></div>
   <div><div class="t">${title} ${x.vip ? '<span class="tag hi">⭐ VIP</span>' : ''} ${x.hi ? '<span class="tag hi">דרינגענד</span>' : ''} ${late ? `<span class="tag late">שפעט ${late > 365 ? Math.floor(late / 365) + ' יאר' : late + ' טעג'}</span>` : ''}</div>
   <div class="m">${a && a.ph[0] ? `<span>${callBtn(a.ph[0][1], x.code)} <span class="num">${esc(a.ph[0][1])}</span></span>` : ''}${g ? `<span>לעצטע מתנה: ${money(g.lastAmt)} · ${fmtD(g.last)}</span><span>סך הכל: ${money(g.total)}</span>` : ''}${p && p.open > 0.009 ? `<span class="bal">באלאנס ${money(p.open)}</span>` : ''}${x.kind === 'ask' ? `<span>${FREQ[x.freq] ? FREQ[x.freq][0] : ''}</span>` : ''}${x.task && x.task.note ? `<span>📝 ${esc(x.task.note)}</span>` : ''}${whoSel(x.kind === 'ask' ? `assign(${x.code},this.value)` : `assignTask('${x.id}',this.value)`, x.who)}${lastNoteHTML(x.code)}</div></div>
-  <div class="acts">${x.code ? `<button class="btn ghost sm" onclick="noteForm(${x.code})">📝 נאטיץ</button>` : ''}${x.kind === 'ask' ? `<button class="btn sm" onclick="askForm(${x.code})">✓ געבעטן</button>` : `${x.task.rc ? `<button class="btn gold sm" onclick="rcOpenTask('${x.id}')">🖨️ רעסיטס</button>` : ''}<button class="btn sm" onclick="taskDone('${x.id}')">✓ געטון</button><button class="btn ghost sm" onclick="taskForm('${x.id}')">ענדער</button>`}
+  <div class="acts">${x.code ? `<button class="btn ghost sm" onclick="noteForm(${x.code})">📝 נאטיץ</button>` : ''}${x.kind === 'ask' ? `<button class="btn sm" onclick="askForm(${x.code})">✓ געבעטן</button>` : `${x.task.rc ? `<button class="btn gold sm" onclick="rcOpenTask('${x.id}')">🖨️ רעסיטס</button>` : ''}${x.task.fm ? `<button class="btn gold sm" onclick="frMailTask('${x.id}')">✉️ שיק צום אפיס</button>` : ''}<button class="btn sm" onclick="taskDone('${x.id}')">✓ געטון</button><button class="btn ghost sm" onclick="taskForm('${x.id}')">ענדער</button>`}
   ${x.kind === 'ask' ? `<button class="btn ghost sm" title="איינמאליגע נדבה – נישט בעטן ווייטער" onclick="markOnce(${x.code})">🚫 איינמאליג</button>` : ''}<button class="btn ghost sm" onclick="snooze('${x.kind}','${x.kind === 'ask' ? x.code : x.id}',7)">אין א וואך</button><button class="btn ghost sm" onclick="snooze('${x.kind}','${x.kind === 'ask' ? x.code : x.id}',30)">אין א חודש</button></div></div>`;
 }
 function go(v) { if (!canView(v)) { toast('🔒 No access'); return; } view = v; document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x.dataset.v === v)); render(); }

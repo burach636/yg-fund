@@ -377,24 +377,22 @@ async function rcPdf(d) {
 function mailFill(t, d) {
   return t.split('{name}').join(d.top || d.eng).split('{amount}').join('$' + rcMoney(d.amt)).split('{date}').join(rcDate(d.date) + ' · ' + HEB.fmtHeb(d.date));
 }
-async function rcSendMail(p, to) {
-  const d = rcData(p), s = SET();
-  to = (to || emailOf(p[1])).trim();
-  if (!to) throw new Error('קיין אימעיל ביי ' + (d.top || d.eng));
-  const pdf = await rcPdf(d);
-  // Upload the PDF to Storage first; the function only gets its path (a big request body to the function does not get through)
-  // Sent as a plain binary file (.bin) – some filters drop PDF uploads – and retried up to 3 times
-  const pdfPath = 'receipts/' + String(d.key).replace(/[^\w.-]/g, '_') + '-' + Date.now() + '.bin';
-  let up;
-  for (let k = 1; k <= 3; k++) {
-    up = await sb.storage.from('jls').upload(pdfPath, pdf, { contentType: 'application/octet-stream', upsert: true });
-    if (!up.error) break;
-    if (k < 3) await new Promise(r => setTimeout(r, 1500 * k));
+// Send one e-mail through the Supabase function, with an optional attachment (Blob).
+// The attachment is first uploaded to Storage (jls/receipts/*.bin, up to 3 tries) and the function gets only its path,
+// because a large request body to the function does not get through from the owner's network.
+async function mailSend(to, subject, html, blob, filename, tag, cc) {
+  let pdfPath = '';
+  if (blob) {
+    pdfPath = 'receipts/' + String(tag || 'file').replace(/[^\w.-]/g, '_') + '-' + Date.now() + '.bin';
+    let up;
+    for (let k = 1; k <= 3; k++) {
+      up = await sb.storage.from('jls').upload(pdfPath, blob, { contentType: 'application/octet-stream', upsert: true });
+      if (!up.error) break;
+      if (k < 3) await new Promise(r => setTimeout(r, 1500 * k));
+    }
+    if (up.error) throw new Error('ארויפלייגן דעם צוגעלייגטן פייל (3 מאל פרובירט): ' + up.error.message);
   }
-  if (up.error) throw new Error('ארויפלייגן דעם PDF (3 מאל פרובירט): ' + up.error.message);
-  const body = mailFill(s.mailBody || MAIL_BODY_DEF, d);
-  const html = `<div dir="rtl" style="font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#222">${esc(body).replace(/\n/g, '<br>')}</div>`;
-  const payload = { to, subject: mailFill(s.mailSubject || MAIL_SUBJ_DEF, d), html, pdfPath, filename: 'Receipt-' + d.code + '-' + d.date + '.pdf' };
+  const payload = { to, cc: cc || '', subject, html, pdfPath, filename };
   // The function may have been created as "email" or "EMAIL" (names are case-sensitive): try the last one that worked first
   let fn = '', res;
   for (const name of [...new Set([localStorage.getItem('yg_mailfn') || 'EMAIL', 'EMAIL', 'email'])]) {
@@ -411,6 +409,14 @@ async function rcSendMail(p, to) {
     throw new Error((st ? '[' + st + '] ' : '') + m);
   }
   if (data && data.error) throw new Error(data.error);
+}
+const mailHtml = body => `<div dir="rtl" style="font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#222">${esc(body).replace(/\n/g, '<br>')}</div>`;
+async function rcSendMail(p, to) {
+  const d = rcData(p), s = SET();
+  to = (to || emailOf(p[1])).trim();
+  if (!to) throw new Error('קיין אימעיל ביי ' + (d.top || d.eng));
+  const pdf = await rcPdf(d);
+  await mailSend(to, mailFill(s.mailSubject || MAIL_SUBJ_DEF, d), mailHtml(mailFill(s.mailBody || MAIL_BODY_DEF, d)), pdf, 'Receipt-' + d.code + '-' + d.date + '.pdf', d.key);
   await emit('rcpt', rcKey(p), { emailed: todayS(), emailTo: to, by: me });
   await emit('hist', uid(), { code: p[1], text: '✉️ רעסיט געשיקט צו ' + to + ' – ' + money(d.amt) });
 }
