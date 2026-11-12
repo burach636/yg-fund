@@ -356,7 +356,7 @@ function loadLibs() {   // html2canvas + jsPDF, only when the first e-mail is se
   const add = src => new Promise((ok, bad) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => bad(new Error('לאדן ' + src)); document.head.appendChild(s); });
   return (_libs = Promise.all([add('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'), add('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')]).catch(e => { _libs = null; throw e; }));
 }
-// Render the same page that is printed into a one-page Letter PDF (base64 data URI)
+// Render the same page that is printed into a one-page Letter PDF (Blob)
 async function rcPdf(d) {
   await loadLibs();
   const fr = document.createElement('iframe');
@@ -371,7 +371,7 @@ async function rcPdf(d) {
     const canvas = await window.html2canvas(pg, { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false });
     const pdf = new window.jspdf.jsPDF({ unit: 'in', format: 'letter' });
     pdf.addImage(canvas.toDataURL('image/jpeg', 0.82), 'JPEG', 0, 0, 8.5, 11);
-    return pdf.output('datauristring');
+    return pdf.output('blob');
   } finally { fr.parentNode.removeChild(fr); }
 }
 function mailFill(t, d) {
@@ -382,12 +382,16 @@ async function rcSendMail(p, to) {
   to = (to || emailOf(p[1])).trim();
   if (!to) throw new Error('קיין אימעיל ביי ' + (d.top || d.eng));
   const pdf = await rcPdf(d);
+  // Upload the PDF to Storage first; the function only gets its path (a big request body to the function does not get through)
+  const pdfPath = 'receipts/' + String(d.key).replace(/[^\w.-]/g, '_') + '-' + Date.now() + '.pdf';
+  const up = await sb.storage.from('jls').upload(pdfPath, pdf, { contentType: 'application/pdf', upsert: true });
+  if (up.error) throw new Error('ארויפלייגן דעם PDF: ' + up.error.message);
   const body = mailFill(s.mailBody || MAIL_BODY_DEF, d);
   const html = `<div dir="rtl" style="font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#222">${esc(body).replace(/\n/g, '<br>')}</div>`;
-  const payload = { to, subject: mailFill(s.mailSubject || MAIL_SUBJ_DEF, d), html, pdf, filename: 'Receipt-' + d.code + '-' + d.date + '.pdf' };
+  const payload = { to, subject: mailFill(s.mailSubject || MAIL_SUBJ_DEF, d), html, pdfPath, filename: 'Receipt-' + d.code + '-' + d.date + '.pdf' };
   // The function may have been created as "email" or "EMAIL" (names are case-sensitive): try the last one that worked first
   let fn = '', res;
-  for (const name of [...new Set([localStorage.getItem('yg_mailfn') || 'email', 'email', 'EMAIL'])]) {
+  for (const name of [...new Set([localStorage.getItem('yg_mailfn') || 'EMAIL', 'EMAIL', 'email'])]) {
     res = await sb.functions.invoke(name, { body: payload });
     const st = res.error && res.error.context && res.error.context.status;
     if (!res.error || (st && st !== 404)) { fn = name; break; }

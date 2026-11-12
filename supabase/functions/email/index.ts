@@ -25,8 +25,12 @@ async function isTeam(auth: string) {
   const rows = await r.json();
   return rows.length ? rows : null;   // RLS returns rows only to team members
 }
+function svcHeaders() { const k = ENV('SUPABASE_SERVICE_ROLE_KEY'); const h: Record<string, string> = { apikey: k }; if (!k.startsWith('sb_')) h.Authorization = 'Bearer ' + k; return h; }
+function b64(u: Uint8Array) { let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode(...u.subarray(i, i + 0x8000)); return btoa(s); }
 function parseFrom(f: string) { const m = f.match(/^\s*(.*?)\s*<([^>]+)>\s*$/); return m ? { name: m[1].replace(/^"|"$/g, ''), email: m[2] } : { name: '', email: f.trim() }; }
 
+// Remove the uploaded PDF from Storage once the mail is sent
+async function cleanup(pdfPath: string) { if (pdfPath) await fetch(ENV('SUPABASE_URL') + '/storage/v1/object/jls', { method: 'DELETE', headers: { ...svcHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify({ prefixes: [pdfPath] }) }).catch(() => { }); }
 async function handle(req: Request): Promise<Response> {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   if (req.method !== 'POST') {
@@ -41,7 +45,17 @@ async function handle(req: Request): Promise<Response> {
     const to = String(b.to || '').trim().toLowerCase();
     if (!EMAIL_RE.test(to)) return json({ error: 'bad address: ' + to }, 400);
     const subject = String(b.subject || '').slice(0, 300), html = String(b.html || '').slice(0, 100000);
-    const pdf = b.pdf ? String(b.pdf).replace(/^data:[^,]*,/, '') : '', filename = String(b.filename || 'receipt.pdf').replace(/[^\w.\- ]/g, '_');
+    let pdf = b.pdf ? String(b.pdf).replace(/^data:[^,]*,/, '') : '';
+    // Preferred: the browser uploads the PDF to Storage (bucket jls, receipts/...) and sends only its path,
+    // because a large request body to the function does not get through from the owner's network.
+    const pdfPath = String(b.pdfPath || '');
+    if (!pdf && pdfPath) {
+      if (!/^receipts\/[\w.\-]+\.pdf$/.test(pdfPath)) return json({ error: 'bad pdf path' }, 400);
+      const r0 = await fetch(ENV('SUPABASE_URL') + '/storage/v1/object/jls/' + pdfPath, { headers: svcHeaders() });
+      if (!r0.ok) return json({ error: 'PDF not found in Storage (' + r0.status + ')' }, 400);
+      pdf = b64(new Uint8Array(await r0.arrayBuffer()));
+    }
+    const filename = String(b.filename || 'receipt.pdf').replace(/[^\w.\- ]/g, '_');
     if (pdf.length > 7_000_000) return json({ error: 'attachment too big' }, 400);
     const gUser = ENV('GMAIL_USER'), gPass = ENV('GMAIL_APP_PASSWORD').replace(/\s+/g, '');
     const from = ENV('EMAIL_FROM') || (gUser ? 'Yeshivas Maharit Satmar <' + gUser + '>' : ''), replyTo = ENV('EMAIL_REPLY_TO');
@@ -52,6 +66,7 @@ async function handle(req: Request): Promise<Response> {
       try {
         await Promise.race([tr.sendMail({ from, to, subject, html, ...(replyTo ? { replyTo } : {}), attachments: pdf ? [{ filename, content: pdf, encoding: 'base64', contentType: 'application/pdf' }] : [] }), timeout]);
       } catch (e) { return json({ error: 'Gmail: ' + String((e as any)?.message || e) }, 502); }
+      await cleanup(pdfPath);
       return json({ ok: true });
     }
     let r: Response;
@@ -65,6 +80,7 @@ async function handle(req: Request): Promise<Response> {
     } else return json({ error: 'no e-mail provider is set (GMAIL_USER + GMAIL_APP_PASSWORD, RESEND_API_KEY or BREVO_API_KEY)' }, 500);
     const txt = await r.text();
     if (!r.ok) return json({ error: 'provider ' + r.status + ': ' + txt.slice(0, 300) }, 502);
+    await cleanup(pdfPath);
     return json({ ok: true });
   } catch (e) {
     return json({ error: String((e as any)?.message || e) }, 500);
