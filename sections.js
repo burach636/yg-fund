@@ -112,7 +112,7 @@ function fundCalc() {
 function vFund() {
   const F = fundCalc();
   $('#main').innerHTML = `<div class="row"><div><h2>פאנדרעיזינג חשבונות</h2><p class="sub">פון יעדן דאלער וואס קומט אריין זינט ${fmtDual(F.start)} באקומען די פאנדרעיזערס <b>${F.pct}%</b>. עס ווערט אויסגערעכנט יעדע 2 וואכן. די באצאלונגען צו זיי ווערן אראפגערעכנט.</p></div><div class="spacer"></div>
-   <button class="btn" onclick="frMailForm()">✉️ אימעיל צום אפיס</button><button class="btn ghost" onclick="xlsFund()">⬇ Excel</button><button class="btn ghost" onclick="fundSettings()">⚙️ ${F.pct}% · ${fmtD(F.start)}</button><button class="btn ghost" onclick="frInForm()">+ אריינקומען (נישט אין JLS)</button><button class="btn ghost" onclick="frExForm()">+ סכום אן פראצענט</button><button class="btn gold" onclick="frForm()">+ באצאלט די פאנדרעיזערס</button></div>
+   ${SET().frAuto ? `<span class="tag ok" title="ווערט געשיקט אליין ${SET().frAutoDays != null ? SET().frAutoDays : 2} טעג נאך די 2 וואכן">⏰ אויטאמאטיש</span>` : ''}<button class="btn" onclick="frMailForm()">✉️ אימעיל צום אפיס</button><button class="btn ghost" onclick="xlsFund()">⬇ Excel</button><button class="btn ghost" onclick="fundSettings()">⚙️ ${F.pct}% · ${fmtD(F.start)}</button><button class="btn ghost" onclick="frInForm()">+ אריינקומען (נישט אין JLS)</button><button class="btn ghost" onclick="frExForm()">+ סכום אן פראצענט</button><button class="btn gold" onclick="frForm()">+ באצאלט די פאנדרעיזערס</button></div>
   <div class="stats">
    <div class="stat"><b>${money(F.totIn)}</b><span>אריינגעקומען זינט ${fmtD(F.start)}</span></div>
    ${F.totEx ? `<div class="stat"><b>${money(F.totEx)}</b><span>אן פראצענט (אראפגערעכנט)</span></div>` : ''}
@@ -217,6 +217,8 @@ function fundSettings() {
    <h3>✉️ E-mail to the office (checks for the fundraisers)</h3>
    <div class="grid2"><label class="f" style="grid-column:1/-1">Office e-mail(s) – several separated by commas<input id="fo" style="direction:ltr" value="${esc(SET().frOffice || '')}" placeholder="office@example.com"></label>
    <label class="f" style="grid-column:1/-1">CC – more e-mails (optional), separated by commas<input id="fcc" style="direction:ltr" value="${esc(SET().frCc || '')}"></label>
+   <label style="display:flex;gap:8px;align-items:center;font-size:14px;grid-column:1/-1"><input type="checkbox" id="fau" ${SET().frAuto ? 'checked' : ''}> <span><b>⏰ Send automatically</b> every 2 weeks (Supabase sends it by itself – see the setup steps)</span></label>
+   <label class="f">Send ... days after the 2 weeks end<input id="fad" type="number" min="0" max="10" value="${SET().frAutoDays != null ? SET().frAutoDays : 2}"></label>
    <label class="f">Who gets the reminder every 2 weeks<select id="fw">${USERS().map(u => `<option ${u === frMailWho() ? 'selected' : ''}>${esc(u)}</option>`).join('')}</select></label>
    <label class="f" style="grid-column:1/-1">Subject<input id="fsj" dir="auto" value="${esc(SET().frMailSubject || FR_SUBJ_DEF)}"></label>
    <label class="f" style="grid-column:1/-1">Text ({from} {to} {count} {income} {exempt} {pct} {amount} {paid} {balance})<textarea id="fbd" dir="auto" rows="8">${esc(SET().frMailBody || FR_BODY_DEF)}</textarea></label></div>
@@ -224,7 +226,7 @@ function fundSettings() {
 }
 async function fundSaveSet() {
   const pct = +$('#fp').value; if (!(pct >= 0 && pct <= 100)) { $('#fp').focus(); return; }
-  await emit('settings', 's', { frPct: pct, frStart: $('#fs').value || RH5787, frOffice: $('#fo').value.trim(), frCc: $('#fcc').value.trim(), frMailWho: $('#fw').value, frMailSubject: $('#fsj').value.trim(), frMailBody: $('#fbd').value.trim() });
+  await emit('settings', 's', { frPct: pct, frStart: $('#fs').value || RH5787, frOffice: $('#fo').value.trim(), frCc: $('#fcc').value.trim(), frAuto: $('#fau').checked, frAutoDays: Math.max(0, Math.min(10, +$('#fad').value || 0)), frMailWho: $('#fw').value, frMailSubject: $('#fsj').value.trim(), frMailBody: $('#fbd').value.trim() });
   closeM(); render(); toast('✓ Saved');
 }
 
@@ -450,7 +452,7 @@ async function ensureFundMailTask() {
   if (!JD) return;
   const F = fundCalc(), n = F.periods.length; if (n < 2) return;
   const prev = F.periods[n - 2], id = 'frmail-' + prev.from;
-  if (S.task[id] || (S.frmail[prev.from] || {}).sent) return;
+  if (S.task[id] || (S.frmail[prev.from] || {}).sent || SET().frAuto) return;   // with automatic sending no reminder is needed
   await emitTask(id, { title: '✉️ שיק אימעיל צום אפיס – טשעקס פאר די פאנדרעיזערס (' + fmtD(prev.from) + ' ביז ' + fmtD(prev.to) + ')', due: F.cur.from, who: frMailWho(), who2: '', code: '', pri: 'norm', note: '', repeat: '', done: false, priv: false, fm: { from: prev.from, to: prev.to } });
 }
 function frMailTask(id) { const x = S.task[id]; if (!x || !x.fm) return; const k = fundCalc().periods.findIndex(p => p.from === x.fm.from); go('fund'); frMailForm(k < 0 ? null : k); }

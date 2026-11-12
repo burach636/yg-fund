@@ -88,3 +88,14 @@ alter table public.team add column if not exists phone text;
 
 -- 7. (v1.10) Which main sections each user may open (null = all; admins always see all)
 alter table public.team add column if not exists perms text[];
+
+-- 8. (v1.12) Automatic e-mail to the office every 2 weeks: run the Edge Function "fundmail" every day at ~9:45 New York.
+--    Replace YOUR-KEY with the same value as the Supabase secret FUNDMAIL_KEY.
+create extension if not exists pg_cron;
+create extension if not exists pg_net;
+select cron.schedule('yg-fundmail', '45 14 * * *', $$
+  select net.http_post(
+    url := 'https://qrudivrakwoathgbzrwd.supabase.co/functions/v1/fundmail',
+    headers := '{"Content-Type": "application/json", "x-cron-key": "YOUR-KEY"}'::jsonb,
+    body := '{}'::jsonb);
+$$);
