@@ -47,6 +47,12 @@ function rcRangeDefault() {
 function rcList() {
   if (!ui.rc) ui.rc = Object.assign({ hide: true, bg: true, sel: {} }, rcRangeDefault());
   const r = ui.rc;
+  // Searching looks in all years and also shows printed receipts (to print an old one again)
+  const q = (r.q || '').trim().toLowerCase(), words = q.split(/\s+/).filter(Boolean), qn = q.replace(/[$,\s]/g, '');
+  const hit = p => { if (!words.length) return true; const a = IDX.by.get(p[1]); if (a && words.every(w => a._s.includes(w))) return true;
+    return /^\d+(\.\d+)?$/.test(qn) && (Math.abs(p[3] - +qn) < 0.005 || String(p[1]) === qn); };
+  if (words.length) return rcItems().filter(p => (r.all !== false || (p[2] >= r.from && p[2] <= r.to)) && hit(p))
+    .sort((a, b) => b[2].localeCompare(a[2]));
   return rcItems().filter(p => p[2] >= r.from && p[2] <= r.to && (!r.hide || !rcPrinted(p)))
     .sort((a, b) => a[2].localeCompare(b[2]) || acctName(a[1]).localeCompare(acctName(b[1]), 'he'));
 }
@@ -65,7 +71,9 @@ function vRcpt() {
   <div class="box" style="margin-bottom:14px"><div class="row" style="margin:0;align-items:flex-end">
    <label class="f">פון${dateField('rcf', r.from)}</label><label class="f">ביז${dateField('rct', r.to)}</label>
    <button class="btn" onclick="ui.rc.from=$('#rcf').value||ui.rc.from;ui.rc.to=$('#rct').value||ui.rc.to;ui.rc.sel={};vRcpt()">ווייז</button>
-   <div class="chips">${prev ? `<button class="chip" onclick="rcRange('${prev.from}','${prev.to}')">די לעצטע 2 וואכן</button>` : ''}${cur ? `<button class="chip" onclick="rcRange('${cur.from}','${todayS()}')">די יעצטיגע 2 וואכן</button>` : ''}<button class="chip" onclick="rcRange('${F.start}','${todayS()}')">אלע וואס זענען נאך נישט געדרוקט (${unprintedAll})</button></div></div>
+   <div class="chips">${prev ? `<button class="chip" onclick="rcRange('${prev.from}','${prev.to}')">די לעצטע 2 וואכן</button>` : ''}${cur ? `<button class="chip" onclick="rcRange('${cur.from}','${todayS()}')">די יעצטיגע 2 וואכן</button>` : ''}<button class="chip" onclick="rcRange('${addMonths(todayS(), -12)}','${todayS()}');ui.rc.hide=false;vRcpt()">די לעצטע יאר</button><button class="chip" onclick="rcRange('1990-01-01','${todayS()}');ui.rc.hide=false;vRcpt()">אלע יארן</button><button class="chip" onclick="rcRange('${F.start}','${todayS()}')">אלע וואס זענען נאך נישט געדרוקט (${unprintedAll})</button></div></div>
+   <div class="row" style="margin:10px 0 0"><input id="rcq" placeholder="🔍 זוך א רעסיט: נאמען, טעלעפאן, #נומער אדער סכום..." value="${esc(r.q || '')}" style="flex:1;min-width:260px;font-size:15px">
+    <label style="font-size:13px;display:flex;gap:6px;align-items:center"><input type="checkbox" ${r.all !== false ? 'checked' : ''} onchange="ui.rc.all=this.checked;vRcpt()"> זוך אין אלע יארן</label></div>
    <div class="row" style="margin:10px 0 0"><label style="font-size:13px;display:flex;gap:6px;align-items:center"><input type="checkbox" ${r.hide ? 'checked' : ''} onchange="ui.rc.hide=this.checked;vRcpt()"> באהאלט וואס איז שוין געדרוקט</label>
    <label style="font-size:13px;display:flex;gap:6px;align-items:center"><input type="checkbox" ${r.bg ? 'checked' : ''} onchange="ui.rc.bg=this.checked"> דרוק מיט דעם הינטערגרונט (אראפנעמען אויב איר דרוקט אויף פארגעדרוקטע פאפיר)</label></div></div>
   <div class="row"><b>${sel.length} רעסיטס אויסגעקליבן · ${money(total)}</b><div class="spacer"></div>
@@ -75,10 +83,13 @@ function vRcpt() {
   ${L.map((p, i) => { const d = rcData(p), a = IDX.by.get(p[1]); return `<tr style="${rcIsSel(p) ? '' : 'opacity:.5'}"><td><input type="checkbox" ${rcIsSel(p) ? 'checked' : ''} onchange="ui.rc.sel['${d.key}']=this.checked;vRcpt()"></td>
    <td class="num" style="font-size:13px">${fmtD(p[2])}</td><td><a class="name" onclick="openAcct(${p[1]})">${esc(a.h || a.n)}</a><div class="heb">${esc(a.h ? a.n : '')}</div></td>
    <td class="num"><b>${money(d.amt)}</b>${p[10] ? `<br><span class="tag custom">פלעדזש</span> <small class="dim">באצאלט ${money(p[10][4])}</small>` : ''}</td><td style="font-size:13px">${a.a ? `<span class="ltr">${esc(a.a)}</span>` : '<span class="tag late">⚠️ קיין אדרעס</span>'}</td><td style="font-size:12px">${esc(d.by)}</td>
-   <td>${rcPrinted(p) ? `<span class="tag ok">✓ געדרוקט ${fmtD(rcPrinted(p))}</span>` : ''} ${d.edited ? '<span class="tag ask">✏️ געטוישט</span> ' : ''}<button class="btn ghost sm" title="טויש דעם טעקסט" onclick="rcEdit(${i})">✏️</button><button class="btn ghost sm" title="קוק אן" onclick="rcPreview(${i})">👁</button></td></tr>`; }).join('') || '<tr><td colspan="7" class="empty">קיין נדבות אין די טעג</td></tr>'}
+   <td>${rcPrinted(p) ? `<span class="tag ok">✓ געדרוקט ${fmtD(rcPrinted(p))}</span>` : ''} ${d.edited ? '<span class="tag ask">✏️ געטוישט</span> ' : ''}<button class="btn ghost sm" title="פרינט נאר די רעסיט (אויך אן אלטע)" onclick="rcPrintOne(${i})">🖨️</button><button class="btn ghost sm" title="טויש דעם טעקסט" onclick="rcEdit(${i})">✏️</button><button class="btn ghost sm" title="קוק אן" onclick="rcPreview(${i})">👁</button></td></tr>`; }).join('') || '<tr><td colspan="7" class="empty">קיין נדבות אין די טעג</td></tr>'}
   </tbody></table>
   <p class="sub" style="margin-top:10px">💡 נאר וואס איז אין JLS (ביז ${new Date(JD.importedAt).toLocaleDateString()}). ביים דרוקן: Margins = None, Scale = 100%.</p>`;
   initDateFields($('#main'));
+  const qi = $('#rcq');
+  if (ui.rc._focus) { qi.focus(); qi.setSelectionRange(qi.value.length, qi.value.length); ui.rc._focus = false; }
+  let tm; qi.oninput = () => { clearTimeout(tm); tm = setTimeout(() => { ui.rc.q = qi.value; ui.rc.sel = {}; ui.rc._focus = true; vRcpt(); }, 300); };
 }
 function rcRange(f, t) { ui.rc.from = f; ui.rc.to = t; ui.rc.sel = {}; vRcpt(); }
 function rcAll(v) { rcList().forEach(p => { ui.rc.sel[rcKey(p)] = v; }); vRcpt(); }
@@ -123,9 +134,17 @@ ${autoPrint ? `<script>window.onload=function(){(document.fonts?document.fonts.r
 function rcOpen(list, autoPrint) {
   const w = window.open('', '_blank');
   if (!w) { toast('⚠️ דער בראוזער האט בלאקירט דאס נייע פענצטער – ערלויבט Pop-ups פאר דעם וועבסייט'); return false; }
-  w.document.open(); w.document.write(rcDoc(list, ui.rc.bg, autoPrint)); w.document.close();
+  w.document.open(); w.document.write(rcDoc(list, (ui.rc || { bg: true }).bg !== false, autoPrint)); w.document.close();
   return true;
 }
+// Print one receipt right away (also an old one); it is marked printed again with today's date
+async function rcPrintOne(i, p) {
+  p = p || window._rcL[i]; if (!p) return;
+  if (!rcOpen([rcData(p)], true)) return;
+  await emit('rcpt', rcKey(p), { printed: todayS(), by: me });
+  if (view === 'rcpt') render();
+}
+function rcPrintPay(num) { const p = JD.payments.find(x => String(x[0]) === String(num)); if (p) rcPrintOne(null, p); }
 function rcPreview(i) { const p = window._rcL[i]; if (p) rcOpen([rcData(p)], false); }
 function rcPrint() {
   const sel = rcList().filter(rcIsSel); if (!sel.length) return;
