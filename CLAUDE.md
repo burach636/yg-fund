@@ -57,7 +57,7 @@ Backend is **Supabase** (project `qrudivrakwoathgbzrwd`).
 - `style.css`, `logo.png` (the yeshiva's logo; never alter it), `icon.png`.
 
 ## UX rules the user asked for
-- Login screen: the yeshiva building as background (`building.jpg` landscape, `building-m.jpg` portrait/phone – both color-enhanced from the owner's photos), dark gradient overlay, translucent login box.
+- Login screen: the yeshiva building as background (`building.jpg` wide and `building-m.jpg` phone, both made from the owner's landscaped photo – flowers, no big trees in front – with a warm sun glow added; no generative editing is available here), dark gradient overlay, translucent login box.
 - Automatic log out after **10 minutes** without mouse/keyboard/touch (`IDLE_MS`, last activity in localStorage `yg_act`, shared by all tabs; a warning toast 1 minute before; skipped while the busy overlay is on). Also checked on page load, so a closed browser does not stay logged in.
 - Hebrew name first and bold. The English name comes after it, smaller and lighter.
 - Phones: cell first, then home.
