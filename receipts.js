@@ -385,7 +385,12 @@ async function rcSendMail(p, to) {
   const body = mailFill(s.mailBody || MAIL_BODY_DEF, d);
   const html = `<div dir="rtl" style="font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#222">${esc(body).replace(/\n/g, '<br>')}</div>`;
   const { data, error } = await sb.functions.invoke('email', { body: { to, subject: mailFill(s.mailSubject || MAIL_SUBJ_DEF, d), html, pdf, filename: 'Receipt-' + d.code + '-' + d.date + '.pdf' } });
-  if (error) { let m = error.message; try { const j = await error.context.json(); if (j && j.error) m = j.error; } catch (e) { } throw new Error(m); }
+  if (error) {
+    let m = error.message || String(error), st = error.context && error.context.status;
+    try { const j = await error.context.json(); if (j && j.error) m = j.error; } catch (e) { }
+    if (st === 404 || /not found|FunctionsFetchError|Failed to send/i.test(m)) m = 'די פונקציע "email" איז נישט געפונען אין Supabase (צי איז זי Deploy\'ט מיט דעם נאמען email?) – ' + m;
+    throw new Error((st ? '[' + st + '] ' : '') + m);
+  }
   if (data && data.error) throw new Error(data.error);
   await emit('rcpt', rcKey(p), { emailed: todayS(), emailTo: to, by: me });
   await emit('hist', uid(), { code: p[1], text: '✉️ רעסיט געשיקט צו ' + to + ' – ' + money(d.amt) });
@@ -405,7 +410,12 @@ async function rcMailGo(i) {
   try {
     if ($('#msave').checked && to !== emailOf(p[1])) await emit('acct', p[1], { email: to });
     busy('שיקט...'); await rcSendMail(p, to); busy(false); closeM(); render(); toast('✓ געשיקט צו ' + to);
-  } catch (e) { busy(false); $('#msend').disabled = false; toast('⚠️ ' + (e.message || e)); }
+  } catch (e) {
+    busy(false);
+    modal(`<h2>⚠️ דער אימעיל איז נישט אוועקגעגאנגען</h2><p>דאס האט דער סערווער געענטפערט:</p>
+     <pre id="merr" style="direction:ltr;text-align:left;background:#faf7f0;border:1px solid var(--line);border-radius:8px;padding:10px;white-space:pre-wrap;font-size:13px">${esc(e.message || String(e))}</pre>
+     <div class="row" style="justify-content:flex-end"><button class="btn ghost sm" onclick="navigator.clipboard.writeText(document.getElementById('merr').textContent).then(()=>toast('✓ קאפירט'))">📋 קאפיר</button><button class="btn" onclick="closeM()">גוט</button></div>`, 'narrow');
+  }
 }
 async function rcMailSel() {
   const L = rcList().filter(rcIsSel).filter(p => emailOf(p[1])); if (!L.length) { toast('קיינער פון די אויסגעקליבענע האט נישט קיין אימעיל'); return; }
