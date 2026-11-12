@@ -1,6 +1,7 @@
 // YG Fund – send one e-mail (a receipt PDF) for a logged-in team member. Supabase Edge Function "email".
-// Deploy with "Verify JWT" ON (the default): only logged-in users can call it, and we also check the
-// caller is in table `team` (through RLS, with the caller's own token).
+// Deploy with "Verify JWT" OFF: with the new Supabase API keys the gateway's legacy JWT check rejects the
+// browser's call before it reaches us (no CORS headers -> "Failed to send a request"). Safe, because this
+// function itself requires a logged-in user's token and checks the caller is in table `team` (through RLS).
 //
 // Secrets (Supabase > Edge Functions > Secrets), never in the repo – set ONE provider:
 //   GMAIL_USER + GMAIL_APP_PASSWORD   (send from a Gmail account through smtp.gmail.com:465; needs 2-step
