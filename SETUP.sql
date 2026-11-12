@@ -85,3 +85,6 @@ create policy ev_read on public.events for select to authenticated
 
 -- 6. (v1.6) Cell phone per team member, for the SMS bot (only these numbers get answers)
 alter table public.team add column if not exists phone text;
+
+-- 7. (v1.10) Which main sections each user may open (null = all; admins always see all)
+alter table public.team add column if not exists perms text[];

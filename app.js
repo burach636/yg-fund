@@ -393,9 +393,21 @@ function render() {
   impInfo();
   const sb = document.querySelector('nav [data-v=settings]'); if (sb) sb.style.display = isAdmin() ? '' : 'none';
   if (view === 'settings' && !isAdmin()) view = 'home';
+  if (!canView(view)) view = 'home';
   if (!JD) { vWelcome(); return; }
   counts();
   ({ home: vHome, rcpt: vRcpt, jrep: vJrep, todo: vTodo, fund: vFund, shuls: vShuls, today: vToday, pledges: vPledges, accounts: vAccounts, reports: vReports, settings: vSettings }[view] || vHome)();
+  applyPerms();
+}
+// ---------- which main sections each user may open (team.perms; null = everything; admins always everything) ----------
+const SECTIONS = [['accounts', '👥 נדבות'], ['rcpt', '🧾 רעסיטס/סטעיטמענטס'], ['todo', '✅ To-Do'], ['fund', '💵 פאנדרעיזינג חשבונות'], ['shuls', '🕍 שולן'], ['today', '📋 היינט צו בעטן'], ['pledges', '📞 פלעדזשעס'], ['reports', '📊 באריכטן'], ['jrep', '📑 רופארטס']];
+const myPerms = () => { const t = TEAM.find(a => a.email.toLowerCase() === myEmail.toLowerCase()); return t && !t.is_admin && Array.isArray(t.perms) ? t.perms : null; };
+const canView = v => v === 'home' || v === 'settings' || !myPerms() || myPerms().includes(v);
+function applyPerms() {
+  document.querySelectorAll('nav [data-v]').forEach(b => { if (b.dataset.v !== 'settings') b.style.display = canView(b.dataset.v) ? '' : 'none'; });
+  document.querySelectorAll('.tile[onclick]').forEach(t => { const m = t.getAttribute('onclick').match(/go\('(\w+)'\)/); if (m && !canView(m[1])) t.remove(); });
+  if (!canView('todo')) document.querySelectorAll('.hcol.t2').forEach(e => e.remove());
+  if (!canView('shuls')) document.querySelectorAll('.hcol.t4').forEach(e => e.remove());
 }
 function impInfo() {
   $('#impInfo').innerHTML = JD ? `JLS: ${new Date(JD.importedAt).toLocaleString()}<br>${JD.accounts.length.toLocaleString()} אקאונטס · ${esc(JD.companyName || 'Company ' + JD.company)}` : '';
@@ -461,7 +473,7 @@ function taskRow(x) {
   <div class="acts">${x.code ? `<button class="btn ghost sm" onclick="noteForm(${x.code})">📝 נאטיץ</button>` : ''}${x.kind === 'ask' ? `<button class="btn sm" onclick="askForm(${x.code})">✓ געבעטן</button>` : `${x.task.rc ? `<button class="btn gold sm" onclick="rcOpenTask('${x.id}')">🖨️ רעסיטס</button>` : ''}<button class="btn sm" onclick="taskDone('${x.id}')">✓ געטון</button><button class="btn ghost sm" onclick="taskForm('${x.id}')">ענדער</button>`}
   ${x.kind === 'ask' ? `<button class="btn ghost sm" title="איינמאליגע נדבה – נישט בעטן ווייטער" onclick="markOnce(${x.code})">🚫 איינמאליג</button>` : ''}<button class="btn ghost sm" onclick="snooze('${x.kind}','${x.kind === 'ask' ? x.code : x.id}',7)">אין א וואך</button><button class="btn ghost sm" onclick="snooze('${x.kind}','${x.kind === 'ask' ? x.code : x.id}',30)">אין א חודש</button></div></div>`;
 }
-function go(v) { view = v; document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x.dataset.v === v)); render(); }
+function go(v) { if (!canView(v)) { toast('🔒 No access'); return; } view = v; document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x.dataset.v === v)); render(); }
 async function snooze(kind, id, n) {
   const d = addDays(todayS(), n);
   if (kind === 'ask') { await emit('acct', id, { nextAsk: d }); await emit('hist', uid(), { code: +id, text: 'אפגעשטופט אויף ' + fmtD(d) }); }
@@ -822,7 +834,7 @@ function vSettings() {
   $('#main').innerHTML = `<div dir="ltr" style="text-align:left"><h2>Settings</h2><p class="sub">Only the admin sees this page.</p>
   <div class="cols"><div class="box"><h3 style="margin-top:0">Users</h3>
    <p class="sub">Only the e-mails on this list can log in. To add a user: add the e-mail here; the user opens the website, clicks <b>"ערשטע מאל דא?"</b> and makes a password.</p>
-   <table><thead><tr><th style="text-align:left">Name</th><th style="text-align:left">E-mail</th><th style="text-align:left">📱 Cell phone (SMS)</th><th>Admin</th><th></th></tr></thead><tbody id="ulist">
+   <table><thead><tr><th style="text-align:left">Name</th><th style="text-align:left">E-mail</th><th style="text-align:left">📱 Cell phone (SMS)</th><th>Admin</th><th style="text-align:left">🔒 Sections</th><th></th></tr></thead><tbody id="ulist">
    ${TEAM.map(t => urow(t)).join('')}</tbody></table>
    <div class="row" style="margin-top:10px"><button class="btn ghost sm" onclick="addURow()">+ New user</button><div class="spacer"></div><button class="btn" onclick="saveUsers()">Save users</button></div>
    <div id="uerr" class="bal" style="font-size:13px"></div>
@@ -846,7 +858,28 @@ function vSettings() {
 }
 function urow(t) {
   t = t || { email: '', name: '', is_admin: false };
-  return `<tr data-old="${esc(t.email)}"><td><input class="un" value="${esc(t.name)}" style="width:100%"></td><td><input class="ue" type="email" value="${esc(t.email)}" style="width:100%;direction:ltr"></td><td><input class="up" type="tel" value="${esc(t.phone || '')}" placeholder="845-555-1234" style="width:100%;direction:ltr"></td><td style="text-align:center"><input class="ua" type="checkbox" ${t.is_admin ? 'checked' : ''}></td><td><button class="btn red sm" onclick="this.closest('tr').remove()">✕</button></td></tr>`;
+  const pv = Array.isArray(t.perms) ? t.perms : null;
+  return `<tr data-old="${esc(t.email)}" data-perms="${esc(pv ? JSON.stringify(pv) : '')}"><td><input class="un" value="${esc(t.name)}" style="width:100%"></td><td><input class="ue" type="email" value="${esc(t.email)}" style="width:100%;direction:ltr"></td><td><input class="up" type="tel" value="${esc(t.phone || '')}" placeholder="845-555-1234" style="width:100%;direction:ltr"></td><td style="text-align:center"><input class="ua" type="checkbox" ${t.is_admin ? 'checked' : ''}></td><td><button class="btn ghost sm upb" onclick="permForm(this.closest('tr'))">${permLabel(pv)}</button></td><td><button class="btn red sm" onclick="this.closest('tr').remove()">✕</button></td></tr>`;
+}
+const permLabel = pv => pv ? '🔒 ' + pv.length + ' of ' + SECTIONS.length : '✓ All';
+// Edit one user's sections (kept on the row until "Save users")
+function permForm(tr) {
+  window._permTr = tr;
+  const cur = tr.dataset.perms ? JSON.parse(tr.dataset.perms) : null, name = tr.querySelector('.un').value || tr.querySelector('.ue').value;
+  modal(`<div dir="ltr" style="text-align:left"><h2>🔒 Sections for ${esc(name)}</h2>
+   <p class="sub">Which parts of the main page this user can open. The home page is always shown. Admins always see everything.</p>
+   ${tr.querySelector('.ua').checked ? '<p class="sub"><b>This user is an admin</b> – the choice below only matters if admin is turned off.</p>' : ''}
+   <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;margin:10px 0">${SECTIONS.map(([v, l]) => `<label style="display:flex;gap:8px;align-items:center;font-size:14px" dir="rtl"><input type="checkbox" class="pcb" value="${v}" ${!cur || cur.includes(v) ? 'checked' : ''}> ${l}</label>`).join('')}</div>
+   <div class="row"><button class="btn ghost sm" onclick="document.querySelectorAll('.pcb').forEach(c=>c.checked=true)">All</button><button class="btn ghost sm" onclick="document.querySelectorAll('.pcb').forEach(c=>c.checked=false)">None</button><div class="spacer"></div>
+   <button class="btn ghost" onclick="closeM()">Back</button><button class="btn" onclick="permSet()">OK</button></div>
+   <p class="sub" style="margin-top:8px">Then press <b>Save users</b>.</p></div>`, 'narrow');
+}
+function permSet() {
+  const tr = window._permTr, v = [...document.querySelectorAll('.pcb:checked')].map(c => c.value);
+  const pv = v.length === SECTIONS.length ? null : v;
+  tr.dataset.perms = pv ? JSON.stringify(pv) : '';
+  tr.querySelector('.upb').textContent = permLabel(pv);
+  closeM(); toast('Press "Save users" to keep it');
 }
 function addURow() { $('#ulist').insertAdjacentHTML('beforeend', urow()); }
 async function saveUsers() {
@@ -859,7 +892,7 @@ async function saveUsers() {
     if (out.some(a => a.email === email)) return err('The same e-mail appears twice');
     if (out.some(a => a.name === name)) return err('The same name appears twice');
     if (phone && phone.replace(/\D/g, '').length < 10) return err('The cell phone number of ' + name + ' is incomplete (10 digits)');
-    out.push({ email, name, is_admin: admin, phone, old: r.dataset.old.toLowerCase() });
+    out.push({ email, name, is_admin: admin, phone, perms: r.dataset.perms ? JSON.parse(r.dataset.perms) : null, old: r.dataset.old.toLowerCase() });
   }
   if (!out.some(a => a.is_admin)) return err('At least one admin must remain');
   const mine = out.find(a => a.email === myEmail.toLowerCase());
@@ -869,9 +902,10 @@ async function saveUsers() {
     for (const t of TEAM) { const n = out.find(a => a.email === t.email.toLowerCase()); if (n && n.name !== t.name) renames[t.name] = n.name; }
     const keep = out.map(a => a.email);
     for (const t of TEAM) if (!keep.includes(t.email.toLowerCase())) await q(sb.from('team').delete().eq('email', t.email));
-    const hasPhone = TEAM.some(t => 'phone' in t);
+    const hasPhone = TEAM.some(t => 'phone' in t), hasPerms = TEAM.some(t => 'perms' in t);
+    if (!hasPerms && out.some(a => a.perms)) return err('To limit sections, first run this in Supabase > SQL Editor:  alter table public.team add column if not exists perms text[];');
     if (!hasPhone && out.some(a => a.phone)) return err('צו אפהיטן סעלפאון נומערן דארף מען ערשט לויפן די SQL פון v1.6 אין Supabase (זעט SETUP.sql טייל 6)');
-    for (const a of out) await q(sb.from('team').upsert(Object.assign({ email: a.email, name: a.name, is_admin: a.is_admin }, hasPhone ? { phone: a.phone || null } : {})));
+    for (const a of out) await q(sb.from('team').upsert(Object.assign({ email: a.email, name: a.name, is_admin: a.is_admin }, hasPhone ? { phone: a.phone || null } : {}, hasPerms ? { perms: a.perms } : {})));
     for (const [o, n] of Object.entries(renames)) {
       for (const [c, st] of Object.entries(S.acct)) if (st.assigned === o) await emit('acct', c, { assigned: n });
       for (const [id, t] of Object.entries(S.task)) { if (t.who === o) await emitTask(id, { who: n }); if (t.who2 === o) await emitTask(id, { who2: n }); }
