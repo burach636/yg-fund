@@ -81,7 +81,7 @@ async function loadJLS() {
   JD = JSON.parse(await gunzip(blob)); buildIndex(); jlsVersion = m.version;
 }
 async function loadTeam() {
-  TEAM = await q(sb.from('team').select('email,name,is_admin').order('added_at', { ascending: true }));
+  TEAM = await q(sb.from('team').select('*').order('added_at', { ascending: true }));
   const t = TEAM.find(x => x.email.toLowerCase() === myEmail.toLowerCase());
   me = t ? t.name : myEmail;
 }
@@ -187,7 +187,7 @@ async function start() {
   setInterval(poll, 15000);
 }
 function setupUser() {
-  $('#whoBox').innerHTML = `👤 <b>${esc(me)}</b>${isAdmin() ? ' <span class="tag ask">אדמין</span>' : ''} <button class="btn ghost sm" onclick="pwForm()">🔑 פאסווארט</button> <button class="btn ghost sm" onclick="logout()">ארויסגיין</button>`;
+  $('#whoBox').innerHTML = `👤 <b>${esc(me)}</b>${isAdmin() ? ' <span class="tag ask">אדמין</span>' : ''} <button class="btn ghost sm" onclick="callSetup()">📞 טעלעפאן</button> <button class="btn ghost sm" onclick="pwForm()">🔑 פאסווארט</button> <button class="btn ghost sm" onclick="logout()">ארויסגיין</button>`;
 }
 const USERS = () => TEAM.map(a => a.name);
 const isAdmin = () => !!(TEAM.find(a => a.email.toLowerCase() === myEmail.toLowerCase()) || {}).is_admin;
@@ -271,7 +271,7 @@ function lastNoteHTML(code, br) {
 }
 function noteForm(code) {
   const a = IDX.by.get(+code), st = S.acct[code] || {};
-  modal(`<h2>📝 נאטיץ: ${esc(a.h || a.n)}</h2><p class="sub">${a.ph.slice(0, 3).map(p => esc(p[0] + ' ' + p[1])).join(' · ')}</p>
+  modal(`<h2>📝 נאטיץ: ${esc(a.h || a.n)}</h2><p class="sub">${a.ph.slice(0, 3).map(p => callBtn(p[1], code) + ' ' + esc(p[0] + ' ' + p[1])).join(' · ')}</p>
    <label class="f">וואס האט ער געענטפערט?<textarea id="nn" rows="3"></textarea></label>
    <div class="grid2" style="margin-top:10px"><label class="f">ווער קאלט אים ווייטער<select id="nw"><option value="">נישט צוגעטיילט</option>${USERS().map(u => `<option ${u === st.assigned ? 'selected' : ''}>${esc(u)}</option>`).join('')}</select></label>
    <label class="f">רימיינד ווידער (אפציאנאל)${dateField('nd', '', { clear: true })}</label></div>
@@ -435,7 +435,7 @@ function taskRow(x) {
     : `<span class="tag custom">ארבעט</span> ${esc(x.task.title)} ${a ? `· <a class="name" onclick="openAcct(${x.code})">${esc(a.h || a.n)}</a>` : ''}`;
   return `<div class="task"><div class="chk" title="געטון" onclick="${x.kind === 'ask' ? `askForm(${x.code})` : `taskDone('${x.id}')`}"></div>
   <div><div class="t">${title} ${x.vip ? '<span class="tag hi">⭐ VIP</span>' : ''} ${x.hi ? '<span class="tag hi">דרינגענד</span>' : ''} ${late ? `<span class="tag late">שפעט ${late > 365 ? Math.floor(late / 365) + ' יאר' : late + ' טעג'}</span>` : ''}</div>
-  <div class="m">${a && a.ph[0] ? `<span>📞 <span class="num">${esc(a.ph[0][1])}</span></span>` : ''}${g ? `<span>לעצטע מתנה: ${money(g.lastAmt)} · ${fmtD(g.last)}</span><span>סך הכל: ${money(g.total)}</span>` : ''}${p && p.open > 0.009 ? `<span class="bal">באלאנס ${money(p.open)}</span>` : ''}${x.kind === 'ask' ? `<span>${FREQ[x.freq] ? FREQ[x.freq][0] : ''}</span>` : ''}${x.task && x.task.note ? `<span>📝 ${esc(x.task.note)}</span>` : ''}${whoSel(x.kind === 'ask' ? `assign(${x.code},this.value)` : `assignTask('${x.id}',this.value)`, x.who)}${lastNoteHTML(x.code)}</div></div>
+  <div class="m">${a && a.ph[0] ? `<span>${callBtn(a.ph[0][1], x.code)} <span class="num">${esc(a.ph[0][1])}</span></span>` : ''}${g ? `<span>לעצטע מתנה: ${money(g.lastAmt)} · ${fmtD(g.last)}</span><span>סך הכל: ${money(g.total)}</span>` : ''}${p && p.open > 0.009 ? `<span class="bal">באלאנס ${money(p.open)}</span>` : ''}${x.kind === 'ask' ? `<span>${FREQ[x.freq] ? FREQ[x.freq][0] : ''}</span>` : ''}${x.task && x.task.note ? `<span>📝 ${esc(x.task.note)}</span>` : ''}${whoSel(x.kind === 'ask' ? `assign(${x.code},this.value)` : `assignTask('${x.id}',this.value)`, x.who)}${lastNoteHTML(x.code)}</div></div>
   <div class="acts">${x.code ? `<button class="btn ghost sm" onclick="noteForm(${x.code})">📝 נאטיץ</button>` : ''}${x.kind === 'ask' ? `<button class="btn sm" onclick="askForm(${x.code})">✓ געבעטן</button>` : `${x.task.rc ? `<button class="btn gold sm" onclick="rcOpenTask('${x.id}')">🖨️ רעסיטס</button>` : ''}<button class="btn sm" onclick="taskDone('${x.id}')">✓ געטון</button><button class="btn ghost sm" onclick="taskForm('${x.id}')">ענדער</button>`}
   ${x.kind === 'ask' ? `<button class="btn ghost sm" title="איינמאליגע נדבה – נישט בעטן ווייטער" onclick="markOnce(${x.code})">🚫 איינמאליג</button>` : ''}<button class="btn ghost sm" onclick="snooze('${x.kind}','${x.kind === 'ask' ? x.code : x.id}',7)">אין א וואך</button><button class="btn ghost sm" onclick="snooze('${x.kind}','${x.kind === 'ask' ? x.code : x.id}',30)">אין א חודש</button></div></div>`;
 }
@@ -461,7 +461,7 @@ async function taskDone(id) {
 }
 function askForm(code) {
   const a = IDX.by.get(code), k = ask(code);
-  modal(`<h2>וואס איז געווען מיט ${esc(a.h || a.n)}?</h2><p class="sub">${a.ph.map(p => esc(p[0] + ' ' + p[1])).join(' · ')}</p>
+  modal(`<h2>וואס איז געווען מיט ${esc(a.h || a.n)}?</h2><p class="sub">${a.ph.map(p => callBtn(p[1], code) + ' ' + esc(p[0] + ' ' + p[1])).join(' · ')}</p>
   <div class="grid2"><label class="f">רעזולטאט<select id="res">${RESULTS.map(r => `<option>${r}</option>`).join('')}</select></label>
   <label class="f">סכום (אויב געגעבן/צוגעזאגט)<input id="amt" type="number" placeholder="$"></label>
   <label class="f">ווי אפט בעטן<select id="fq">${Object.entries(FREQ).map(([kk, v]) => `<option value="${kk}" ${kk === k.freq ? 'selected' : ''}>${v[0]}</option>`).join('')}</select></label>
@@ -526,7 +526,7 @@ function vPledges() {
   <table><thead><tr><th></th><th>נאמען</th><th>טעלעפאנען</th><th>פעליג יעצט</th><th>סך הכל אפען</th><th>לעצטע באצאלונג</th><th>ווער קאלט / לעצטע נאטיץ</th><th></th></tr></thead><tbody>
   ${rows.map(r => `<tr style="${r.called ? 'opacity:.45' : ''}"><td>${r.called ? '✅' : '⬜'}</td>
    <td><a class="name" onclick="openAcct(${r.c})">${esc(r.a.h || r.a.n)}</a> ${r.st.vip ? '⭐' : ''}<div class="heb">${esc(r.a.h ? r.a.n : '')}</div></td>
-   <td class="num" style="font-size:13px">${r.a.ph.slice(0, 2).map(p => esc(p[1])).join('<br>')}</td>
+   <td class="num" style="font-size:13px">${r.a.ph.slice(0, 2).map(p => callBtn(p[1], r.c) + ' ' + esc(p[1])).join('<br>')}</td>
    <td class="num bal">${money(r.g.dueNow)}</td><td class="num">${money(r.g.open)}</td>
    <td class="num" style="font-size:13px">${r.y && r.y.last ? money(r.y.lastAmt) + '<br>' + fmtD(r.y.last) : '—'}</td>
    <td style="font-size:13px">${r.g.sol ? esc(r.g.sol) + '<br>' : ''}${whoSel(`assign(${r.c},this.value)`, r.st.assigned || '')}${lastNoteHTML(r.c, true)}</td>
@@ -583,7 +583,7 @@ function vAccounts() {
   <table class="acclist"><thead><tr><th>#</th><th>נאמען</th><th>טעלעפאן</th><th>אדרעס</th><th>YG סך הכל</th><th>לעצטע</th><th>באלאנס</th><th>ווייטער בעטן</th><th>שול</th></tr></thead><tbody>
   ${L.slice(0, ui.accN).map(a => { const g = IDX.yg.get(a.c), p = IDX.pl.get(a.c), k = ask(a.c), st = S.acct[a.c] || {}; return `<tr>
    <td class="num" style="color:var(--muted)">${a.c}</td><td><a class="name" onclick="openAcct(${a.c})">${esc(a.h || a.n)}</a> ${st.vip ? '⭐' : ''} ${a.x ? '<span class="tag gray">נישט אקטיוו</span>' : ''}<div class="heb">${esc(a.h ? a.n : '')}</div></td>
-   <td class="num" style="font-size:13px">${a.ph[0] ? esc(a.ph[0][1]) : ''}</td><td style="font-size:13px"><span class="ltr">${esc(a.a)}</span></td>
+   <td class="num" style="font-size:13px">${a.ph[0] ? callBtn(a.ph[0][1], a.c) + ' ' + esc(a.ph[0][1]) : ''}</td><td style="font-size:13px"><span class="ltr">${esc(a.a)}</span></td>
    <td class="num">${g ? money(g.total) : ''}</td><td class="num" style="font-size:13px">${g && g.last ? fmtD(g.last) : ''}</td>
    <td class="num ${p && p.open > 0.009 ? 'bal' : ''}">${p && p.open > 0.009 ? money(p.open) : ''}</td>
    <td style="font-size:13px">${k.next ? (k.next <= todayS() ? '<span class="tag late">היינט</span>' : fmtDual(k.next)) : ''}</td><td style="font-size:13px">${esc(shulName(st.shul))}</td></tr>`; }).join('') || '<tr><td colspan="9" class="empty">נישט געפונען</td></tr>'}
@@ -628,7 +628,7 @@ function openAcct(code) {
   <div class="cols"><div class="box"><div class="k">פון JLS</div>
    ${a.w || a.wh ? `<div style="margin:4px 0">👩 <b>${esc(a.wh || a.w)}</b> <span class="heb">${esc(a.wh ? a.w : '')}</span></div>` : ''}
    <div style="margin:6px 0">🏠 <span class="ltr">${esc(a.a || '—')}</span></div>
-   ${a.ph.map(x => `<div class="ph"><span>${esc(x[0] || 'טעלעפאן')}</span><span class="num">${esc(x[1])}</span></div>`).join('')}
+   ${a.ph.map(x => `<div class="ph"><span>${esc(x[0] || 'טעלעפאן')}</span><span class="num">${esc(x[1])} ${callBtn(x[1], code)}</span></div>`).join('')}
    ${a.co ? `<div class="sub" style="margin-top:6px">${esc(a.co)}</div>` : ''}
    ${a.x ? '<span class="tag gray">נישט אקטיוו אין JLS</span>' : ''}</div>
   <div class="box"><div class="k">מיינע איינשטעלונגען</div><div class="grid2" style="margin-top:6px">
@@ -673,7 +673,7 @@ function vSettings() {
   $('#main').innerHTML = `<h2>סעטינגס</h2><p class="sub">נאר דער אדמין זעט דעם בלאט.</p>
   <div class="cols"><div class="box"><h3 style="margin-top:0">באניצער</h3>
    <p class="sub">נאר די אימעילס אויף דער ליסטע קענען אריין. א נייער באניצער: לייגט צו זיין אימעיל דא, און ער גייט אויף דער וועבסייט, דריקט <b>"ערשטע מאל דא?"</b> און מאכט זיך א פאסווארט.</p>
-   <table><thead><tr><th>נאמען</th><th>אימעיל</th><th>אדמין</th><th></th></tr></thead><tbody id="ulist">
+   <table><thead><tr><th>נאמען</th><th>אימעיל</th><th>📱 סעלפאון (SMS)</th><th>אדמין</th><th></th></tr></thead><tbody id="ulist">
    ${TEAM.map(t => urow(t)).join('')}</tbody></table>
    <div class="row" style="margin-top:10px"><button class="btn ghost sm" onclick="addURow()">+ נייער באניצער</button><div class="spacer"></div><button class="btn" onclick="saveUsers()">היט אפ באניצער</button></div>
    <div id="uerr" class="bal" style="font-size:13px"></div>
@@ -686,23 +686,28 @@ function vSettings() {
   <div class="box"><h3 style="margin-top:0">לעצטע JLS דערהיינטיגונג</h3><p class="sub">${new Date(JD.importedAt).toLocaleString()} · ${esc(JD.importedBy || '')} · ${esc((JD.source || {}).name || '')}<br>${JD.accounts.length.toLocaleString()} אקאונטס · ${JD.payments.length.toLocaleString()} באצאלונגען · ${JD.pledges.length.toLocaleString()} פלעדזשעס · ${esc(JD.companyName)}</p>
    <h3>אריבערנעמען פון דער דעסקטאפ ווערסיע</h3>
    <p class="sub">אויב איר האט שוין געארבעט מיט דער דעסקטאפ ווערסיע: קלייבט די פייל <span class="path">data\\log.jsonl</span>, און אלע To-Do'ס, נאטיצן און רימיינדערס פון דארט קומען אריבער.</p>
-   <label class="btn ghost sm">📥 קלייב log.jsonl<input type="file" accept=".jsonl,.txt" hidden onchange="importDesktopLog(this.files[0])"></label></div></div>`;
+   <label class="btn ghost sm">📥 קלייב log.jsonl<input type="file" accept=".jsonl,.txt" hidden onchange="importDesktopLog(this.files[0])"></label>
+   <h3>📱 SMS פון סעלפאון</h3>
+   <p class="sub">שיקט א טעקסט צום SMS נומער פון דער סיסטעם. נאר די סעלפאונס וואס שטייען אין דער ליסטע פון באניצער באקומען אן ענטפער.</p>
+   <table><tbody>${[['שווארץ', 'אלע אינפא (נאמען, טעלעפאן, אדרעס, נדבות)'], ['טעלעפאן שווארץ', 'טעלעפאן נומערן'], ['אדרעס שווארץ', 'אדרעס'], ['געגעבן שווארץ', 'וויפיל ער האט געגעבן די לעצטע יאר'], ['באלאנס שווארץ', 'אפענער פלעדזש'], ['היינט', 'מיינע To-Do פאר היינט'], ['פלעדזשעס', 'פלעדזשעס צו קאלן דעם חודש'], ['געקאלט שווארץ', 'מערקט אן אז מ\'האט געקאלט'], ['טאדו קויפן פאפיר', 'נייע זאך אין מיין To-Do'], ['נאטיץ שווארץ: וועט געבן נאך פסח', 'נאטיץ ביי דעם נדבן'], ['שול', 'קומענדיגע שול'], ['?', 'די ליסטע']].map(([c, d]) => `<tr><td><b>${esc(c)}</b></td><td style="font-size:13px">${esc(d)}</td></tr>`).join('')}</tbody></table>
+   <p class="sub" style="margin-top:6px">אויב עס זענען דא עטליכע מיט דעם זעלבן נאמען, שיקט עס צוריק א ליסטע מיט #נומערן. דערנאך שיקט מען למשל <b>#1234</b>.</p></div></div>`;
 }
 function urow(t) {
   t = t || { email: '', name: '', is_admin: false };
-  return `<tr data-old="${esc(t.email)}"><td><input class="un" value="${esc(t.name)}" style="width:100%"></td><td><input class="ue" type="email" value="${esc(t.email)}" style="width:100%;direction:ltr"></td><td style="text-align:center"><input class="ua" type="checkbox" ${t.is_admin ? 'checked' : ''}></td><td><button class="btn red sm" onclick="this.closest('tr').remove()">✕</button></td></tr>`;
+  return `<tr data-old="${esc(t.email)}"><td><input class="un" value="${esc(t.name)}" style="width:100%"></td><td><input class="ue" type="email" value="${esc(t.email)}" style="width:100%;direction:ltr"></td><td><input class="up" type="tel" value="${esc(t.phone || '')}" placeholder="845-555-1234" style="width:100%;direction:ltr"></td><td style="text-align:center"><input class="ua" type="checkbox" ${t.is_admin ? 'checked' : ''}></td><td><button class="btn red sm" onclick="this.closest('tr').remove()">✕</button></td></tr>`;
 }
 function addURow() { $('#ulist').insertAdjacentHTML('beforeend', urow()); }
 async function saveUsers() {
   const err = t => { $('#uerr').textContent = t; };
   const rows = [...document.querySelectorAll('#ulist tr')], out = [];
   for (const r of rows) {
-    const name = r.querySelector('.un').value.trim(), email = r.querySelector('.ue').value.trim().toLowerCase(), admin = r.querySelector('.ua').checked;
+    const name = r.querySelector('.un').value.trim(), email = r.querySelector('.ue').value.trim().toLowerCase(), admin = r.querySelector('.ua').checked, phone = r.querySelector('.up').value.trim();
     if (!name && !email) continue;
     if (!name || !/^\S+@\S+\.\S+$/.test(email)) return err('יעדער באניצער דארף א נאמען און א ריכטיגן אימעיל');
     if (out.some(a => a.email === email)) return err('צוויי מאל דער זעלבער אימעיל');
     if (out.some(a => a.name === name)) return err('צוויי מאל דער זעלבער נאמען');
-    out.push({ email, name, is_admin: admin, old: r.dataset.old.toLowerCase() });
+    if (phone && phone.replace(/\D/g, '').length < 10) return err('דער סעלפאון נומער פון ' + name + ' איז נישט גאנץ (10 ציפערן)');
+    out.push({ email, name, is_admin: admin, phone, old: r.dataset.old.toLowerCase() });
   }
   if (!out.some(a => a.is_admin)) return err('עס מוז בלייבן כאטש איין אדמין');
   const mine = out.find(a => a.email === myEmail.toLowerCase());
@@ -712,7 +717,9 @@ async function saveUsers() {
     for (const t of TEAM) { const n = out.find(a => a.email === t.email.toLowerCase()); if (n && n.name !== t.name) renames[t.name] = n.name; }
     const keep = out.map(a => a.email);
     for (const t of TEAM) if (!keep.includes(t.email.toLowerCase())) await q(sb.from('team').delete().eq('email', t.email));
-    for (const a of out) await q(sb.from('team').upsert({ email: a.email, name: a.name, is_admin: a.is_admin }));
+    const hasPhone = TEAM.some(t => 'phone' in t);
+    if (!hasPhone && out.some(a => a.phone)) return err('צו אפהיטן סעלפאון נומערן דארף מען ערשט לויפן די SQL פון v1.6 אין Supabase (זעט SETUP.sql טייל 6)');
+    for (const a of out) await q(sb.from('team').upsert(Object.assign({ email: a.email, name: a.name, is_admin: a.is_admin }, hasPhone ? { phone: a.phone || null } : {})));
     for (const [o, n] of Object.entries(renames)) {
       for (const [c, st] of Object.entries(S.acct)) if (st.assigned === o) await emit('acct', c, { assigned: n });
       for (const [id, t] of Object.entries(S.task)) { if (t.who === o) await emitTask(id, { who: n }); if (t.who2 === o) await emitTask(id, { who2: n }); }

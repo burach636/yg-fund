@@ -156,3 +156,5 @@ table.acclist td.num{font-size:15px!important}
 .hcol{border-radius:14px;padding:4px 14px 14px;border-top:4px solid}
 .hcol.t2{background:#f2faf5;border-top-color:#3d9a62}
 .hcol.t4{background:#f7f3fc;border-top-color:#8a63c2}
+a.callb{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:var(--greenbg);border:1px solid #bfe0cc;text-decoration:none;font-size:13px;vertical-align:middle;cursor:pointer}
+a.callb:hover{background:#d3eedd;border-color:var(--green)}

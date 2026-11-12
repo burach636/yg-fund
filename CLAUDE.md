@@ -62,11 +62,14 @@ Backend is **Supabase** (project `qrudivrakwoathgbzrwd`).
   - Settings has a "skipOnce" option, so donors who gave only once are not auto-scheduled.
 - The logo has a 3D look done with CSS only (`.logo3d`: drop-shadow extrusion, shine, tilt). The image itself must never be changed.
 
-## Planned next (phase 2)
-SMS bot: Twilio number plus a Supabase Edge Function webhook.
-- Commands in Yiddish and English: `אדרעס/address <name>`, `באלאנס/balance <name>`, `טעלעפאן/phone <name>`, `אינפא <name>`, `היינט`, `פלעדזשעס`, `געקאלט <name>`.
-- Only reply to the team's whitelisted phone numbers.
-- The user must work from a basic "kosher" SMS-only phone.
+## SMS bot (v1.6)
+- `supabase/functions/sms/index.ts`: Supabase Edge Function `sms`, deployed by the user from the dashboard editor with **Verify JWT off**. Plain fetch to Supabase REST/Storage with the built-in `SUPABASE_SERVICE_ROLE_KEY`; caches the JLS data and the event log while warm.
+- Works with **Telnyx** (JSON webhook, Ed25519 signature `TELNYX_PUBLIC_KEY`, reply via API `TELNYX_API_KEY`) or **Twilio** (form webhook, HMAC `TWILIO_AUTH_TOKEN`, TwiML reply). Requests without a valid signature get 403. Secrets live only in Supabase > Edge Functions > Secrets.
+- Only phones in `team.phone` (SETUP.sql section 6) get answers. Commands (Yiddish/English): a plain name = info, `טעלעפאן`, `אדרעס`, `געגעבן` (last 12 months), `באלאנס`, `היינט`, `פלעדזשעס`, `געקאלט`, `טאדו`/`+` (new task for the sender), `נאטיץ name: text`, `שול`, `?`. Several matches → list of `#code`.
+- Test locally: copy to `.mts` and run with `node --experimental-strip-types` against a mocked `fetch` (exports `handle`, `answer`, `load`).
+
+## Click to call
+- `callBtn(num, code)` in sections.js puts a 📞 link next to phones. The link template is per computer (localStorage `yg_call`, header button "📞 טעלעפאן"): default `tel:{num}` (opens the office softphone), or an http click-to-dial URL for desk phones (`{num}` = +1…, `{digits}` = 10 digits), opened in a small window that closes itself.
 
 ## Testing
 There is no test framework. Run `node --check app.js` and similar for each file.

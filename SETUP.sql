@@ -82,3 +82,6 @@ create policy jls_upd  on storage.objects for update to authenticated using (buc
 drop policy if exists ev_read on public.events;
 create policy ev_read on public.events for select to authenticated
   using (public.is_team() and (coalesce(p->>'priv', 'false') <> 'true' or uid = auth.uid()));
+
+-- 6. (v1.6) Cell phone per team member, for the SMS bot (only these numbers get answers)
+alter table public.team add column if not exists phone text;

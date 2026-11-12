@@ -289,9 +289,47 @@ function shulDonors(id) {
   modal(`<div class="row"><div><h2 style="margin:0">🕍 ${esc(s.name)}</h2><span class="ltr sub">${esc(s.addr || '')}</span></div><div class="spacer"></div><button class="btn ghost sm" onclick="closeM()">✕</button></div>
    <div class="row"><p class="sub" style="margin:0">${L.length} נדבנים געטראפן אין דער שול</p><div class="spacer"></div><button class="btn ghost sm" onclick="xlsShul('${id}')">⬇ Excel</button></div>
    <div class="scroll" style="max-height:60vh"><table><thead><tr><th>נאמען</th><th>טעלעפאן</th><th>סך הכל</th><th>לעצטע</th></tr></thead><tbody>
-   ${L.map(c => { const a = IDX.by.get(c), g = IDX.yg.get(c) || {}; return `<tr><td><a class="name" onclick="closeM();openAcct(${c})">${esc(a.h || a.n)}</a><div class="heb">${esc(a.h ? a.n : '')}</div></td><td class="num" style="font-size:13px">${a.ph[0] ? esc(a.ph[0][1]) : ''}</td><td class="num">${money(g.total)}</td><td class="num">${fmtD(g.last)}</td></tr>`; }).join('') || '<tr><td colspan="4" class="empty">נאך קיינער. עפנט א נדבן און קלייבט אויס די שול.</td></tr>'}
+   ${L.map(c => { const a = IDX.by.get(c), g = IDX.yg.get(c) || {}; return `<tr><td><a class="name" onclick="closeM();openAcct(${c})">${esc(a.h || a.n)}</a><div class="heb">${esc(a.h ? a.n : '')}</div></td><td class="num" style="font-size:13px">${a.ph[0] ? callBtn(a.ph[0][1], c) + ' ' + esc(a.ph[0][1]) : ''}</td><td class="num">${money(g.total)}</td><td class="num">${fmtD(g.last)}</td></tr>`; }).join('') || '<tr><td colspan="4" class="empty">נאך קיינער. עפנט א נדבן און קלייבט אויס די שול.</td></tr>'}
    </tbody></table></div>`);
 }
 function shulSel(id, cur) {
   return `<select id="${id}"><option value="">—</option>${shulList().map(s => `<option value="${s.id}" ${s.id === cur ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}</select>`;
+}
+
+// ---------- 📞 click to call (per computer) ----------
+// The way to dial is saved on this computer only: 'tel:{num}' opens the office phone program
+// (softphone / Phone Link / RingCentral...), or an http URL for desk phones with "click to dial".
+const callTpl = () => { try { return localStorage.getItem('yg_call') || 'tel:{num}'; } catch (e) { return 'tel:{num}'; } };
+const callNum = n => { const d = String(n || '').replace(/\D/g, ''); return d.length === 10 ? '1' + d : d; };
+function callBtn(num, code) {
+  const d = callNum(num); if (d.length < 7) return '';
+  return `<a class="callb" title="קאל ${esc(num)}" href="${esc(callTpl().replace('{num}', '+' + d).replace('{digits}', d.slice(-10)))}" onclick="return dial(this,${+code || 0})">📞</a>`;
+}
+function dial(el, code) {
+  const url = el.getAttribute('href');
+  if (/^https?:/i.test(url)) {   // desk phone: send the dial request in a small window that closes itself
+    const w = window.open(url, 'ygdial', 'width=320,height=160');
+    if (w) setTimeout(() => { try { w.close(); } catch (e) { } }, 5000);
+    toast('📞 קאלט...');
+    return false;
+  }
+  toast('📞 קאלט...');
+  return true;
+}
+function callSetup() {
+  const t = callTpl();
+  modal(`<h2>📞 קאלן פון דעם קאמפיוטער</h2>
+   <p class="sub">ווען מען דריקט 📞 לעבן א נדבן, קאלט עס אים דורך אייער אפיס טעלעפאן. די איינשטעלונג איז נאר פאר <b>דעם</b> קאמפיוטער.</p>
+   <label class="f">ווי אזוי<select id="cs" onchange="document.getElementById('cu').value=this.value||document.getElementById('cu').value">
+    <option value="tel:{num}" ${t === 'tel:{num}' ? 'selected' : ''}>טעלעפאן פראגראם אויפן קאמפיוטער (tel:)</option>
+    <option value="callto:{num}" ${t === 'callto:{num}' ? 'selected' : ''}>callto: (עלטערע פראגראמען)</option>
+    <option value="" ${!/^(tel|callto):\{num\}$/.test(t) ? 'selected' : ''}>א טעלעפאן אויפן טיש (לינק פון דער טעלעפאן פירמע)</option></select></label>
+   <label class="f" style="margin-top:10px">לינק ({num} = +18455551234, {digits} = 8455551234)<input id="cu" style="direction:ltr" value="${esc(t)}"></label>
+   <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn ghost" onclick="closeM()">צוריק</button><button class="btn" onclick="callSave()">היט אפ</button></div>`, 'narrow');
+}
+function callSave() {
+  const v = $('#cu').value.trim() || 'tel:{num}';
+  if (!v.includes('{num}') && !v.includes('{digits}')) { toast('⚠️ דער לינק מוז האבן {num} אדער {digits}'); return; }
+  try { localStorage.setItem('yg_call', v); } catch (e) { }
+  closeM(); render(); toast('✓ אפגעהיטן');
 }
