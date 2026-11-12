@@ -77,3 +77,8 @@ create policy jls_ins  on storage.objects for insert to authenticated with check
 create policy jls_upd  on storage.objects for update to authenticated using (bucket_id = 'jls' and public.is_team());
 
 -- Done.
+
+-- 5. (v1.2) Private To-Do items: only the person who made them can read them
+drop policy if exists ev_read on public.events;
+create policy ev_read on public.events for select to authenticated
+  using (public.is_team() and (coalesce(p->>'priv', 'false') <> 'true' or uid = auth.uid()));

@@ -47,9 +47,9 @@ async function gunzip(blob) { const s = blob.stream().pipeThrough(new Decompress
 // ---------- state ----------
 let JD = null;            // imported JLS data
 let IDX = null;           // derived indexes
-let S = { acct: {}, task: {}, call: {}, hist: {}, settings: { s: { users: ['באניצער 1', 'באניצער 2', 'באניצער 3'], defFreq: 'm12', maxYears: 5 } } };
-let status = {}, me = '', view = 'today';
-let ui = { todayF: 'all', todayN: 50, accQ: '', accF: 'all', accN: 100 };
+let S = { acct: {}, task: {}, call: {}, hist: {}, fr: {}, frin: {}, shul: {}, settings: { s: { users: ['באניצער 1', 'באניצער 2', 'באניצער 3'], defFreq: 'm12', maxYears: 5 } } };
+let status = {}, me = '', view = 'home';
+let ui = { todayF: 'all', todayN: 50, accQ: '', accF: 'all', accN: 100, accShul: '', todoF: 'mine', todoDone: false };
 const SET = () => S.settings.s;
 
 function applyEvent(ev) {
@@ -255,7 +255,7 @@ function whoSel(onch, cur) {
   return `<select class="mini" title="ווער קאלט" onchange="${onch}"><option value="">👤 נישט צוגעטיילט</option>${USERS().map(u => `<option value="${esc(u)}" ${u === cur ? 'selected' : ''}>👤 ${esc(u)}</option>`).join('')}</select>`;
 }
 async function assign(code, v) { await emit('acct', code, { assigned: v }); counts(); toast(v ? '✓ ' + v + ' וועט קאלן ' + acctName(+code) : 'נישט צוגעטיילט'); }
-async function assignTask(id, v) { await emit('task', id, { who: v }); counts(); toast('✓'); }
+async function assignTask(id, v) { await emitTask(id, { who: v }); counts(); toast('✓'); }
 function lastNotes() { const m = new Map(); Object.values(S.hist).forEach(h => { const c = +h.code; if (!m.has(c) || (h.at || '') > (m.get(c).at || '')) m.set(c, h); }); return m; }
 function lastNoteHTML(code, br) {
   const h = code && window._ln ? window._ln.get(+code) : null; if (!h) return '';
@@ -274,7 +274,7 @@ async function saveNote(code) {
   const t = $('#nn').value.trim(), w = $('#nw').value, d = $('#nd').value, st = S.acct[code] || {};
   if (t) await emit('hist', uid(), { code, text: t });
   if (w !== (st.assigned || '')) await emit('acct', code, { assigned: w });
-  if (d) await emit('task', uid(), { title: 'קאלן ' + acctName(code), due: d, who: w || me, code, pri: 'norm', note: t });
+  if (d) await emitTask(uid(), { title: 'קאלן ' + acctName(code), due: d, who: w || me, code, pri: 'norm', note: t });
   closeM(); render(); toast('✓ אפגעהיטן');
 }
 async function poll() {
@@ -361,10 +361,10 @@ function wire() {
 function render() {
   impInfo();
   const sb = document.querySelector('nav [data-v=settings]'); if (sb) sb.style.display = isAdmin() ? '' : 'none';
-  if (view === 'settings' && !isAdmin()) view = 'today';
+  if (view === 'settings' && !isAdmin()) view = 'home';
   if (!JD) { vWelcome(); return; }
   counts();
-  ({ today: vToday, pledges: vPledges, accounts: vAccounts, reports: vReports, settings: vSettings })[view]();
+  ({ home: vHome, todo: vTodo, fund: vFund, shuls: vShuls, today: vToday, pledges: vPledges, accounts: vAccounts, reports: vReports, settings: vSettings }[view] || vHome)();
 }
 function impInfo() {
   $('#impInfo').innerHTML = JD ? `JLS: ${new Date(JD.importedAt).toLocaleString()}<br>${JD.accounts.length.toLocaleString()} אקאונטס · ${esc(JD.companyName || 'Company ' + JD.company)}` : '';
@@ -380,6 +380,7 @@ function counts() {
   const mk = monthKey(); let n = 0;
   IDX.pl.forEach((g, c) => { if (g.open > 0.009 && !(S.call[c + '|' + mk] || {}).v) n++; });
   $('#cPl').textContent = n || '';
+  const t = todayS(); $('#cTodo').textContent = Object.values(S.task).filter(x => taskVisible(x) && !x.done && taskMine(x) && x.due && x.due <= t).length || '';
 }
 
 // ---------- TODAY ----------
@@ -393,7 +394,7 @@ function todayItems(filter) {
     if (a.next && a.next <= t && ok(a.st.assigned || '')) out.push({ kind: 'ask', code, due: a.next, who: a.st.assigned || '', vip: !!a.st.vip, w: (IDX.yg.get(code) || {}).total || 0, freq: a.freq });
   });
   Object.entries(S.task).forEach(([id, x]) => {
-    if (x.done || x.del || !x.due || x.due > t || !ok(x.who || '')) return;
+    if (!taskVisible(x) || x.done || !x.due || x.due > t || !(ok(x.who || '') || (x.who2 && ok(x.who2)))) return;
     out.push({ kind: 'task', id, task: x, code: x.code ? +x.code : null, due: x.due, who: x.who || '', vip: x.code ? !!(S.acct[x.code] || {}).vip : false, w: 1e12, hi: x.pri === 'hi' });
   });
   return out.sort((a, b) => (b.hi ? 1 : 0) - (a.hi ? 1 : 0) || (b.vip - a.vip) || (a.kind === 'task' ? -1 : 0) - (b.kind === 'task' ? -1 : 0) || b.w - a.w);
@@ -401,7 +402,7 @@ function todayItems(filter) {
 function vToday() {
   window._ln = lastNotes();
   const items = todayItems(ui.todayF), t = todayS();
-  const upcoming = Object.entries(S.task).filter(([, x]) => !x.done && !x.del && x.due > t && x.due <= addDays(t, 14)).sort((a, b) => a[1].due.localeCompare(b[1].due));
+  const upcoming = Object.entries(S.task).filter(([, x]) => taskVisible(x) && !x.done && x.due > t && x.due <= addDays(t, 14)).sort((a, b) => a[1].due.localeCompare(b[1].due));
   let owed = 0, nOwed = 0; IDX.pl.forEach(g => { if (g.dueNow > 0.009) { owed += g.dueNow; nOwed++; } });
   const yr = t.slice(0, 4); let ytd = 0; JD.payments.forEach(p => { if ((p[2] || '').slice(0, 4) === yr) ytd += p[3]; });
   const mine = todayItems('mine').length, all = todayItems('all').length, un = todayItems('none').length;
@@ -416,7 +417,7 @@ function vToday() {
     <div class="chips">${[['mine', 'מיינע (' + mine + ')'], ['none', 'נישט צוגעטיילט (' + un + ')'], ['all', 'אלע (' + all + ')']].map(([k, l]) => `<button class="chip ${ui.todayF === k ? 'on' : ''}" onclick="ui.todayF='${k}';ui.todayN=50;render()">${l}</button>`).join('')}</div>
     <button class="btn gold" onclick="taskForm()">+ נייע ארבעט</button></div>
   ${items.length ? items.slice(0, ui.todayN).map(taskRow).join('') + (items.length > ui.todayN ? `<div class="more"><button class="btn ghost" onclick="ui.todayN+=50;render()">ווייז נאך (${items.length - ui.todayN} פארבליבן)</button></div>` : '') : '<div class="empty">🎉 גארנישט פאר היינט!</div>'}
-  ${upcoming.length ? `<h3>קומענדיגע ארבעטן (2 וואכן)</h3>${upcoming.map(([id, x]) => `<div class="task"><span>📅</span><div><div class="t">${esc(x.title)}</div><div class="m"><span>📅 ${fmtDual(x.due)}</span><span>👤 ${esc(x.who || 'נישט צוגעטיילט')}</span>${x.code ? `<a class="name" onclick="openAcct(${x.code})">${esc(acctName(+x.code))}</a>` : ''}</div></div><div class="acts"><button class="btn ghost sm" onclick="taskForm('${id}')">ענדער</button></div></div>`).join('')}` : ''}`;
+  ${upcoming.length ? `<h3>קומענדיגע ארבעטן (2 וואכן)</h3>${upcoming.map(([id, x]) => `<div class="task"><span>📅</span><div><div class="t">${esc(x.title)}</div><div class="m"><span>📅 ${fmtDual(x.due)}</span><span>👤 ${esc(taskWho(x))}</span>${x.code ? `<a class="name" onclick="openAcct(${x.code})">${esc(acctName(+x.code))}</a>` : ''}</div></div><div class="acts"><button class="btn ghost sm" onclick="taskForm('${id}')">ענדער</button></div></div>`).join('')}` : ''}`;
 }
 function taskRow(x) {
   const late = x.due < todayS() ? daysBetween(x.due, todayS()) : 0;
@@ -433,7 +434,7 @@ function go(v) { view = v; document.querySelectorAll('nav button').forEach(x => 
 async function snooze(kind, id, n) {
   const d = addDays(todayS(), n);
   if (kind === 'ask') { await emit('acct', id, { nextAsk: d }); await emit('hist', uid(), { code: +id, text: 'אפגעשטופט אויף ' + fmtD(d) }); }
-  else await emit('task', id, { due: d });
+  else await emitTask(id, { due: d });
   render(); toast('אפגעשטופט אויף ' + fmtD(d));
 }
 async function markOnce(code) {
@@ -444,9 +445,9 @@ async function markOnce(code) {
 }
 async function taskDone(id) {
   const x = S.task[id];
-  await emit('task', id, { done: true, doneAt: todayS() });
-  if (x.code) await emit('hist', uid(), { code: +x.code, text: '✓ ' + x.title });
-  if (x.repeat && FREQ[x.repeat]) { const nid = uid(); await emit('task', nid, { title: x.title, due: addFreq(x.due > todayS() ? x.due : todayS(), x.repeat), who: x.who, code: x.code, pri: x.pri, note: x.note, repeat: x.repeat }); }
+  await emitTask(id, { done: true, doneAt: todayS() });
+  if (x.code && !x.priv) await emit('hist', uid(), { code: +x.code, text: '✓ ' + x.title });
+  if (x.repeat && FREQ[x.repeat]) { const nid = uid(); await emitTask(nid, { title: x.title, due: addFreq(x.due && x.due > todayS() ? x.due : todayS(), x.repeat), who: x.who, who2: x.who2 || '', code: x.code, pri: x.pri, note: x.note, repeat: x.repeat, priv: !!x.priv, owner: x.owner || '' }); }
   render(); toast('✓ אפגעמארקירט');
 }
 function askForm(code) {
@@ -470,11 +471,14 @@ async function saveAsk(code) {
   closeM(); render(); toast('✓ אפגעהיטן. ווייטער בעטן: ' + (next ? fmtD(next) : '—'));
 }
 function taskForm(id, code) {
-  const x = id ? S.task[id] : { title: '', due: todayS(), who: me, code: code || '', pri: 'norm', note: '', repeat: '' };
+  const x = id ? S.task[id] : { title: '', due: todayS(), who: me, who2: '', code: code || '', pri: 'norm', note: '', repeat: '', priv: false };
+  const canPriv = !id || !x.priv || (x.owner || '').toLowerCase() === myKey();
   modal(`<h2>${id ? 'ענדער ארבעט' : 'נייע ארבעט'}</h2><div class="grid2">
   <label class="f" style="grid-column:1/-1">וואס דארף מען טון?<input id="tt" value="${esc(x.title)}"></label>
   <label class="f">ביז ווען${dateField('td', x.due)}</label>
   <label class="f">פאר וועמען<select id="tw"><option value="">נישט צוגעטיילט</option>${USERS().map(u => `<option ${u === x.who ? 'selected' : ''}>${esc(u)}</option>`).join('')}</select></label>
+  <label class="f">👥 און אויך (צווייטער באניצער)<select id="tw2"><option value="">—</option>${USERS().map(u => `<option ${u === x.who2 ? 'selected' : ''}>${esc(u)}</option>`).join('')}</select></label>
+  ${canPriv ? `<label style="display:flex;gap:8px;align-items:center;font-size:14px;grid-column:1/-1"><input type="checkbox" id="tpv" ${x.priv ? 'checked' : ''}> 🔒 פריוואט – נאר איך זע דאס (פאר מיר אליין)</label>` : ''}
   <label class="f">אקאונט (נומער, אפציאנאל)<input id="tc" type="number" value="${x.code || ''}" placeholder="למשל 12345"></label>
   <label class="f">וויכטיגקייט<select id="tp"><option value="norm">נארמאל</option><option value="hi" ${x.pri === 'hi' ? 'selected' : ''}>דרינגענד</option></select></label>
   <label class="f">איבערחזרן<select id="tr"><option value="">נישט</option>${['m1', 'm3', 'm6', 'm12', 'yt'].map(k => `<option value="${k}" ${x.repeat === k ? 'selected' : ''}>${FREQ[k][0]}</option>`).join('')}</select></label>
@@ -486,10 +490,16 @@ async function saveTask(id) {
   const title = $('#tt').value.trim(); if (!title) { $('#tt').focus(); return; }
   const code = $('#tc').value ? +$('#tc').value : '';
   if (code && !IDX.by.has(code)) { toast('אקאונט #' + code + ' עקזיסטירט נישט'); return; }
-  await emit('task', id || uid(), { title, due: $('#td').value || todayS(), who: $('#tw').value, code, pri: $('#tp').value, note: $('#tn').value.trim(), repeat: $('#tr').value, done: false });
+  const priv = !!($('#tpv') && $('#tpv').checked);
+  let who = $('#tw').value, who2 = $('#tw2').value;
+  if (priv) { who = me; who2 = ''; }
+  if (who2 === who) who2 = '';
+  const p = { title, due: $('#td').value || todayS(), who, who2, code, pri: $('#tp').value, note: $('#tn').value.trim(), repeat: $('#tr').value, done: false, priv };
+  if (priv) p.owner = myEmail.toLowerCase();
+  await emitTask(id || uid(), p);
   closeM(); render(); toast('✓ אפגעהיטן');
 }
-async function delTask(id) { await emit('task', id, { del: true }); closeM(); render(); }
+async function delTask(id) { await emitTask(id, { del: true }); closeM(); render(); }
 
 // ---------- PLEDGES ----------
 function vPledges() {
@@ -524,7 +534,7 @@ function callForm(c) {
 async function saveCall(c) {
   const r = $('#cr').value, n = $('#cn').value.trim();
   if (r === 'נישט געענטפערט' || r === 'קאלן צוריק שפעטער') {
-    await emit('task', uid(), { title: 'קאלן צוריק פאר פלעדזש – ' + acctName(c), due: addDays(todayS(), 3), who: me, code: c, pri: 'norm', note: n });
+    await emitTask(uid(), { title: 'קאלן צוריק פאר פלעדזש – ' + acctName(c), due: addDays(todayS(), 3), who: me, code: c, pri: 'norm', note: n });
   } else await setCalled(c, true, true);
   await emit('hist', uid(), { code: c, text: 'פלעדזש קאל: ' + r + (n ? ' · ' + n : '') });
   closeM(); render(); toast('✓ אפגעהיטן');
@@ -550,29 +560,31 @@ function filterAccounts() {
   if (f === 'mine') L = L.filter(a => (S.acct[a.c] || {}).assigned === me);
   if (f === 'active') L = L.filter(a => !a.x);
   if (f === 'once') L = L.filter(a => ask(a.c).freq === 'once');
+  if (ui.accShul) L = L.filter(a => (S.acct[a.c] || {}).shul === ui.accShul);
   L.sort((x, y) => ((IDX.yg.get(y.c) || {}).total || 0) - ((IDX.yg.get(x.c) || {}).total || 0) || x.ln.localeCompare(y.ln));
   return L;
 }
 function vAccounts() {
   const L = filterAccounts();
   window._accL = L;
-  $('#main').innerHTML = `<div class="row"><div><h2>אקאונטס</h2><p class="sub">אלע ${JD.accounts.length.toLocaleString()} אקאונטס פון JLS. זוכט אויף ענגליש אדער לשון קודש, לויט טעלעפאן, אדרעס אדער נומער.</p></div><div class="spacer"></div><button class="btn ghost" onclick="csvAcc()">⬇ Excel</button></div>
+  $('#main').innerHTML = `<div class="row"><div><h2>נדבות – אקאונטס</h2><p class="sub">אלע ${JD.accounts.length.toLocaleString()} אקאונטס פון JLS. זוכט אויף ענגליש אדער לשון קודש, לויט טעלעפאן, אדרעס אדער נומער.</p></div><div class="spacer"></div><button class="btn ghost" onclick="csvAcc()">⬇ Excel</button></div>
   <div class="row"><input id="q" placeholder="🔍 זוך..." value="${esc(ui.accQ)}" style="flex:1;min-width:240px;font-size:16px">
-  <div class="chips">${[['all', 'אלע'], ['yg', 'YG נדבנים'], ['bal', 'מיט באלאנס'], ['vip', '⭐ VIP'], ['mine', 'מיינע'], ['once', '🚫 איינמאליגע'], ['active', 'אקטיוו']].map(([k, l]) => `<button class="chip ${ui.accF === k ? 'on' : ''}" onclick="ui.accF='${k}';ui.accN=100;vAccounts()">${l}</button>`).join('')}</div></div>
+  <div class="chips">${[['all', 'אלע'], ['yg', 'YG נדבנים'], ['bal', 'מיט באלאנס'], ['vip', '⭐ VIP'], ['mine', 'מיינע'], ['once', '🚫 איינמאליגע'], ['active', 'אקטיוו']].map(([k, l]) => `<button class="chip ${ui.accF === k ? 'on' : ''}" onclick="ui.accF='${k}';ui.accN=100;vAccounts()">${l}</button>`).join('')}</div>
+  ${shulList().length ? `<select class="mini" onchange="ui.accShul=this.value;ui.accN=100;vAccounts()"><option value="">🕍 אלע שולן</option>${shulList().map(x => `<option value="${x.id}" ${x.id === ui.accShul ? 'selected' : ''}>🕍 ${esc(x.name)}</option>`).join('')}</select>` : ''}</div>
   <p class="sub">${L.length.toLocaleString()} געפונען</p>
-  <table><thead><tr><th>#</th><th>נאמען</th><th>טעלעפאן</th><th>אדרעס</th><th>YG סך הכל</th><th>לעצטע</th><th>באלאנס</th><th>ווייטער בעטן</th></tr></thead><tbody>
+  <table><thead><tr><th>#</th><th>נאמען</th><th>טעלעפאן</th><th>אדרעס</th><th>YG סך הכל</th><th>לעצטע</th><th>באלאנס</th><th>ווייטער בעטן</th><th>שול</th></tr></thead><tbody>
   ${L.slice(0, ui.accN).map(a => { const g = IDX.yg.get(a.c), p = IDX.pl.get(a.c), k = ask(a.c), st = S.acct[a.c] || {}; return `<tr>
    <td class="num" style="color:var(--muted)">${a.c}</td><td><a class="name" onclick="openAcct(${a.c})">${esc(a.h || a.n)}</a> ${st.vip ? '⭐' : ''} ${a.x ? '<span class="tag gray">נישט אקטיוו</span>' : ''}<div class="heb">${esc(a.h ? a.n : '')}</div></td>
    <td class="num" style="font-size:13px">${a.ph[0] ? esc(a.ph[0][1]) : ''}</td><td style="font-size:13px"><span class="ltr">${esc(a.a)}</span></td>
    <td class="num">${g ? money(g.total) : ''}</td><td class="num" style="font-size:13px">${g && g.last ? fmtD(g.last) : ''}</td>
    <td class="num ${p && p.open > 0.009 ? 'bal' : ''}">${p && p.open > 0.009 ? money(p.open) : ''}</td>
-   <td style="font-size:13px">${k.next ? (k.next <= todayS() ? '<span class="tag late">היינט</span>' : fmtDual(k.next)) : ''}</td></tr>`; }).join('') || '<tr><td colspan="8" class="empty">נישט געפונען</td></tr>'}
+   <td style="font-size:13px">${k.next ? (k.next <= todayS() ? '<span class="tag late">היינט</span>' : fmtDual(k.next)) : ''}</td><td style="font-size:13px">${esc(shulName(st.shul))}</td></tr>`; }).join('') || '<tr><td colspan="9" class="empty">נישט געפונען</td></tr>'}
   </tbody></table>${L.length > ui.accN ? `<div class="more"><button class="btn ghost" onclick="ui.accN+=200;vAccounts()">ווייז נאך</button></div>` : ''}`;
   const qi = $('#q'); qi.focus(); qi.setSelectionRange(qi.value.length, qi.value.length);
   let tm; qi.oninput = () => { clearTimeout(tm); tm = setTimeout(() => { ui.accQ = qi.value; ui.accN = 100; vAccounts(); }, 250); };
 }
 function csvAcc() {
-  csv([['Code', 'Name', 'Hebrew', 'Wife', 'Phone1', 'Phone2', 'Address', 'YG total', 'Last gift', 'Open balance', 'Next ask', 'VIP', 'Assigned']].concat(window._accL.map(a => { const g = IDX.yg.get(a.c) || {}, p = IDX.pl.get(a.c) || {}, st = S.acct[a.c] || {}; return [a.c, a.n, a.h, a.w, (a.ph[0] || [])[1], (a.ph[1] || [])[1], a.a, (g.total || 0).toFixed(2), g.last || '', (p.open || 0).toFixed(2), ask(a.c).next || '', st.vip ? 'Yes' : '', st.assigned || '']; })), 'accounts.csv');
+  csv([['Code', 'Name', 'Hebrew', 'Wife', 'Phone1', 'Phone2', 'Address', 'YG total', 'Last gift', 'Open balance', 'Next ask', 'VIP', 'Assigned', 'Shul']].concat(window._accL.map(a => { const g = IDX.yg.get(a.c) || {}, p = IDX.pl.get(a.c) || {}, st = S.acct[a.c] || {}; return [a.c, a.n, a.h, a.w, (a.ph[0] || [])[1], (a.ph[1] || [])[1], a.a, (g.total || 0).toFixed(2), g.last || '', (p.open || 0).toFixed(2), ask(a.c).next || '', st.vip ? 'Yes' : '', st.assigned || '', shulName(st.shul)]; })), 'accounts.csv');
 }
 
 // ---------- ACCOUNT PAGE ----------
@@ -584,7 +596,7 @@ function openAcct(code) {
   const hist = Object.entries(S.hist).filter(([, h]) => h.code === code).map(([, h]) => ({ d: (h.at || '').slice(0, 10), t: h.text, by: h.by, src: 'app' }))
     .concat(JD.notes.filter(n => n[0] === code).map(n => ({ d: n[1], t: n[2], by: n[3] + (n[4] ? ' · ' + n[4] : ''), src: 'JLS' })))
     .sort((x, y) => (y.d || '').localeCompare(x.d || ''));
-  const tasks = Object.entries(S.task).filter(([, x]) => +x.code === code && !x.del).sort((x, y) => (x[1].done ? 1 : 0) - (y[1].done ? 1 : 0) || x[1].due.localeCompare(y[1].due));
+  const tasks = Object.entries(S.task).filter(([, x]) => +x.code === code && taskVisible(x)).sort((x, y) => (x[1].done ? 1 : 0) - (y[1].done ? 1 : 0) || (x[1].due || '').localeCompare(y[1].due || ''));
   const tabBody = {
     pay: g ? `<table><thead><tr><th>טאג</th><th>סכום</th><th>קאמפעין</th><th>סארט</th><th>טשעק</th><th>סאליסיטאר</th></tr></thead><tbody>${g.list.map(x => `<tr><td class="num">${fmtD(x[2])}</td><td class="num">${money(x[3])}${x[9] ? ' <span class="tag late">ריפאנד</span>' : ''}</td><td>${esc(camp(x[6]))}</td><td>${esc(x[4])}</td><td class="num">${esc(x[5])}</td><td style="font-size:12px">${esc(x[7])}</td></tr>`).join('')}</tbody></table>` : '<div class="empty">קיין באצאלונגען צו ' + esc(JD.companyName) + '</div>',
     pl: p ? `<table><thead><tr><th>פעליג</th><th>סכום</th><th>באצאלט</th><th>באלאנס</th><th>קאמפעין</th><th>באשרייבונג</th></tr></thead><tbody>${p.list.map(x => `<tr style="${x[9] ? 'opacity:.5' : ''}"><td class="num">${fmtD(x[2])}</td><td class="num">${money(x[3])}</td><td class="num">${money(x[4])}</td><td class="num ${x[5] > 0.009 ? 'bal' : 'zero'}">${money(x[5])}</td><td>${esc(camp(x[6]))}</td><td style="font-size:12px">${esc(x[7])}${x[9] ? ' (Hold)' : ''}</td></tr>`).join('')}</tbody></table>` : '<div class="empty">קיין פלעדזשעס</div>',
@@ -607,6 +619,7 @@ function openAcct(code) {
    <label class="f">ווי אפט בעטן<select id="af">${Object.entries(FREQ).map(([kk, v]) => `<option value="${kk}" ${kk === k.freq ? 'selected' : ''}>${v[0]}</option>`).join('')}</select></label>
    <label class="f">ווייטער בעטן${dateField('an', st.nextAsk || '', { clear: true })}</label>
    <label class="f">אחראי<select id="aa"><option value="">נישט צוגעטיילט</option>${USERS().map(u => `<option ${u === st.assigned ? 'selected' : ''}>${esc(u)}</option>`).join('')}</select></label>
+   <label class="f">🕍 געטראפן אין שול${shulSel('ash', st.shul || '')}</label>
    <label class="f">VIP<select id="av"><option value="">ניין</option><option value="1" ${st.vip ? 'selected' : ''}>⭐ יא</option></select></label>
    <label class="f" style="grid-column:1/-1">נאטיצן<textarea id="ao" rows="2">${esc(st.notes || '')}</textarea></label></div>
    <div class="row" style="margin:8px 0 0;justify-content:flex-end"><button class="btn gold sm" onclick="askForm(${code})">✓ געבעטן</button><button class="btn sm" onclick="saveAcct(${code})">היט אפ</button></div></div></div>
@@ -614,7 +627,7 @@ function openAcct(code) {
   <div class="scroll">${tabBody[acctTab]}</div>`);
 }
 async function saveAcct(code) {
-  await emit('acct', code, { freq: $('#af').value, nextAsk: $('#an').value, assigned: $('#aa').value, vip: !!$('#av').value, notes: $('#ao').value });
+  await emit('acct', code, { freq: $('#af').value, nextAsk: $('#an').value, assigned: $('#aa').value, vip: !!$('#av').value, notes: $('#ao').value, shul: $('#ash').value });
   openAcct(code); render(); toast('✓ אפגעהיטן');
 }
 async function addNote(code) {
@@ -686,7 +699,7 @@ async function saveUsers() {
     for (const a of out) await q(sb.from('team').upsert({ email: a.email, name: a.name, is_admin: a.is_admin }));
     for (const [o, n] of Object.entries(renames)) {
       for (const [c, st] of Object.entries(S.acct)) if (st.assigned === o) await emit('acct', c, { assigned: n });
-      for (const [id, t] of Object.entries(S.task)) if (t.who === o) await emit('task', id, { who: n });
+      for (const [id, t] of Object.entries(S.task)) { if (t.who === o) await emitTask(id, { who: n }); if (t.who2 === o) await emitTask(id, { who2: n }); }
     }
     await loadTeam(); setupUser(); render(); toast('✓ באניצער אפגעהיטן');
   } catch (e) { err(e.message || String(e)); }

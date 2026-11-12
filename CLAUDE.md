@@ -24,7 +24,7 @@ Backend is **Supabase** (project `qrudivrakwoathgbzrwd`).
 - **NEVER** read or import the JLS tables `CCTransactions`, `MCCInfo` or `MChecking`, the columns `Members.SSNumF` and `Members.SSNumW`, or the tables `Users` and `MWebLogin`. These hold card, bank, SSN and password data.
 - **App data** (to-dos, notes, call marks, assignments, settings) is an append-only event log in table `events`, with columns (k, eid, p jsonb, by, at).
   - Clients replay the log with `applyEvent`. The rule is `state[k][eid] = Object.assign(state[k][eid] || {}, p)`.
-  - Event kinds: `acct` (per-account settings: freq, nextAsk, assigned, vip, notes, lastAsk), `task`, `call` (id = `code|YYYY-MM`), `hist` (notes/history), `settings` (id `s`).
+  - Event kinds: `acct` (per-account settings: freq, nextAsk, assigned, vip, notes, lastAsk, shul), `task`, `fr`, `frin`, `shul`, `call` (id = `code|YYYY-MM`), `hist` (notes/history), `settings` (id `s`).
   - Clients poll every 15 s.
 - **Users**: Supabase Auth with email and password.
   - Access is allowed only for emails listed in table `team` (email, name, is_admin). RLS uses `is_team()` and `is_admin()`.
@@ -32,7 +32,11 @@ Backend is **Supabase** (project `qrudivrakwoathgbzrwd`).
   - The free plan's email sending is rate-limited. To add a user without email, use **Supabase > Authentication > Users > Add user > Create new user** with **Auto Confirm User** checked.
 
 ## Files
-- `index.html`: the page shell. It loads supabase-js from the jsdelivr CDN, then `config.js`, `jls.js`, `cal.js` and `app.js`.
+- `index.html`: the page shell. It loads supabase-js from the jsdelivr CDN, then `config.js`, `jls.js`, `cal.js`, `sections.js` and `app.js`.
+- `sections.js` (v1.2, loaded before app.js, functions only): Home dashboard (default view `home`), To-Do list (`todo`), fundraiser accounts (`fund`), shuls (`shuls`).
+  - Tasks: `who` + optional `who2` (two users); `priv: true` + `owner` (email) = private. Always write tasks via `emitTask`, which keeps priv/owner on every event. SETUP.sql section 5 makes RLS hide priv events from others.
+  - Fundraisers: `fr` events (payments to them), `frin` (income not in JLS). Settings `frPct` (default 40), `frStart` (default RH 5787 = 2026-09-12). Income = JLS payments (not refunded) from frStart; 14-day periods from frStart.
+  - Shuls: `shul` events (name, addr, notes, ord, paused, del). Setting `shulStart` (a Wednesday); every 14 days the next active shul in `ord`. Per-account `acct.shul`.
 - `app.js`: all UI and logic. Views:
   - Today (to-do list, auto "ask again" schedule)
   - Monthly pledges (call list that resets each month)
