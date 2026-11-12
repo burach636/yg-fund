@@ -174,3 +174,7 @@ a.callb:hover{background:#d3eedd;border-color:var(--green)}
 .mbox.tot b{color:#fff}
 .mbox.click{cursor:pointer;transition:.12s}
 .mbox.click:hover{border-color:var(--gold);transform:translateY(-1px);box-shadow:0 3px 10px rgba(20,40,75,.12)}
+.bar i.expbar{background:repeating-linear-gradient(45deg,#7cc39a,#7cc39a 4px,#a9dcbc 4px,#a9dcbc 8px)}
+.mbox.exp{background:#f0faf3;border:1px dashed #7cc39a}
+.mbox.exp b{color:var(--green)}
+.mbox small.expl{color:var(--green);font-weight:600}

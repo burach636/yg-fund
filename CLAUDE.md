@@ -42,7 +42,7 @@ Backend is **Supabase** (project `qrudivrakwoathgbzrwd`).
   - Monthly pledges (call list that resets each month)
   - Accounts / "נדבות" (search across all ~21k; default filter YG donors; default sort A-B by Hebrew last name `lh` = JLS `LNameH`, falling back to the last word of the Hebrew name until a re-import)
   - Account modal (payments, pledges, history, tasks, per-account settings)
-  - Reports: totals per Jewish year with a box per Hebrew month (13 in leap years) and the year total; click a month (or the total) for its donors (`monthDonors`, Excel `xlsMonth`); Excel `xlsReports` (5 sheets)
+  - Reports: totals per Jewish year with a box per Hebrew month (13 in leap years) and the year total; click a month (or the total) for its donors (`monthDonors`, Excel `xlsMonth`); optional "scheduled" amounts (`expPledges`: open JLS charges, not on hold, due from today on – this is where scheduled credit-card installments show up) shown in green per month; Excel `xlsReports` (5 sheets)
   - Settings (admin only)
   - Login, signup, password recovery, and a setup self-check screen
 - `cal.js`: Hebrew calendar helpers (Intl `en-u-ca-hebrew`), Hebrew numerals, and a dual Hebrew/English date picker. Use `dateField(id, value, {clear})` together with `initDateFields(root)`. The `modal()` function calls it automatically.
