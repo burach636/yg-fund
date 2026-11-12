@@ -26,7 +26,8 @@ function vHome() {
   const shuls = shulList();
   const next = sh[0];
   let sinceRH = 0; JD.payments.forEach(p => { if (p[2] >= F.start && p[2] <= t && !p[9]) sinceRH += p[3]; });
-  const rcNew = JD.payments.filter(p => validD(p[2]) && p[2] >= F.start && p[2] <= t && !p[9] && p[3] > 0 && IDX.by.has(p[1]) && !rcPrinted(p)).length;
+  const rcNew = rcItems().filter(p => p[2] >= F.start && p[2] <= t && !rcPrinted(p)).length;
+  const hyNow = (HEB.parts(t) || {}).y; let thisYr = 0; JD.payments.forEach(p => { if (!p[9] && validD(p[2]) && (HEB.parts(p[2]) || {}).y === hyNow) thisYr += p[3]; });
   const askToday = todayItems('all').filter(x => x.kind === 'ask').length;
   $('#main').innerHTML = `
   <div class="row"><div><h2>שלום ${esc(me)}!</h2><p class="sub">${fmtDual(t)}</p></div></div>
@@ -36,7 +37,9 @@ function vHome() {
     <div class="tile t2" onclick="go('todo')"><i>✅</i><h3>To-Do ליסטע</h3><b>${mineOpen.length}</b><span>מיינע אפענע זאכן</span>${late ? `<span class="bal">${late} שפעט!</span>` : '<span>&nbsp;</span>'}</div>
     <div class="tile t3" onclick="go('fund')"><i>💵</i><h3>פאנדרעיזינג חשבונות</h3><b class="${F.balance > 0.009 ? 'bal' : 'zero'}">${money(F.balance)}</b><span>${F.balance >= 0 ? 'מ\'איז שולדיג די פאנדרעיזערס' : 'איבערבאצאלט'}</span><span>די 2 וואכן: ${money(F.cur ? F.cur.owed : 0)}</span></div>
     <div class="tile t4" onclick="go('shuls')"><i>🕍</i><h3>שולן</h3><b>${shuls.length}</b><span>שולן אויף דער ליסטע</span><span>${next ? 'קומענדיג: ' + esc(next.s.name) : 'לייגט צו שולן'}</span></div>
-    <div class="tile t5" onclick="go('rcpt')"><i>🧾</i><h3>רעסיטס</h3><b>${rcNew}</b><span>נאך נישט געדרוקט</span><span>זינט ${fmtD(F.start)}</span></div>
+    <div class="tile t5" onclick="go('rcpt')"><i>🧾</i><h3>רעסיטס/סטעיטמענטס</h3><b>${rcNew}</b><span>נאך נישט געדרוקט</span><span>זינט ${fmtD(F.start)}</span></div>
+    <div class="tile t6" onclick="go('reports')"><i>📊</i><h3>באריכטן</h3><b>${money(thisYr)}</b><span>אריינגעקומען ${HEB.gem((HEB.parts(t) || {}).y || 0)}</span><span>לויט חדשים און יארן</span></div>
+    <div class="tile t7" onclick="go('jrep')"><i>📑</i><h3>רופארטס</h3><b>${jrDefs().length || 1}</b><span>ליסטעס פון JLS צו קאלן</span><span>${esc((jrDefs()[0] || { name: 'דינער מהרי"ט 2026' }).name)}</span></div>
   </div>
   <div class="cols">
    <div class="hcol t2"><h3>מיינע To-Do פאר היינט</h3>

@@ -47,7 +47,7 @@ async function gunzip(blob) { const s = blob.stream().pipeThrough(new Decompress
 // ---------- state ----------
 let JD = null;            // imported JLS data
 let IDX = null;           // derived indexes
-let S = { acct: {}, task: {}, call: {}, hist: {}, fr: {}, frin: {}, frex: {}, shul: {}, rcpt: {}, settings: { s: { users: ['באניצער 1', 'באניצער 2', 'באניצער 3'], defFreq: 'm12', maxYears: 5 } } };
+let S = { acct: {}, task: {}, call: {}, hist: {}, fr: {}, frin: {}, frex: {}, shul: {}, rcpt: {}, stmt: {}, jrep: {}, settings: { s: { users: ['באניצער 1', 'באניצער 2', 'באניצער 3'], defFreq: 'm12', maxYears: 5 } } };
 let status = {}, me = '', view = 'home';
 let ui = { todayF: 'all', todayN: 50, accQ: '', accF: 'yg', accN: 100, accSort: 'abc', accShul: '', todoF: 'mine', todoDone: false };
 const SET = () => S.settings.s;
@@ -373,7 +373,7 @@ function render() {
   if (view === 'settings' && !isAdmin()) view = 'home';
   if (!JD) { vWelcome(); return; }
   counts();
-  ({ home: vHome, rcpt: vRcpt, todo: vTodo, fund: vFund, shuls: vShuls, today: vToday, pledges: vPledges, accounts: vAccounts, reports: vReports, settings: vSettings }[view] || vHome)();
+  ({ home: vHome, rcpt: vRcpt, jrep: vJrep, todo: vTodo, fund: vFund, shuls: vShuls, today: vToday, pledges: vPledges, accounts: vAccounts, reports: vReports, settings: vSettings }[view] || vHome)();
 }
 function impInfo() {
   $('#impInfo').innerHTML = JD ? `JLS: ${new Date(JD.importedAt).toLocaleString()}<br>${JD.accounts.length.toLocaleString()} אקאונטס · ${esc(JD.companyName || 'Company ' + JD.company)}` : '';
@@ -568,6 +568,7 @@ function filterAccounts() {
   if (f === 'active') L = L.filter(a => !a.x);
   if (f === 'once') L = L.filter(a => ask(a.c).freq === 'once');
   if (ui.accShul) L = L.filter(a => (S.acct[a.c] || {}).shul === ui.accShul);
+  if (ui.accTag) L = L.filter(a => tagsOf(a.c).includes(ui.accTag));
   if (ui.accSort === 'total') L.sort((x, y) => ((IDX.yg.get(y.c) || {}).total || 0) - ((IDX.yg.get(x.c) || {}).total || 0) || x._k.localeCompare(y._k, 'he'));
   else L.sort((x, y) => x._k.localeCompare(y._k, 'he') || (x.h || x.n).localeCompare(y.h || y.n, 'he'));
   return L;
@@ -578,11 +579,12 @@ function vAccounts() {
   $('#main').innerHTML = `<div class="row"><div><h2>נדבות – אקאונטס</h2><p class="sub">אלע ${JD.accounts.length.toLocaleString()} אקאונטס פון JLS. זוכט אויף ענגליש אדער לשון קודש, לויט טעלעפאן, אדרעס אדער נומער.</p></div><div class="spacer"></div><button class="btn ghost" onclick="csvAcc()">⬇ Excel</button></div>
   <div class="row"><input id="q" placeholder="🔍 זוך..." value="${esc(ui.accQ)}" style="flex:1;min-width:240px;font-size:16px">
   <div class="chips">${[['all', 'אלע'], ['yg', 'YG נדבנים'], ['bal', 'מיט באלאנס'], ['vip', '⭐ VIP'], ['mine', 'מיינע'], ['once', '🚫 איינמאליגע'], ['active', 'אקטיוו']].map(([k, l]) => `<button class="chip ${ui.accF === k ? 'on' : ''}" onclick="ui.accF='${k}';ui.accN=100;vAccounts()">${l}</button>`).join('')}</div>
+  ${allTags().length ? `<select class="mini" onchange="ui.accTag=this.value;ui.accN=100;vAccounts()"><option value="">🏷️ אלע פלאגס</option>${allTags().map(t => `<option value="${esc(t)}" ${t === ui.accTag ? 'selected' : ''}>🏷️ ${esc(t)}</option>`).join('')}</select>` : ''}
   ${shulList().length ? `<select class="mini" onchange="ui.accShul=this.value;ui.accN=100;vAccounts()"><option value="">🕍 אלע שולן</option>${shulList().map(x => `<option value="${x.id}" ${x.id === ui.accShul ? 'selected' : ''}>🕍 ${esc(x.name)}</option>`).join('')}</select>` : ''}</div>
   <div class="row" style="margin-bottom:6px"><span class="sub" style="margin:0">${L.length.toLocaleString()} געפונען · ריי:</span><div class="chips">${[['abc', 'א-ב (לעצטער נאמען)'], ['total', 'גרעסטע נדבנים']].map(([k, l]) => `<button class="chip ${ui.accSort === k ? 'on' : ''}" onclick="ui.accSort='${k}';vAccounts()">${l}</button>`).join('')}</div></div>
   <table class="acclist"><thead><tr><th>#</th><th>נאמען</th><th>טעלעפאן</th><th>אדרעס</th><th>YG סך הכל</th><th>לעצטע</th><th>באלאנס</th><th>ווייטער בעטן</th><th>שול</th></tr></thead><tbody>
   ${L.slice(0, ui.accN).map(a => { const g = IDX.yg.get(a.c), p = IDX.pl.get(a.c), k = ask(a.c), st = S.acct[a.c] || {}; return `<tr>
-   <td class="num" style="color:var(--muted)">${a.c}</td><td><a class="name" onclick="openAcct(${a.c})">${esc(a.h || a.n)}</a> ${st.vip ? '⭐' : ''} ${a.x ? '<span class="tag gray">נישט אקטיוו</span>' : ''}<div class="heb">${esc(a.h ? a.n : '')}</div></td>
+   <td class="num" style="color:var(--muted)">${a.c}</td><td><a class="name" onclick="openAcct(${a.c})">${esc(a.h || a.n)}</a> ${tagChips(a.c)} ${st.vip ? '⭐' : ''} ${a.x ? '<span class="tag gray">נישט אקטיוו</span>' : ''}<div class="heb">${esc(a.h ? a.n : '')}</div></td>
    <td class="num" style="font-size:13px">${a.ph[0] ? callBtn(a.ph[0][1], a.c) + ' ' + esc(a.ph[0][1]) : ''}</td><td style="font-size:13px"><span class="ltr">${esc(a.a)}</span></td>
    <td class="num">${g ? money(g.total) : ''}</td><td class="num" style="font-size:13px">${g && g.last ? fmtD(g.last) : ''}</td>
    <td class="num ${p && p.open > 0.009 ? 'bal' : ''}">${p && p.open > 0.009 ? money(p.open) : ''}</td>
@@ -635,6 +637,7 @@ function openAcct(code) {
    <label class="f">ווי אפט בעטן<select id="af">${Object.entries(FREQ).map(([kk, v]) => `<option value="${kk}" ${kk === k.freq ? 'selected' : ''}>${v[0]}</option>`).join('')}</select></label>
    <label class="f">ווייטער בעטן${dateField('an', st.nextAsk || '', { clear: true })}</label>
    <label class="f">אחראי<select id="aa"><option value="">נישט צוגעטיילט</option>${USERS().map(u => `<option ${u === st.assigned ? 'selected' : ''}>${esc(u)}</option>`).join('')}</select></label>
+   <div style="grid-column:1/-1"><div class="k" style="margin-bottom:4px">🏷️ פלאגס (וועלכע סארט מענטש)</div>${tagEditor(code)}</div>
    <label class="f">🕍 געטראפן אין שול${shulSel('ash', st.shul || '')}</label>
    <label class="f">VIP<select id="av"><option value="">ניין</option><option value="1" ${st.vip ? 'selected' : ''}>⭐ יא</option></select></label>
    <label class="f" style="grid-column:1/-1">נאטיצן<textarea id="ao" rows="2">${esc(st.notes || '')}</textarea></label></div>

@@ -20,10 +20,23 @@ function rcAddr(a) {   // "12 Sears Rd, Monroe, NY 10950" -> ["12 Sears Rd", "Mo
   if (parts.length < 3) return [parts.join(', '), ''];
   return [parts.slice(0, -2).join(', '), parts.slice(-2).join(' ')];
 }
+// Campaigns whose receipt is for the whole pledge (even before it is fully paid)
+const rcPlCamps = () => new Set((SET().rcptPlCamps || []).map(Number));
+// Receipt items, shaped like payments: [key, code, date, amount, type, check, campaign, solicitor, notes, refunded, pledge?]
+// Payments of the full-pledge campaigns are left out; their pledges (MCharges) become the receipts instead.
+function rcItems() {
+  const pc = rcPlCamps();
+  const L = JD.payments.filter(p => validD(p[2]) && !p[9] && p[3] > 0 && IDX.by.has(p[1]) && !pc.has(+p[6]));
+  if (pc.size) JD.pledges.forEach(c => { const d = c[11] || c[2]; if (pc.has(+c[6]) && validD(d) && c[3] > 0 && IDX.by.has(c[1])) L.push(['pl' + c[0], c[1], d, c[3], 'פלעדזש', '', c[6], c[8], '', 0, c]); });
+  return L;
+}
 function rcData(p) {
   const a = IDX.by.get(p[1]) || { n: '', h: '', a: '' }, s = SET(), suf = s.rcptSuffix != null ? s.rcptSuffix : 'הי"ו';
   const heb = a.h ? a.h + (suf ? ' ' + suf : '') : '';
-  return { key: rcKey(p), code: p[1], date: p[2], amt: p[3], heb, top: heb || a.n, eng: a.n, addr: rcAddr(a), by: s.rcptBy || p[7] || '' };
+  const d = { key: rcKey(p), code: p[1], date: p[2], amt: p[3], heb, top: heb || a.n, eng: a.n, addr: rcAddr(a), by: s.rcptBy || p[7] || '' };
+  const ed = (S.rcpt[d.key] || {}).ed;   // text changed by hand for this one receipt
+  if (ed) { ['top', 'heb', 'eng', 'by', 'date'].forEach(k => { if (ed[k] != null) d[k] = ed[k]; }); if (ed.amt != null && ed.amt !== '') d.amt = +ed.amt; if (ed.a1 != null) d.addr = [ed.a1, d.addr[1]]; if (ed.a2 != null) d.addr = [d.addr[0], ed.a2]; d.edited = true; }
+  return d;
 }
 // ---------- range / list ----------
 function rcPeriods() { const F = fundCalc(); return { F, prev: F.periods[F.periods.length - 2], cur: F.cur }; }
@@ -34,16 +47,20 @@ function rcRangeDefault() {
 function rcList() {
   if (!ui.rc) ui.rc = Object.assign({ hide: true, bg: true, sel: {} }, rcRangeDefault());
   const r = ui.rc;
-  return JD.payments.filter(p => validD(p[2]) && p[2] >= r.from && p[2] <= r.to && !p[9] && p[3] > 0 && IDX.by.has(p[1]) && (!r.hide || !rcPrinted(p)))
+  return rcItems().filter(p => p[2] >= r.from && p[2] <= r.to && (!r.hide || !rcPrinted(p)))
     .sort((a, b) => a[2].localeCompare(b[2]) || acctName(a[1]).localeCompare(acctName(b[1]), 'he'));
 }
 const rcIsSel = p => { const v = ui.rc.sel[rcKey(p)]; return v === undefined ? !rcPrinted(p) : v; };
+function rcTabs() {
+  return `<div class="row"><h2 style="margin:0">🧾 רעסיטס/סטעיטמענטס</h2></div><div class="tabs2" style="margin-top:6px">${[['rc', '🧾 רעסיטס'], ['st', '📄 סטעיטמענטס (אפענע פלעדזשעס)']].map(([k, l]) => `<button class="${(ui.rcTab || 'rc') === k ? 'on' : ''}" onclick="ui.rcTab='${k}';render()">${l}</button>`).join('')}</div>`;
+}
 function vRcpt() {
+  if (ui.rcTab === 'st') return vStmt();
   const L = rcList(), r = ui.rc, { F, prev, cur } = rcPeriods(), s = SET();
-  const sel = L.filter(rcIsSel), total = sel.reduce((t, p) => t + p[3], 0);
-  const unprintedAll = JD.payments.filter(p => validD(p[2]) && p[2] >= F.start && !p[9] && p[3] > 0 && IDX.by.has(p[1]) && !rcPrinted(p)).length;
+  const sel = L.filter(rcIsSel), total = sel.reduce((t, p) => t + rcData(p).amt, 0);
+  const unprintedAll = rcItems().filter(p => p[2] >= F.start && !rcPrinted(p)).length;
   window._rcL = L;
-  $('#main').innerHTML = `<div class="row"><div><h2>🧾 רעסיטס</h2><p class="sub">קלייבט פון ווען ביז ווען, קוקט איבער די ליסטע, און דריקט "פרינט". יעדע רעסיט איז א בלאט (Letter). נאכן דרוקן מערקט מען זיי אן אלס געדרוקט, כדי זיי זאלן נישט ארויסקומען נאכאמאל.</p></div><div class="spacer"></div>
+  $('#main').innerHTML = rcTabs() + `<div class="row"><div><p class="sub">קלייבט פון ווען ביז ווען, קוקט איבער די ליסטע, און דריקט "פרינט". יעדע רעסיט איז א בלאט (Letter). נאכן דרוקן מערקט מען זיי אן אלס געדרוקט, כדי זיי זאלן נישט ארויסקומען נאכאמאל.</p></div><div class="spacer"></div>
    <button class="btn ghost" onclick="rcSettings()">⚙️ איינשטעלונגען</button><button class="btn ghost" onclick="rcExcel()">⬇ Excel</button></div>
   <div class="box" style="margin-bottom:14px"><div class="row" style="margin:0;align-items:flex-end">
    <label class="f">פון${dateField('rcf', r.from)}</label><label class="f">ביז${dateField('rct', r.to)}</label>
@@ -57,8 +74,8 @@ function vRcpt() {
   <table><thead><tr><th></th><th>טאג</th><th>נאמען</th><th>סכום</th><th>אדרעס</th><th>Received by</th><th></th></tr></thead><tbody>
   ${L.map((p, i) => { const d = rcData(p), a = IDX.by.get(p[1]); return `<tr style="${rcIsSel(p) ? '' : 'opacity:.5'}"><td><input type="checkbox" ${rcIsSel(p) ? 'checked' : ''} onchange="ui.rc.sel['${d.key}']=this.checked;vRcpt()"></td>
    <td class="num" style="font-size:13px">${fmtD(p[2])}</td><td><a class="name" onclick="openAcct(${p[1]})">${esc(a.h || a.n)}</a><div class="heb">${esc(a.h ? a.n : '')}</div></td>
-   <td class="num"><b>${money(p[3])}</b></td><td style="font-size:13px">${a.a ? `<span class="ltr">${esc(a.a)}</span>` : '<span class="tag late">⚠️ קיין אדרעס</span>'}</td><td style="font-size:12px">${esc(d.by)}</td>
-   <td>${rcPrinted(p) ? `<span class="tag ok">✓ געדרוקט ${fmtD(rcPrinted(p))}</span>` : ''} <button class="btn ghost sm" title="קוק אן" onclick="rcPreview(${i})">👁</button></td></tr>`; }).join('') || '<tr><td colspan="7" class="empty">קיין נדבות אין די טעג</td></tr>'}
+   <td class="num"><b>${money(d.amt)}</b>${p[10] ? `<br><span class="tag custom">פלעדזש</span> <small class="dim">באצאלט ${money(p[10][4])}</small>` : ''}</td><td style="font-size:13px">${a.a ? `<span class="ltr">${esc(a.a)}</span>` : '<span class="tag late">⚠️ קיין אדרעס</span>'}</td><td style="font-size:12px">${esc(d.by)}</td>
+   <td>${rcPrinted(p) ? `<span class="tag ok">✓ געדרוקט ${fmtD(rcPrinted(p))}</span>` : ''} ${d.edited ? '<span class="tag ask">✏️ געטוישט</span> ' : ''}<button class="btn ghost sm" title="טויש דעם טעקסט" onclick="rcEdit(${i})">✏️</button><button class="btn ghost sm" title="קוק אן" onclick="rcPreview(${i})">👁</button></td></tr>`; }).join('') || '<tr><td colspan="7" class="empty">קיין נדבות אין די טעג</td></tr>'}
   </tbody></table>
   <p class="sub" style="margin-top:10px">💡 נאר וואס איז אין JLS (ביז ${new Date(JD.importedAt).toLocaleDateString()}). ביים דרוקן: Margins = None, Scale = 100%.</p>`;
   initDateFields($('#main'));
@@ -128,14 +145,35 @@ async function rcMark() {
   // close the 2-week receipt to-dos that are now fully printed
   for (const [id, x] of Object.entries(S.task)) {
     if (!x.rc || x.done || x.del) continue;
-    const left = JD.payments.some(p => validD(p[2]) && p[2] >= x.rc.from && p[2] <= x.rc.to && !p[9] && p[3] > 0 && IDX.by.has(p[1]) && !rcPrinted(p));
+    const left = rcItems().some(p => p[2] >= x.rc.from && p[2] <= x.rc.to && !rcPrinted(p));
     if (!left) await emitTask(id, { done: true, doneAt: t });
   }
   ui.rc.sel = {}; closeM(); render(); toast('✓ ' + L.length + ' רעסיטס אנגעמערקט אלס געדרוקט');
 }
 function rcExcel() {
   const L = rcList().filter(rcIsSel);
-  xlsx([{ name: 'רעסיטס', rows: [['טאג', 'טאג (אידיש)', '#', 'נאמען', 'English', 'סכום', 'אדרעס', 'שטאט', 'Received by', 'געדרוקט']].concat(L.map(p => { const d = rcData(p); return [p[2], hebD(p[2]), p[1], d.heb, d.eng, r2(p[3]), d.addr[0], d.addr[1], d.by, rcPrinted(p) || '']; })) }], 'receipts-' + ui.rc.from + '-' + ui.rc.to + '.xlsx');
+  xlsx([{ name: 'רעסיטס', rows: [['טאג', 'טאג (אידיש)', '#', 'נאמען', 'English', 'סכום', 'אדרעס', 'שטאט', 'Received by', 'געדרוקט']].concat(L.map(p => { const d = rcData(p); return [d.date, hebD(d.date), p[1], d.heb, d.eng, r2(d.amt), d.addr[0], d.addr[1], d.by, rcPrinted(p) || '']; })) }], 'receipts-' + ui.rc.from + '-' + ui.rc.to + '.xlsx');
+}
+function rcEdit(i) {
+  const p = window._rcL[i]; if (!p) return;
+  const d = rcData(p);
+  const f = (id, label, v, ltr, full) => `<label class="f"${full ? ' style="grid-column:1/-1"' : ''}>${label}<input id="${id}" value="${esc(v == null ? '' : v)}"${ltr ? ' style="direction:ltr"' : ''}></label>`;
+  modal(`<h2>✏️ טויש דעם טעקסט אויף דער רעסיט</h2><p class="sub">נאר פאר <b>די</b> רעסיט. JLS ווערט נישט געטוישט.</p><div class="grid2">
+   ${f('ret', 'נאמען אויבן (אונטער "מעלת כבוד")', d.top, false, true)}
+   ${f('rea', 'סכום $', d.amt, true)}${f('red', 'טאג (YYYY-MM-DD)', d.date, true)}
+   ${f('reh', 'נאמען אויף לשון קודש (אדרעס)', d.heb, false, true)}${f('ree', 'נאמען אויף ענגליש', d.eng, true, true)}
+   ${f('re1', 'גאס', d.addr[0], true)}${f('re2', 'שטאט, סטעיט, זיפ', d.addr[1], true)}
+   ${f('reb', 'Received by', d.by, false, true)}</div>
+   <div class="row" style="justify-content:flex-end;margin-top:14px">${d.edited ? `<button class="btn red" onclick="rcEditSave('${esc(d.key)}',true)">צוריק צו JLS</button><div class="spacer"></div>` : ''}<button class="btn ghost" onclick="closeM()">צוריק</button><button class="btn ghost" onclick="rcEditSave('${esc(d.key)}',false,${i})">👁 היט אפ און קוק אן</button><button class="btn" onclick="rcEditSave('${esc(d.key)}')">היט אפ</button></div>`, 'narrow');
+}
+async function rcEditSave(key, reset, preview) {
+  if (reset) { await emit('rcpt', key, { ed: null }); closeM(); render(); toast('✓ צוריק ווי אין JLS'); return; }
+  const amt = $('#rea').value.trim(), date = $('#red').value.trim();
+  if (amt && !(+amt > 0)) { toast('⚠️ סכום איז נישט ריכטיג'); return; }
+  if (date && !validD(date)) { toast('⚠️ טאג: למשל 2026-11-12'); return; }
+  await emit('rcpt', key, { ed: { top: $('#ret').value, amt, date: date || null, heb: $('#reh').value, eng: $('#ree').value, a1: $('#re1').value, a2: $('#re2').value, by: $('#reb').value } });
+  closeM(); render(); toast('✓ אפגעהיטן');
+  if (preview != null) rcPreview(preview);
 }
 function rcSettings() {
   const s = SET();
@@ -143,11 +181,19 @@ function rcSettings() {
    <label class="f">"Received by" (ליידיג = דער סאליסיטאר פון JLS)<input id="rsb" value="${esc(s.rcptBy || '')}"></label>
    <label class="f">נאכן נאמען (למשל הי"ו)<input id="rss" value="${esc(s.rcptSuffix != null ? s.rcptSuffix : 'הי"ו')}"></label>
    <label class="f">ווער באקומט די To-Do יעדע 2 וואכן<select id="rsw">${USERS().map(u => `<option ${u === rcWho() ? 'selected' : ''}>${esc(u)}</option>`).join('')}</select></label></div>
+   <h3>קאמפעינס מיט רעסיט אויף דער גאנצער פלעדזש</h3>
+   <p class="sub">ביי די קאמפעינס באקומט דער נדבן א רעסיט אויף דער <b>גאנצער פלעדזש</b>, אפילו ער האט נאך נישט אלעס באצאלט. (זיינע באצאלונגען צו דעם קאמפעין מאכן דעמאלט נישט קיין באזונדערע רעסיט.)</p>
+   <div class="scroll" style="max-height:220px;border:1px solid var(--line);border-radius:8px;padding:6px 10px">${rcCampList().map(([n, name, cnt]) => `<label style="display:flex;gap:8px;align-items:center;font-size:14px;padding:3px 0"><input type="checkbox" class="rpc" value="${n}" ${rcPlCamps().has(n) ? 'checked' : ''}> ${esc(name)} <small class="dim">#${n} · ${cnt} פלעדזשעס</small></label>`).join('') || '<div class="sub">קיין קאמפעינס מיט פלעדזשעס</div>'}</div>
    <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn ghost" onclick="closeM()">צוריק</button><button class="btn" onclick="rcSaveSet()">היט אפ</button></div>`, 'narrow');
 }
 async function rcSaveSet() {
-  await emit('settings', 's', { rcptBy: $('#rsb').value.trim(), rcptSuffix: $('#rss').value.trim(), rcptWho: $('#rsw').value });
+  await emit('settings', 's', { rcptBy: $('#rsb').value.trim(), rcptSuffix: $('#rss').value.trim(), rcptWho: $('#rsw').value, rcptPlCamps: [...document.querySelectorAll('.rpc:checked')].map(x => +x.value) });
   closeM(); render(); toast('✓ אפגעהיטן');
+}
+// Campaigns that have YG pledges, newest first: [num, name, count]
+function rcCampList() {
+  const m = new Map(); JD.pledges.forEach(c => { if (!c[6]) return; const o = m.get(c[6]) || { n: 0, last: '' }; o.n++; const d = c[11] || c[2] || ''; if (d > o.last) o.last = d; m.set(c[6], o); });
+  return [...m.entries()].sort((a, b) => b[1].last.localeCompare(a[1].last)).map(([n, o]) => [+n, JD.campaigns[n] || ('#' + n), o.n]);
 }
 const rcWho = () => SET().rcptWho || ((TEAM.find(t => t.is_admin) || TEAM[0] || {}).name) || me;
 // Every 2 weeks (same periods as the fundraiser accounts), a to-do to print the last period's receipts.
@@ -159,3 +205,121 @@ async function ensureRcptTask() {
   await emitTask(id, { title: '🧾 רעסיטס פרינטן – ' + fmtD(prev.from) + ' ביז ' + fmtD(prev.to), due: cur.from, who: rcWho(), who2: '', code: '', pri: 'norm', note: '', repeat: '', done: false, priv: false, rc: { from: prev.from, to: prev.to } });
 }
 function rcOpenTask(id) { const x = S.task[id]; if (!x || !x.rc) return; ui.rc = Object.assign({ hide: true, bg: true, sel: {} }, x.rc); go('rcpt'); }
+
+// ---------- statements (סטעיטמענטס) for open pledges ----------
+const STMT_TEXT_DEF = 'מיר ווילן אייך הארציג דאנקען פאר אייער צוזאג לטובת ישיבתינו הק\'. אונטן געפינט איר א חשבון פון וואס שטייט נאך אפען. מיר וועלן זיין זייער דאנקבאר ווען איר וועט עס באצאלן בהקדם. אויב איר האט שוין באצאלט, ביטע איגנארירט דעם בריוו.';
+const stSent = c => (S.stmt[c] || {}).sent;
+function stLines(code) {   // open pledge lines of one donor, by the current filter
+  const p = IDX.pl.get(code), st = ui.st, eom = iso(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0));
+  if (!p) return [];
+  return p.list.filter(c => !c[9] && c[5] > 0.009 && (!st.camp || +c[6] === +st.camp) && (st.due !== 'now' || !c[2] || c[2] <= eom))
+    .sort((a, b) => (a[2] || '').localeCompare(b[2] || ''));
+}
+function stRows() {
+  if (!ui.st) ui.st = { camp: '', due: 'now', min: 0, hide: false, sel: {} };
+  const out = [];
+  IDX.pl.forEach((g, c) => {
+    if (!IDX.by.has(c)) return;
+    const L = stLines(c), bal = L.reduce((s, x) => s + x[5], 0);
+    if (bal > 0.009 && bal >= (+ui.st.min || 0) && (!ui.st.hide || !stSent(c))) out.push({ c, a: IDX.by.get(c), L, bal });
+  });
+  return out.sort((x, y) => x.a._k.localeCompare(y.a._k, 'he'));
+}
+const stIsSel = r => { const v = ui.st.sel[r.c]; return v === undefined ? !!r.a.a : v; };
+function vStmt() {
+  const R = stRows(), st = ui.st, sel = R.filter(stIsSel), tot = sel.reduce((s, r) => s + r.bal, 0);
+  const camps = rcCampList();
+  window._stR = R;
+  $('#main').innerHTML = rcTabs() + `<div class="row"><div><p class="sub">נדבנים מיט אן אפענער פלעדזש וואס איז נאך נישט באצאלט. קלייבט אויס, דרוקט, און מערקט אן אלס געשיקט. יעדער סטעיטמענט איז א בלאט מיט אלע זיינע אפענע פלעדזשעס.</p></div><div class="spacer"></div>
+   <button class="btn ghost" onclick="stSettings()">⚙️ טעקסט</button><button class="btn ghost" onclick="stExcel()">⬇ Excel</button></div>
+  <div class="box" style="margin-bottom:14px"><div class="row" style="margin:0;align-items:flex-end">
+   <label class="f">קאמפעין<select onchange="ui.st.camp=this.value;ui.st.sel={};vStmt()"><option value="">אלע קאמפעינס</option>${camps.map(([n, name]) => `<option value="${n}" ${+st.camp === n ? 'selected' : ''}>${esc(name)}</option>`).join('')}</select></label>
+   <label class="f">וועלכע<select onchange="ui.st.due=this.value;ui.st.sel={};vStmt()"><option value="now" ${st.due === 'now' ? 'selected' : ''}>וואס איז שוין פעליג (ביז סוף חודש)</option><option value="all" ${st.due === 'all' ? 'selected' : ''}>אלע אפענע, אויך שפעטערדיגע</option></select></label>
+   <label class="f">מינימום באלאנס $<input type="number" value="${esc(st.min || '')}" style="width:110px" onchange="ui.st.min=+this.value||0;ui.st.sel={};vStmt()"></label>
+   <label style="font-size:13px;display:flex;gap:6px;align-items:center"><input type="checkbox" ${st.hide ? 'checked' : ''} onchange="ui.st.hide=this.checked;vStmt()"> באהאלט וואס איז שוין געשיקט</label></div></div>
+  <div class="row"><b>${sel.length} סטעיטמענטס אויסגעקליבן · ${money(tot)}</b><div class="spacer"></div>
+   <button class="btn ghost sm" onclick="stAll(true)">קלייב אלע</button><button class="btn ghost sm" onclick="stAll(false)">קיינער</button>
+   <button class="btn gold" ${sel.length ? '' : 'disabled'} onclick="stPrint()">🖨️ פרינט ${sel.length} סטעיטמענטס</button></div>
+  <table><thead><tr><th></th><th>נאמען</th><th>אדרעס</th><th>פלעדזשעס</th><th>באלאנס</th><th>לעצטע מאל געשיקט</th><th></th></tr></thead><tbody>
+  ${R.map((r, i) => `<tr style="${stIsSel(r) ? '' : 'opacity:.5'}"><td><input type="checkbox" ${stIsSel(r) ? 'checked' : ''} onchange="ui.st.sel[${r.c}]=this.checked;vStmt()"></td>
+   <td><a class="name" onclick="openAcct(${r.c})">${esc(r.a.h || r.a.n)}</a><div class="heb">${esc(r.a.h ? r.a.n : '')}</div></td>
+   <td style="font-size:13px">${r.a.a ? `<span class="ltr">${esc(r.a.a)}</span>` : '<span class="tag late">⚠️ קיין אדרעס</span>'}</td>
+   <td style="font-size:12.5px">${r.L.slice(0, 3).map(x => `${esc(JD.campaigns[x[6]] || x[7] || '')}: <b class="num">${money(x[5])}</b>`).join('<br>')}${r.L.length > 3 ? '<br>…' : ''}</td>
+   <td class="num bal">${money(r.bal)}</td><td style="font-size:13px">${stSent(r.c) ? `<span class="tag ok">✓ ${fmtD(stSent(r.c))}</span>` : ''}</td>
+   <td><button class="btn ghost sm" title="קוק אן" onclick="stPreview(${i})">👁</button></td></tr>`).join('') || '<tr><td colspan="7" class="empty">קיינער מיט אן אפענעם באלאנס</td></tr>'}
+  </tbody></table>`;
+}
+function stAll(v) { stRows().forEach(r => { ui.st.sel[r.c] = v; }); vStmt(); }
+function stPage(r) {
+  const a = r.a, s = SET(), suf = s.rcptSuffix != null ? s.rcptSuffix : 'הי"ו', ad = rcAddr(a), t = todayS();
+  const camp = n => JD.campaigns[n] || '';
+  return `<div class="pg">
+   <div class="hd"><img src="${location.origin}/logo.png"><div><div class="yn">ישיבה גדולה ומתיבתא תו"י מהרי"ט דסאטמאר</div><div class="ya">Yeshivas Maharit Satmar · P.O. Box 1367 · Monroe NY 10949 · Tel 845.782.1380</div></div></div>
+   <div class="row2"><div class="to"><div class="hn">${esc(a.h ? a.h + (suf ? ' ' + suf : '') : '')}</div><div class="en">${esc(a.n)}</div><div class="en">${esc(ad[0])}</div><div class="en">${esc(ad[1])}</div></div>
+    <div class="dt"><b>STATEMENT · חשבון</b><br>${rcDate(t)}<br>${HEB.fmtHeb(t)}<br>Account #${r.c}</div></div>
+   <div class="ttl">${esc(s.stmtTitle || 'לכבוד ידידינו החשוב')} ${esc(a.h || a.n)} ${esc(suf)}</div>
+   <div class="txt">${esc(s.stmtText || STMT_TEXT_DEF).replace(/\n/g, '<br>')}</div>
+   <table><thead><tr><th>Date · טאג</th><th>Campaign · קאמפעין</th><th>Pledge · פלעדזש</th><th>Paid · באצאלט</th><th>Balance · באלאנס</th></tr></thead><tbody>
+   ${r.L.map(x => `<tr><td>${x[2] ? rcDate(x[2]) : ''}</td><td class="r">${esc(camp(x[6]) || x[7] || '')}</td><td>$${rcMoney(x[3])}</td><td>$${rcMoney(x[4])}</td><td><b>$${rcMoney(x[5])}</b></td></tr>`).join('')}
+   </tbody><tfoot><tr><td colspan="4" class="r">סך הכל צו באצאלן · Total due</td><td><b>$${rcMoney(r.bal)}</b></td></tr></tfoot></table>
+   <div class="ft">Please make checks payable to <b>Yeshivas Maharit Satmar</b> · P.O. Box 1367 · Monroe NY 10949<br>All contributions are tax deductible · ID #45-4099550</div></div>`;
+}
+function stDoc(R, autoPrint) {
+  return `<!doctype html><html><head><meta charset="utf-8"><title>סטעיטמענטס</title>
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+@page{size:letter;margin:0}*{box-sizing:border-box}html,body{margin:0;background:#888}
+.pg{position:relative;width:8.5in;height:11in;overflow:hidden;background:#fff;margin:0 auto;padding:.55in .7in;page-break-after:always;break-after:page;color:#2a1a22;font-family:'Times New Roman',serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.pg:last-child{page-break-after:auto;break-after:auto}
+.hd{display:flex;align-items:center;gap:16px;border-bottom:3px solid #660033;padding-bottom:10px;direction:rtl}
+.hd img{height:.95in}.yn{font-family:'Frank Ruhl Libre',serif;font-weight:900;font-size:21pt;color:#660033}.ya{font-size:10pt;color:#6b4a58;direction:ltr;text-align:right}
+.row2{display:flex;justify-content:space-between;margin-top:.45in}
+.to{width:3.4in;font-size:13pt;line-height:1.3}.hn{font-family:'Frank Ruhl Libre',serif;font-size:14pt;direction:rtl;text-align:left}
+.dt{text-align:right;font-size:11pt;line-height:1.5;color:#4a3340}.dt b{color:#660033;font-size:12pt}
+.ttl{margin-top:.45in;font-family:'Frank Ruhl Libre',serif;font-weight:700;font-size:15pt;direction:rtl;text-align:right;color:#660033}
+.txt{margin-top:10px;font-family:'Frank Ruhl Libre',serif;font-size:12.5pt;line-height:1.55;direction:rtl;text-align:right}
+table{width:100%;border-collapse:collapse;margin-top:.3in;font-size:11.5pt}
+th{background:#660033;color:#fff;padding:6px 8px;font-weight:600;font-size:10pt;text-align:left}
+td{padding:6px 8px;border-bottom:1px solid #e6d9df}td.r,th:nth-child(2){font-family:'Frank Ruhl Libre',serif}
+tfoot td{border:none;border-top:2px solid #660033;font-size:13pt;padding-top:9px}tfoot td.r{text-align:right}
+.ft{position:absolute;left:.7in;right:.7in;bottom:.5in;text-align:center;font-size:10pt;color:#6b4a58;border-top:1px solid #e6d9df;padding-top:8px}
+@media screen{.pg{margin:16px auto;box-shadow:0 4px 20px rgba(0,0,0,.4)}}@media print{html,body{background:#fff}}
+</style></head><body>${R.map(stPage).join('')}
+${autoPrint ? `<script>window.onload=function(){(document.fonts?document.fonts.ready:Promise.resolve()).then(function(){setTimeout(function(){window.print()},300)})}<\/script>` : ''}</body></html>`;
+}
+function stOpen(R, autoPrint) {
+  const w = window.open('', '_blank');
+  if (!w) { toast('⚠️ דער בראוזער האט בלאקירט דאס נייע פענצטער – ערלויבט Pop-ups פאר דעם וועבסייט'); return false; }
+  w.document.open(); w.document.write(stDoc(R, autoPrint)); w.document.close(); return true;
+}
+function stPreview(i) { const r = window._stR[i]; if (r) stOpen([r], false); }
+function stPrint() {
+  const sel = stRows().filter(stIsSel); if (!sel.length || !stOpen(sel, true)) return;
+  window._stToMark = sel;
+  modal(`<h2>🖨️ ${sel.length} סטעיטמענטס</h2><p>זיי האבן זיך געעפנט אין א נייעם פענצטער. ווען עס האט גוט געדרוקט, דריקט דא כדי זיי זאלן אנגעמערקט ווערן אלס געשיקט.</p>
+   <p class="sub">💡 Margins = <b>None</b>, Scale = <b>100%</b>.</p>
+   <div class="row" style="justify-content:flex-end"><button class="btn ghost" onclick="closeM()">נאך נישט</button><button class="btn" onclick="stMark()">✓ געדרוקט – מערק אן</button></div>`, 'narrow');
+}
+async function stMark() {
+  const L = window._stToMark || [], t = todayS();
+  const rows = L.map(r => ({ k: 'stmt', eid: String(r.c), p: { sent: t, bal: r2(r.bal), by: me }, by: me }));
+  try {
+    for (let i = 0; i < rows.length; i += 500) await q(sb.from('events').insert(rows.slice(i, i + 500)));
+    rows.forEach(r => applyEvent({ k: r.k, id: r.eid, p: r.p, by: me }));
+    for (const r of L) await emit('hist', uid(), { code: r.c, text: '📄 סטעיטמענט געשיקט – ' + money(r.bal) });
+  } catch (e) { toast('⚠️ ' + (e.message || e)); return; }
+  ui.st.sel = {}; closeM(); render(); toast('✓ ' + L.length + ' סטעיטמענטס אנגעמערקט');
+}
+function stExcel() {
+  const R = stRows().filter(stIsSel);
+  xlsx([{ name: 'סטעיטמענטס', rows: [['#', 'נאמען', 'English', 'טעלעפאן', 'אדרעס', 'שטאט', 'באלאנס', 'פלעדזשעס', 'לעצטע מאל געשיקט']].concat(R.map(r => { const ad = rcAddr(r.a); return [r.c, r.a.h || r.a.n, r.a.n, (r.a.ph[0] || [])[1] || '', ad[0], ad[1], r2(r.bal), r.L.length, stSent(r.c) || '']; })) },
+    { name: 'אלע אפענע פלעדזשעס', rows: [['#', 'נאמען', 'פעליג', 'קאמפעין', 'באשרייבונג', 'סכום', 'באצאלט', 'באלאנס']].concat(R.flatMap(r => r.L.map(x => [r.c, r.a.h || r.a.n, x[2], JD.campaigns[x[6]] || '', x[7], r2(x[3]), r2(x[4]), r2(x[5])]))) }], 'statements-' + todayS() + '.xlsx');
+}
+function stSettings() {
+  const s = SET();
+  modal(`<h2>⚙️ דער טעקסט פון די סטעיטמענטס</h2>
+   <label class="f">שורה אויבן (פאר דעם נאמען)<input id="stt" value="${esc(s.stmtTitle || 'לכבוד ידידינו החשוב')}"></label>
+   <label class="f" style="margin-top:10px">דער בריוו<textarea id="stx" rows="6">${esc(s.stmtText || STMT_TEXT_DEF)}</textarea></label>
+   <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn ghost" onclick="closeM()">צוריק</button><button class="btn" onclick="stSaveSet()">היט אפ</button></div>`, 'narrow');
+}
+async function stSaveSet() { await emit('settings', 's', { stmtTitle: $('#stt').value.trim(), stmtText: $('#stx').value.trim() }); closeM(); render(); toast('✓ אפגעהיטן'); }

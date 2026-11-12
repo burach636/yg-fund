@@ -178,3 +178,6 @@ a.callb:hover{background:#d3eedd;border-color:var(--green)}
 .mbox.exp{background:#f0faf3;border:1px dashed #7cc39a}
 .mbox.exp b{color:var(--green)}
 .mbox small.expl{color:var(--green);font-weight:600}
+.tile.t6{background:#e8f6f8;border-top-color:#2f8fa3}
+.tile.t7{background:#fff1e6;border-top-color:#d27a2c}
+.tagc{display:inline-block;font-size:11.5px;font-weight:600;border:1px solid;border-radius:12px;padding:1px 8px;vertical-align:middle;white-space:nowrap}

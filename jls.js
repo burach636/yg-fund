@@ -224,8 +224,26 @@
       out.payments.push([r.PaymentNum, r.Code, r.Date || '', r.Amount || 0, clean(r.Type || r.PMethod), clean(r.CheckNum), r.CampaignNum || 0, clean(r.Solicitor), clean(r.Notes).slice(0, 300), r.Refunded || 0]);
 
     step('פלעדזשעס (' + (out.companyName || company) + ')...');
-    for (const r of db.rows(db.table('MCharges'), ['ChargeNum', 'Code', 'DueDate', 'Amount', 'Paid', 'BalanceDue', 'CampaignNum', 'Desc', 'Solicitor', 'Hold', 'Note'], { col: 'Company', test: isCo }))
-      out.pledges.push([r.ChargeNum, r.Code, r.DueDate || '', r.Amount || 0, r.Paid || 0, r.BalanceDue || 0, r.CampaignNum || 0, clean(r.Desc), clean(r.Solicitor), r.Hold ? 1 : 0, clean(r.Note).slice(0, 200)]);
+    for (const r of db.rows(db.table('MCharges'), ['ChargeNum', 'Code', 'DueDate', 'Amount', 'Paid', 'BalanceDue', 'CampaignNum', 'Desc', 'Solicitor', 'Hold', 'Note', 'DateE'], { col: 'Company', test: isCo }))
+      out.pledges.push([r.ChargeNum, r.Code, r.DueDate || '', r.Amount || 0, r.Paid || 0, r.BalanceDue || 0, r.CampaignNum || 0, clean(r.Desc), clean(r.Solicitor), r.Hold ? 1 : 0, clean(r.Note).slice(0, 200), r.DateE || '']);
+
+    // Who took part in which campaign, in ALL companies (for "has not given yet" reports): [campaign, code, 1=paid 2=pledged 3=both]
+    step('קאמפעינס פון אלע קאמפעניס...');
+    const since = (new Date().getFullYear() - 4) + '-01-01', hit = new Map();
+    const addHit = (camp, code, k) => { if (!camp || code == null) return; const key = camp + '|' + code; hit.set(key, (hit.get(key) || 0) | k); };
+    for (const r of db.rows(db.table('MPayments'), ['Code', 'CampaignNum', 'Date'], { col: 'CampaignNum', test: v => !!v }))
+      if (!r.Date || r.Date >= since) addHit(r.CampaignNum, r.Code, 1);
+    for (const r of db.rows(db.table('MCharges'), ['Code', 'CampaignNum', 'DueDate', 'DateE'], { col: 'CampaignNum', test: v => !!v }))
+      if ((r.DateE || r.DueDate || '9') >= since) addHit(r.CampaignNum, r.Code, 2);
+    out.camphits = Array.from(hit, ([key, k]) => { const [c, code] = key.split('|'); return [+c, +code, k]; });
+
+    // Custom account fields (MAInfo), only the UDF ones: [code, type, value]
+    step('UDF פעלדער...');
+    out.udf = [];
+    try {
+      for (const r of db.rows(db.table('MAInfo'), ['Code', 'Type', 'Value'], { col: 'Type', test: v => /^\s*udf/i.test(v || '') }))
+        if (acc.has(r.Code)) out.udf.push([r.Code, clean(r.Type), clean(r.Value)]);
+    } catch (e) { /* optional */ }
 
     // Recurring credit-card plans (the owner asked for this, 2026-11). From MCCInfo ONLY these schedule
     // columns are decoded; the card number, name, expiry, Last4, track data, address, zip, notes and
