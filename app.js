@@ -187,7 +187,7 @@ async function start() {
   setInterval(poll, 15000);
 }
 function setupUser() {
-  $('#whoBox').innerHTML = `👤 <b>${esc(me)}</b>${isAdmin() ? ' <span class="tag ask">אדמין</span>' : ''} <button class="btn ghost sm" onclick="callSetup()">📞 טעלעפאן</button> <button class="btn ghost sm" onclick="pwForm()">🔑 פאסווארט</button> <button class="btn ghost sm" onclick="logout()">ארויסגיין</button>`;
+  $('#whoBox').innerHTML = `👤 <b>${esc(me)}</b>${isAdmin() ? ' <span class="tag ask">Admin</span>' : ''} <button class="btn ghost sm" onclick="callSetup()">📞 Phone</button> <button class="btn ghost sm" onclick="pwForm()">🔑 Password</button> <button class="btn ghost sm" onclick="logout()">Log out</button>`;
 }
 const USERS = () => TEAM.map(a => a.name);
 const isAdmin = () => !!(TEAM.find(a => a.email.toLowerCase() === myEmail.toLowerCase()) || {}).is_admin;
@@ -245,18 +245,18 @@ function vNewPw() {
 }
 async function saveNewPw(fromRecovery) {
   const a = $('#np1').value, b = $('#np2').value, err = $('#nerr');
-  if (a.length < 6) { err.textContent = 'כאטש 6 אותיות'; return; }
-  if (a !== b) { err.textContent = 'די צוויי זענען נישט גלייך'; return; }
+  if (a.length < 6) { err.textContent = fromRecovery ? 'כאטש 6 אותיות' : 'At least 6 characters'; return; }
+  if (a !== b) { err.textContent = fromRecovery ? 'די צוויי זענען נישט גלייך' : 'The two passwords are not the same'; return; }
   const r = await sb.auth.updateUser({ password: a });
   if (r.error) { err.textContent = r.error.message; return; }
   if (fromRecovery) { history.replaceState(null, '', location.pathname); const { data } = await sb.auth.getSession(); toast('✓ נייער פאסווארט אפגעהיטן'); await afterLogin(data.session); }
-  else { closeM(); toast('✓ פאסווארט געטוישט'); }
+  else { closeM(); toast('✓ Password changed'); }
 }
 function pwForm() {
-  modal(`<h2>טויש מיין פאסווארט</h2><div class="grid2">
-   <label class="f">נייער פאסווארט<input id="np1" type="password" autocomplete="new-password"></label><label class="f">נאכאמאל<input id="np2" type="password" autocomplete="new-password"></label></div>
+  modal(`<div dir="ltr" style="text-align:left"><h2>Change my password</h2><div class="grid2">
+   <label class="f">New password<input id="np1" type="password" autocomplete="new-password"></label><label class="f">Again<input id="np2" type="password" autocomplete="new-password"></label></div>
    <div id="nerr" class="bal" style="min-height:20px;font-size:13px;margin-top:6px"></div>
-   <div class="row" style="justify-content:flex-end"><button class="btn ghost" onclick="closeM()">צוריק</button><button class="btn" onclick="saveNewPw(false)">היט אפ</button></div>`, 'narrow');
+   <div class="row" style="justify-content:flex-end"><button class="btn ghost" onclick="closeM()">Back</button><button class="btn" onclick="saveNewPw(false)">Save</button></div></div>`, 'narrow');
 }
 // ---------- who calls / notes ----------
 function whoSel(onch, cur) {
@@ -794,32 +794,33 @@ function xlsReports() {
 }
 
 // ---------- SETTINGS (admin only) ----------
+const FREQ_EN = { m1: 'Every month', m3: 'Every 3 months', m6: 'Every 6 months', m12: 'Once a year', yt: 'Before every Yom Tov', once: 'One-time gift – do not ask again', none: 'Do not ask automatically' };
 function vSettings() {
   const s = SET();
-  $('#main').innerHTML = `<h2>סעטינגס</h2><p class="sub">נאר דער אדמין זעט דעם בלאט.</p>
-  <div class="cols"><div class="box"><h3 style="margin-top:0">באניצער</h3>
-   <p class="sub">נאר די אימעילס אויף דער ליסטע קענען אריין. א נייער באניצער: לייגט צו זיין אימעיל דא, און ער גייט אויף דער וועבסייט, דריקט <b>"ערשטע מאל דא?"</b> און מאכט זיך א פאסווארט.</p>
-   <table><thead><tr><th>נאמען</th><th>אימעיל</th><th>📱 סעלפאון (SMS)</th><th>אדמין</th><th></th></tr></thead><tbody id="ulist">
+  $('#main').innerHTML = `<div dir="ltr" style="text-align:left"><h2>Settings</h2><p class="sub">Only the admin sees this page.</p>
+  <div class="cols"><div class="box"><h3 style="margin-top:0">Users</h3>
+   <p class="sub">Only the e-mails on this list can log in. To add a user: add the e-mail here; the user opens the website, clicks <b>"ערשטע מאל דא?"</b> and makes a password.</p>
+   <table><thead><tr><th style="text-align:left">Name</th><th style="text-align:left">E-mail</th><th style="text-align:left">📱 Cell phone (SMS)</th><th>Admin</th><th></th></tr></thead><tbody id="ulist">
    ${TEAM.map(t => urow(t)).join('')}</tbody></table>
-   <div class="row" style="margin-top:10px"><button class="btn ghost sm" onclick="addURow()">+ נייער באניצער</button><div class="spacer"></div><button class="btn" onclick="saveUsers()">היט אפ באניצער</button></div>
+   <div class="row" style="margin-top:10px"><button class="btn ghost sm" onclick="addURow()">+ New user</button><div class="spacer"></div><button class="btn" onclick="saveUsers()">Save users</button></div>
    <div id="uerr" class="bal" style="font-size:13px"></div>
-   <h3>בעטן אויטאמאטיש</h3>
-   <label class="f" style="margin-bottom:8px">ווי אפט בעטן נדבנים וואס האבן נישט קיין אייגענע איינשטעלונג<select id="sf">${Object.entries(FREQ).map(([k, v]) => `<option value="${k}" ${k === s.defFreq ? 'selected' : ''}>${v[0]}</option>`).join('')}</select></label>
-   <label style="display:flex;gap:8px;align-items:center;margin-bottom:10px;font-size:14px"><input type="checkbox" id="so" ${s.skipOnce ? 'checked' : ''}> נדבנים וואס האבן געגעבן <b>נאר איין מאל</b> – נישט בעטן אויטאמאטיש (מ'קען נאך אלץ שטעלן ביי יעדן באזונדער)</label>
-   <label class="f" style="margin-bottom:8px">נעם נאר נדבנים וואס האבן געגעבן אין די לעצטע ... יאר<input id="sy" type="number" min="1" max="50" value="${s.maxYears || 5}"></label>
-   <label class="f" style="margin-bottom:8px">JLS קאמפעני נומער (באצאלונגען און פלעדזשעס)<input id="sc" type="number" value="${s.company || 32}"></label>
-   <button class="btn" onclick="saveSettings()">היט אפ</button></div>
-  <div class="box"><h3 style="margin-top:0">לעצטע JLS דערהיינטיגונג</h3><p class="sub">${new Date(JD.importedAt).toLocaleString()} · ${esc(JD.importedBy || '')} · ${esc((JD.source || {}).name || '')}<br>${JD.accounts.length.toLocaleString()} אקאונטס · ${JD.payments.length.toLocaleString()} באצאלונגען · ${JD.pledges.length.toLocaleString()} פלעדזשעס · ${esc(JD.companyName)}</p>
-   <h3>אריבערנעמען פון דער דעסקטאפ ווערסיע</h3>
-   <p class="sub">אויב איר האט שוין געארבעט מיט דער דעסקטאפ ווערסיע: קלייבט די פייל <span class="path">data\\log.jsonl</span>, און אלע To-Do'ס, נאטיצן און רימיינדערס פון דארט קומען אריבער.</p>
-   <label class="btn ghost sm">📥 קלייב log.jsonl<input type="file" accept=".jsonl,.txt" hidden onchange="importDesktopLog(this.files[0])"></label>
-   <h3>🔍 JLS טאבעלעס (נאר נעמען)</h3>
-   <p class="sub">ווייזט די נעמען פון אלע טאבעלעס און קאלומס אין Tuition.mdb – <b>נישט</b> קיין שום אינפארמאציע פון זיי. עס בלייבט אויף דעם קאמפיוטער.</p>
-   <label class="btn ghost sm">🔍 קלייב Tuition.mdb<input type="file" accept=".mdb,.zip" hidden onchange="jlsSchema(this.files[0])"></label>
-   <h3>📱 SMS פון סעלפאון</h3>
-   <p class="sub">שיקט א טעקסט צום SMS נומער פון דער סיסטעם. נאר די סעלפאונס וואס שטייען אין דער ליסטע פון באניצער באקומען אן ענטפער.</p>
-   <table><tbody>${[['שווארץ', 'אלע אינפא (נאמען, טעלעפאן, אדרעס, נדבות)'], ['טעלעפאן שווארץ', 'טעלעפאן נומערן'], ['אדרעס שווארץ', 'אדרעס'], ['געגעבן שווארץ', 'וויפיל ער האט געגעבן די לעצטע יאר'], ['באלאנס שווארץ', 'אפענער פלעדזש'], ['היינט', 'מיינע To-Do פאר היינט'], ['פלעדזשעס', 'פלעדזשעס צו קאלן דעם חודש'], ['געקאלט שווארץ', 'מערקט אן אז מ\'האט געקאלט'], ['טאדו קויפן פאפיר', 'נייע זאך אין מיין To-Do'], ['נאטיץ שווארץ: וועט געבן נאך פסח', 'נאטיץ ביי דעם נדבן'], ['שול', 'קומענדיגע שול'], ['?', 'די ליסטע']].map(([c, d]) => `<tr><td><b>${esc(c)}</b></td><td style="font-size:13px">${esc(d)}</td></tr>`).join('')}</tbody></table>
-   <p class="sub" style="margin-top:6px">אויב עס זענען דא עטליכע מיט דעם זעלבן נאמען, שיקט עס צוריק א ליסטע מיט #נומערן. דערנאך שיקט מען למשל <b>#1234</b>.</p></div></div>`;
+   <h3>Automatic asking</h3>
+   <label class="f" style="margin-bottom:8px">How often to ask donors that have no setting of their own<select id="sf">${Object.keys(FREQ).map(k => `<option value="${k}" ${k === s.defFreq ? 'selected' : ''}>${FREQ_EN[k] || FREQ[k][0]}</option>`).join('')}</select></label>
+   <label style="display:flex;gap:8px;align-items:center;margin-bottom:10px;font-size:14px"><input type="checkbox" id="so" ${s.skipOnce ? 'checked' : ''}> <span>Donors who gave <b>only once</b> – do not ask automatically (can still be set per donor)</span></label>
+   <label class="f" style="margin-bottom:8px">Only donors who gave in the last ... years<input id="sy" type="number" min="1" max="50" value="${s.maxYears || 5}"></label>
+   <label class="f" style="margin-bottom:8px">JLS company number (payments and pledges)<input id="sc" type="number" value="${s.company || 32}"></label>
+   <button class="btn" onclick="saveSettings()">Save</button></div>
+  <div class="box"><h3 style="margin-top:0">Last JLS update</h3><p class="sub">${new Date(JD.importedAt).toLocaleString()} · ${esc(JD.importedBy || '')} · ${esc((JD.source || {}).name || '')}<br>${JD.accounts.length.toLocaleString()} accounts · ${JD.payments.length.toLocaleString()} payments · ${JD.pledges.length.toLocaleString()} pledges · ${esc(JD.companyName)}</p>
+   <h3>Import from the desktop version</h3>
+   <p class="sub">If you worked with the desktop version: choose the file <span class="path">data\\log.jsonl</span>, and all to-dos, notes and reminders from there are copied over.</p>
+   <label class="btn ghost sm">📥 Choose log.jsonl<input type="file" accept=".jsonl,.txt" hidden onchange="importDesktopLog(this.files[0])"></label>
+   <h3>🔍 JLS tables (names only)</h3>
+   <p class="sub">Shows the names of all tables and columns in Tuition.mdb – <b>no</b> data from them. Nothing leaves this computer.</p>
+   <label class="btn ghost sm">🔍 Choose Tuition.mdb<input type="file" accept=".mdb,.zip" hidden onchange="jlsSchema(this.files[0])"></label>
+   <h3>📱 SMS from a cell phone</h3>
+   <p class="sub">Text the system's SMS number. Only the cell phones on the users list get an answer.</p>
+   <table><tbody>${[['שווארץ', 'All info (name, phone, address, gifts)'], ['טעלעפאן שווארץ', 'Phone numbers'], ['אדרעס שווארץ', 'Address'], ['געגעבן שווארץ', 'What he gave in the last year'], ['באלאנס שווארץ', 'Open pledge balance'], ['היינט', 'My to-dos for today'], ['פלעדזשעס', 'Pledges to call this month'], ['געקאלט שווארץ', 'Mark as called'], ['טאדו קויפן פאפיר', 'New item in my to-do list'], ['נאטיץ שווארץ: וועט געבן נאך פסח', 'Note on the donor'], ['שול', 'Next shul'], ['?', 'The list of commands']].map(([c, d]) => `<tr><td dir="rtl" style="text-align:right"><b>${esc(c)}</b></td><td style="font-size:13px">${esc(d)}</td></tr>`).join('')}</tbody></table>
+   <p class="sub" style="margin-top:6px">If several people have the same name, it answers with a list of #numbers; then send for example <b>#1234</b>.</p></div></div></div>`;
 }
 function urow(t) {
   t = t || { email: '', name: '', is_admin: false };
@@ -832,15 +833,15 @@ async function saveUsers() {
   for (const r of rows) {
     const name = r.querySelector('.un').value.trim(), email = r.querySelector('.ue').value.trim().toLowerCase(), admin = r.querySelector('.ua').checked, phone = r.querySelector('.up').value.trim();
     if (!name && !email) continue;
-    if (!name || !/^\S+@\S+\.\S+$/.test(email)) return err('יעדער באניצער דארף א נאמען און א ריכטיגן אימעיל');
-    if (out.some(a => a.email === email)) return err('צוויי מאל דער זעלבער אימעיל');
-    if (out.some(a => a.name === name)) return err('צוויי מאל דער זעלבער נאמען');
-    if (phone && phone.replace(/\D/g, '').length < 10) return err('דער סעלפאון נומער פון ' + name + ' איז נישט גאנץ (10 ציפערן)');
+    if (!name || !/^\S+@\S+\.\S+$/.test(email)) return err('Every user needs a name and a valid e-mail');
+    if (out.some(a => a.email === email)) return err('The same e-mail appears twice');
+    if (out.some(a => a.name === name)) return err('The same name appears twice');
+    if (phone && phone.replace(/\D/g, '').length < 10) return err('The cell phone number of ' + name + ' is incomplete (10 digits)');
     out.push({ email, name, is_admin: admin, phone, old: r.dataset.old.toLowerCase() });
   }
-  if (!out.some(a => a.is_admin)) return err('עס מוז בלייבן כאטש איין אדמין');
+  if (!out.some(a => a.is_admin)) return err('At least one admin must remain');
   const mine = out.find(a => a.email === myEmail.toLowerCase());
-  if (!mine || !mine.is_admin) return err('איר קענט נישט אויסמעקן זיך אליין אדער אראפנעמען אייער אדמין');
+  if (!mine || !mine.is_admin) return err('You cannot remove yourself or your own admin rights');
   try {
     const renames = {};
     for (const t of TEAM) { const n = out.find(a => a.email === t.email.toLowerCase()); if (n && n.name !== t.name) renames[t.name] = n.name; }
@@ -886,7 +887,7 @@ async function jlsSchema(file) {
 async function saveSettings() {
   const old = SET().company || 32, nc = +$('#sc').value || 32;
   await emit('settings', 's', { defFreq: $('#sf').value, maxYears: +$('#sy').value || 5, company: nc, skipOnce: $('#so').checked });
-  toast(nc !== old ? 'קאמפעני געטוישט – דערהיינטיגט פון JLS כדי עס זאל נעמען ווירקונג' : '✓ אפגעהיטן');
+  toast(nc !== old ? 'Company changed – update from JLS for it to take effect' : '✓ Saved');
   render();
 }
 

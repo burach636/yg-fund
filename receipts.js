@@ -67,7 +67,7 @@ function vRcpt() {
   const unprintedAll = rcItems().filter(p => p[2] >= F.start && !rcPrinted(p)).length;
   window._rcL = L;
   $('#main').innerHTML = rcTabs() + rcMailErrBox() + `<div class="row"><div><p class="sub">קלייבט פון ווען ביז ווען, קוקט איבער די ליסטע, און דריקט "פרינט". יעדע רעסיט איז א בלאט (Letter). נאכן דרוקן מערקט מען זיי אן אלס געדרוקט, כדי זיי זאלן נישט ארויסקומען נאכאמאל.</p></div><div class="spacer"></div>
-   <button class="btn ghost" onclick="rcSettings()">⚙️ איינשטעלונגען</button><button class="btn ghost" onclick="rcExcel()">⬇ Excel</button></div>
+   <button class="btn ghost" onclick="rcSettings()">⚙️ Settings</button><button class="btn ghost" onclick="rcExcel()">⬇ Excel</button></div>
   <div class="box" style="margin-bottom:14px"><div class="row" style="margin:0;align-items:flex-end">
    <label class="f">פון${dateField('rcf', r.from)}</label><label class="f">ביז${dateField('rct', r.to)}</label>
    <button class="btn" onclick="ui.rc.from=$('#rcf').value||ui.rc.from;ui.rc.to=$('#rct').value||ui.rc.to;ui.rc.sel={};vRcpt()">ווייז</button>
@@ -197,19 +197,19 @@ async function rcEditSave(key, reset, preview) {
 }
 function rcSettings() {
   const s = SET();
-  modal(`<h2>⚙️ רעסיטס איינשטעלונגען</h2><div class="grid2">
-   <label class="f">"Received by" (ליידיג = דער סאליסיטאר פון JLS)<input id="rsb" value="${esc(s.rcptBy || '')}"></label>
-   <label class="f">נאכן נאמען (למשל הי"ו)<input id="rss" value="${esc(s.rcptSuffix != null ? s.rcptSuffix : 'הי"ו')}"></label>
-   <label class="f">ווער באקומט די To-Do יעדע 2 וואכן<select id="rsw">${USERS().map(u => `<option ${u === rcWho() ? 'selected' : ''}>${esc(u)}</option>`).join('')}</select></label></div>
+  modal(`<div dir="ltr" style="text-align:left"><h2>⚙️ Receipt settings</h2><div class="grid2">
+   <label class="f">"Received by" (empty = the solicitor from JLS)<input id="rsb" dir="auto" value="${esc(s.rcptBy || '')}"></label>
+   <label class="f">After the name (e.g. הי"ו)<input id="rss" dir="rtl" value="${esc(s.rcptSuffix != null ? s.rcptSuffix : 'הי"ו')}"></label>
+   <label class="f">Who gets the to-do every 2 weeks<select id="rsw">${USERS().map(u => `<option ${u === rcWho() ? 'selected' : ''}>${esc(u)}</option>`).join('')}</select></label></div>
    ${mailSettingsHTML()}
-   <h3>קאמפעינס מיט רעסיט אויף דער גאנצער פלעדזש</h3>
-   <p class="sub">ביי די קאמפעינס באקומט דער נדבן א רעסיט אויף דער <b>גאנצער פלעדזש</b>, אפילו ער האט נאך נישט אלעס באצאלט. (זיינע באצאלונגען צו דעם קאמפעין מאכן דעמאלט נישט קיין באזונדערע רעסיט.)</p>
-   <div class="scroll" style="max-height:220px;border:1px solid var(--line);border-radius:8px;padding:6px 10px">${rcCampList().map(([n, name, cnt]) => `<label style="display:flex;gap:8px;align-items:center;font-size:14px;padding:3px 0"><input type="checkbox" class="rpc" value="${n}" ${rcPlCamps().has(n) ? 'checked' : ''}> ${esc(name)} <small class="dim">#${n} · ${cnt} פלעדזשעס</small></label>`).join('') || '<div class="sub">קיין קאמפעינס מיט פלעדזשעס</div>'}</div>
-   <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn ghost" onclick="closeM()">צוריק</button><button class="btn" onclick="rcSaveSet()">היט אפ</button></div>`, 'narrow');
+   <h3>Campaigns with a receipt for the whole pledge</h3>
+   <p class="sub">For these campaigns the donor gets a receipt for the <b>whole pledge</b>, even before it is fully paid. (His payments to that campaign then do not make a separate receipt.)</p>
+   <div class="scroll" style="max-height:220px;border:1px solid var(--line);border-radius:8px;padding:6px 10px">${rcCampList().map(([n, name, cnt]) => `<label style="display:flex;gap:8px;align-items:center;font-size:14px;padding:3px 0"><input type="checkbox" class="rpc" value="${n}" ${rcPlCamps().has(n) ? 'checked' : ''}> ${esc(name)} <small class="dim">#${n} · ${cnt} pledges</small></label>`).join('') || '<div class="sub">No campaigns with pledges</div>'}</div>
+   <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn ghost" onclick="closeM()">Back</button><button class="btn" onclick="rcSaveSet()">Save</button></div></div>`, 'narrow');
 }
 async function rcSaveSet() {
   await emit('settings', 's', { rcptBy: $('#rsb').value.trim(), rcptSuffix: $('#rss').value.trim(), rcptWho: $('#rsw').value, rcptPlCamps: [...document.querySelectorAll('.rpc:checked')].map(x => +x.value), mailSubject: $('#msj').value.trim(), mailBody: $('#mbd').value.trim() });
-  closeM(); render(); toast('✓ אפגעהיטן');
+  closeM(); render(); toast('✓ Saved');
 }
 // Campaigns that have YG pledges, newest first: [num, name, count]
 function rcCampList() {
@@ -252,7 +252,7 @@ function vStmt() {
   const camps = rcCampList();
   window._stR = R;
   $('#main').innerHTML = rcTabs() + `<div class="row"><div><p class="sub">נדבנים מיט אן אפענער פלעדזש וואס איז נאך נישט באצאלט. קלייבט אויס, דרוקט, און מערקט אן אלס געשיקט. יעדער סטעיטמענט איז א בלאט מיט אלע זיינע אפענע פלעדזשעס.</p></div><div class="spacer"></div>
-   <button class="btn ghost" onclick="stSettings()">⚙️ טעקסט</button><button class="btn ghost" onclick="stExcel()">⬇ Excel</button></div>
+   <button class="btn ghost" onclick="stSettings()">⚙️ Settings</button><button class="btn ghost" onclick="stExcel()">⬇ Excel</button></div>
   <div class="box" style="margin-bottom:14px"><div class="row" style="margin:0;align-items:flex-end">
    <label class="f">קאמפעין<select onchange="ui.st.camp=this.value;ui.st.sel={};vStmt()"><option value="">אלע קאמפעינס</option>${camps.map(([n, name]) => `<option value="${n}" ${+st.camp === n ? 'selected' : ''}>${esc(name)}</option>`).join('')}</select></label>
    <label class="f">וועלכע<select onchange="ui.st.due=this.value;ui.st.sel={};vStmt()"><option value="now" ${st.due === 'now' ? 'selected' : ''}>וואס איז שוין פעליג (ביז סוף חודש)</option><option value="all" ${st.due === 'all' ? 'selected' : ''}>אלע אפענע, אויך שפעטערדיגע</option></select></label>
@@ -338,12 +338,12 @@ function stExcel() {
 }
 function stSettings() {
   const s = SET();
-  modal(`<h2>⚙️ דער טעקסט פון די סטעיטמענטס</h2>
-   <label class="f">שורה אויבן (פאר דעם נאמען)<input id="stt" value="${esc(s.stmtTitle || 'לכבוד ידידינו החשוב')}"></label>
-   <label class="f" style="margin-top:10px">דער בריוו<textarea id="stx" rows="6">${esc(s.stmtText || STMT_TEXT_DEF)}</textarea></label>
-   <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn ghost" onclick="closeM()">צוריק</button><button class="btn" onclick="stSaveSet()">היט אפ</button></div>`, 'narrow');
+  modal(`<div dir="ltr" style="text-align:left"><h2>⚙️ Statement text</h2>
+   <label class="f">Top line (before the name)<input id="stt" dir="rtl" value="${esc(s.stmtTitle || 'לכבוד ידידינו החשוב')}"></label>
+   <label class="f" style="margin-top:10px">The letter<textarea id="stx" dir="rtl" rows="6">${esc(s.stmtText || STMT_TEXT_DEF)}</textarea></label>
+   <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn ghost" onclick="closeM()">Back</button><button class="btn" onclick="stSaveSet()">Save</button></div></div>`, 'narrow');
 }
-async function stSaveSet() { await emit('settings', 's', { stmtTitle: $('#stt').value.trim(), stmtText: $('#stx').value.trim() }); closeM(); render(); toast('✓ אפגעהיטן'); }
+async function stSaveSet() { await emit('settings', 's', { stmtTitle: $('#stt').value.trim(), stmtText: $('#stx').value.trim() }); closeM(); render(); toast('✓ Saved'); }
 
 // ---------- ✉️ e-mail receipts (PDF attachment, sent by the Supabase function "email") ----------
 const MAIL_SUBJ_DEF = 'קבלה – Yeshivas Maharit Satmar – {amount}';
@@ -459,6 +459,6 @@ function rcMailErrBox() {
 }
 function mailSettingsHTML() {
   const s = SET();
-  return `<h3>✉️ אימעיל</h3><div class="grid2"><label class="f" style="grid-column:1/-1">סאבדזשעקט ({name}, {amount}, {date})<input id="msj" value="${esc(s.mailSubject || MAIL_SUBJ_DEF)}"></label>
-   <label class="f" style="grid-column:1/-1">דער בריוו אין אימעיל<textarea id="mbd" rows="6">${esc(s.mailBody || MAIL_BODY_DEF)}</textarea></label></div>`;
+  return `<h3>✉️ E-mail</h3><div class="grid2"><label class="f" style="grid-column:1/-1">Subject ({name}, {amount}, {date})<input id="msj" dir="auto" value="${esc(s.mailSubject || MAIL_SUBJ_DEF)}"></label>
+   <label class="f" style="grid-column:1/-1">The e-mail text<textarea id="mbd" dir="auto" rows="6">${esc(s.mailBody || MAIL_BODY_DEF)}</textarea></label></div>`;
 }

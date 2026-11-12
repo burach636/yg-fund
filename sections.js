@@ -210,11 +210,11 @@ function xlsShul(id) {
 async function frDel(k, id) { if (!confirm('אויסמעקן?')) return; await emit(k, id, { del: true }); closeM(); render(); }
 function fundSettings() {
   const F = fundCalc();
-  modal(`<h2>⚙️ פאנדרעיזינג איינשטעלונגען</h2><div class="grid2">
-   <label class="f">פראצענט פאר די פאנדרעיזערס<input id="fp" type="number" min="0" max="100" step="0.5" value="${F.pct}"></label>
-   <label class="f">אנגעהויבן פון (ערשטער טאג פון ערשטע 2 וואכן)${dateField('fs', F.start)}</label></div>
-   <p class="sub" style="margin-top:8px">ראש השנה תשפ"ז = ${fmtD(RH5787)}. יעדע 2 וואכן פון דעם טאג ווערט א נייע תקופה.</p>
-   <div class="row" style="justify-content:flex-end"><button class="btn ghost" onclick="closeM()">צוריק</button><button class="btn" onclick="fundSaveSet()">היט אפ</button></div>`, 'narrow');
+  modal(`<div dir="ltr" style="text-align:left"><h2>⚙️ Fundraising settings</h2><div class="grid2">
+   <label class="f">Percentage for the fundraisers<input id="fp" type="number" min="0" max="100" step="0.5" value="${F.pct}"></label>
+   <label class="f">Starting from (first day of the first 2 weeks)${dateField('fs', F.start)}</label></div>
+   <p class="sub" style="margin-top:8px">Rosh Hashana 5787 = ${fmtD(RH5787)}. Every 2 weeks from that day is a new period.</p>
+   <div class="row" style="justify-content:flex-end"><button class="btn ghost" onclick="closeM()">Back</button><button class="btn" onclick="fundSaveSet()">Save</button></div></div>`, 'narrow');
 }
 async function fundSaveSet() {
   const pct = +$('#fp').value; if (!(pct >= 0 && pct <= 100)) { $('#fp').focus(); return; }
@@ -341,28 +341,28 @@ function callSetup() {
   const t = callTpl(), yl = t.match(/^(https?:\/\/[^/]+)\/servlet\?key=number=\{digits\}$/);
   const ls = k => { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } };
   const mode = callIsPost(t) || (ls('yg_call_src') && /%PhoneNum%|\{num1\}/.test(t)) ? 'jls' : t === 'tel:{num}' ? 'tel' : yl ? 'yealink' : 'custom';
-  modal(`<h2>📞 קאלן פון דעם קאמפיוטער</h2>
-   <p class="sub">ווען מען דריקט 📞 לעבן א נדבן, קאלט עס אים דורך אייער אפיס טעלעפאן. די איינשטעלונג איז נאר פאר <b>דעם</b> קאמפיוטער, און ווערט נישט ארויפגעלייגט.</p>
-   <label class="f">וועלכער טעלעפאן<select id="cs" onchange="callMode(this.value)">
-    <option value="jls" ${mode === 'jls' ? 'selected' : ''}>CALL URL פון JLS (TekLink א.א.וו.)</option>
-    <option value="yealink" ${mode === 'yealink' ? 'selected' : ''}>Yealink טעלעפאן אויפן טיש (IP)</option>
-    <option value="tel" ${mode === 'tel' ? 'selected' : ''}>טעלעפאן פראגראם אויפן קאמפיוטער (tel:)</option>
-    <option value="custom" ${mode === 'custom' ? 'selected' : ''}>אנדערש (לינק)</option></select></label>
-   <div id="c_jl" style="margin-top:10px"><label class="f">CALL URL – פעיסט אריין די גאנצע שורה פונקט ווי אין JLS<textarea id="cjl" rows="3" style="direction:ltr;font-size:12px">${esc(mode === 'jls' ? (ls('yg_call_src') || t) : '')}</textarea></label>
-    <div class="grid2" style="margin-top:8px"><label class="f">שיקן ווי<select id="cjm">${[['post', 'POST (ווי JLS)'], ['get', 'GET (אין לינק)'], ['post1', 'POST, מיט 1 פאראויס'], ['get1', 'GET, מיט 1 פאראויס']].map(([k, l]) => `<option value="${k}" ${(ls('yg_call_m') || 'post') === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
-    <label class="f">🧪 טעסט – אייער אייגענער נומער<input id="cjt" type="tel" style="direction:ltr" placeholder="845-555-1234"></label></div>
-    <div class="row" style="margin-top:8px"><button class="btn ghost sm" onclick="callTest()">🧪 פרוביר (דאס פענצטערל בלייבט אפן)</button><span class="sub" style="margin:0">שרייבט מיר וואס עס שטייט אין פענצטערל</span></div></div>
-   <div id="c_yl" style="margin-top:10px"><label class="f">IP פון דעם Yealink טעלעפאן (למשל 192.168.1.50, אדער https://192.168.1.50)<input id="cip" style="direction:ltr" value="${esc(yl ? yl[1] : '')}" placeholder="192.168.1.50"></label>
-    <p class="sub" style="margin-top:6px">💡 צו געפינען: דריקט אויפן טעלעפאן <b>OK</b> (אדער Menu > Status), דארט שטייט IPv4.</p></div>
-   <div id="c_cu" style="margin-top:10px"><label class="f">לינק ({num} = +18455551234, {digits} = 8455551234)<input id="cu" style="direction:ltr" value="${esc(mode === 'custom' ? t : '')}"></label></div>
-   <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn ghost" onclick="closeM()">צוריק</button><button class="btn" onclick="callSave()">היט אפ</button></div>`, 'narrow');
+  modal(`<div dir="ltr" style="text-align:left"><h2>📞 Calling from this computer</h2>
+   <p class="sub">When you click 📞 next to a donor, it calls him through your office phone. This setting is for <b>this</b> computer only and is not uploaded.</p>
+   <label class="f">Which phone<select id="cs" onchange="callMode(this.value)">
+    <option value="jls" ${mode === 'jls' ? 'selected' : ''}>CALL URL from JLS (TekLink etc.)</option>
+    <option value="yealink" ${mode === 'yealink' ? 'selected' : ''}>Yealink desk phone (IP)</option>
+    <option value="tel" ${mode === 'tel' ? 'selected' : ''}>Phone program on this computer (tel:)</option>
+    <option value="custom" ${mode === 'custom' ? 'selected' : ''}>Other (link)</option></select></label>
+   <div id="c_jl" style="margin-top:10px"><label class="f">CALL URL – paste the whole line exactly as in JLS<textarea id="cjl" rows="3" style="direction:ltr;font-size:12px">${esc(mode === 'jls' ? (ls('yg_call_src') || t) : '')}</textarea></label>
+    <div class="grid2" style="margin-top:8px"><label class="f">Send as<select id="cjm">${[['post', 'POST (like JLS)'], ['get', 'GET (in the link)'], ['post1', 'POST, with a leading 1'], ['get1', 'GET, with a leading 1']].map(([k, l]) => `<option value="${k}" ${(ls('yg_call_m') || 'post') === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+    <label class="f">🧪 Test – your own number<input id="cjt" type="tel" style="direction:ltr" placeholder="845-555-1234"></label></div>
+    <div class="row" style="margin-top:8px"><button class="btn ghost sm" onclick="callTest()">🧪 Test (the small window stays open)</button><span class="sub" style="margin:0">Tell Claude what the small window shows</span></div></div>
+   <div id="c_yl" style="margin-top:10px"><label class="f">IP of the Yealink phone (e.g. 192.168.1.50, or https://192.168.1.50)<input id="cip" style="direction:ltr" value="${esc(yl ? yl[1] : '')}" placeholder="192.168.1.50"></label>
+    <p class="sub" style="margin-top:6px">💡 To find it: press <b>OK</b> on the phone (or Menu > Status) and look at IPv4.</p></div>
+   <div id="c_cu" style="margin-top:10px"><label class="f">Link ({num} = +18455551234, {digits} = 8455551234)<input id="cu" style="direction:ltr" value="${esc(mode === 'custom' ? t : '')}"></label></div>
+   <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn ghost" onclick="closeM()">Back</button><button class="btn" onclick="callSave()">Save</button></div></div>`, 'narrow');
   callMode(mode);
 }
 // Build the template from the pasted JLS line and the chosen way of sending
 function callJlsTpl() {
   const src = $('#cjl').value.replace(/\s+/g, '').replace(/^CALL ?URL:?/i, ''), m = $('#cjm').value;
-  if (!/^https?:\/\//.test(src)) { toast('⚠️ פעיסט אריין די CALL URL שורה פון JLS'); return null; }
-  if (!/%PhoneNum%|\{digits\}|\{num\}/.test(src)) { toast('⚠️ אין דער שורה פעלט %PhoneNum%'); return null; }
+  if (!/^https?:\/\//.test(src)) { toast('⚠️ Paste the CALL URL line from JLS'); return null; }
+  if (!/%PhoneNum%|\{digits\}|\{num\}/.test(src)) { toast('⚠️ The line has no %PhoneNum%'); return null; }
   let [url, body] = src.includes('POSTJLSPOST') ? src.split('POSTJLSPOST') : src.split('?');
   body = body || '';
   if (m.endsWith('1')) body = body.split('%PhoneNum%').join('{num1}');
@@ -371,7 +371,7 @@ function callJlsTpl() {
 }
 function callTest() {
   const r = callJlsTpl(); if (!r) return;
-  const d = callNum($('#cjt').value); if (d.length < 10) { toast('⚠️ שרייבט אייער נומער'); return; }
+  const d = callNum($('#cjt').value); if (d.length < 10) { toast('⚠️ Enter your number'); return; }
   const el = document.createElement('a'); el.dataset.n = d;
   dial(el, 0, r.tpl, true);
 }
@@ -384,12 +384,12 @@ function callSave() {
     try { localStorage.setItem('yg_call_src', r.src); localStorage.setItem('yg_call_m', r.m); } catch (e) { }
   } else if (m === 'yealink') {
     const raw = $('#cip').value.trim(), https = /^https:/i.test(raw), ip = raw.replace(/^https?:\/\//i, '').replace(/\/.*$/, '');
-    if (!/^[\w.-]+(:\d+)?$/.test(ip)) { toast('⚠️ שרייבט דעם IP פון דעם טעלעפאן'); return; }
+    if (!/^[\w.-]+(:\d+)?$/.test(ip)) { toast('⚠️ Enter the IP of the phone'); return; }
     v = (https ? 'https://' : 'http://') + ip + '/servlet?key=number={digits}';
   } else if (m === 'custom') {
     v = $('#cu').value.trim();
-    if (!/%PhoneNum%|\{digits\}|\{num\}/.test(v)) { toast('⚠️ דער לינק מוז האבן {num} אדער {digits}'); return; }
+    if (!/%PhoneNum%|\{digits\}|\{num\}/.test(v)) { toast('⚠️ The link must contain {num} or {digits}'); return; }
   }
   try { localStorage.setItem('yg_call', v); } catch (e) { }
-  closeM(); render(); toast('✓ אפגעהיטן – פרובירט א 📞');
+  closeM(); render(); toast('✓ Saved – try a 📞');
 }
