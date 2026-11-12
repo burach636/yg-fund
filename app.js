@@ -219,12 +219,12 @@ function loginShell(inner) {
 }
 function vLogin(mode) {
   const signup = mode === 'signup';
-  loginShell(`<div class="box" style="text-align:right;background:#fff"><h2>${signup ? 'ערשטע מאל: מאכט א פאסווארט' : 'אריינלאגן'}</h2>
+  loginShell(`<div class="box" style="text-align:right;background:#fff"><h2>${signup ? 'ערשטע מאל: מאכט א פאסווארט' : 'Log in'}</h2>
    ${signup ? '<p class="sub">שרייבט דעם אימעיל וואס דער אדמין האט צוגעלייגט, און קלייבט א פאסווארט.</p>' : ''}
-   <label class="f" style="margin:10px 0">אימעיל<input id="le" type="email" autocomplete="username" style="direction:ltr"></label>
-   <label class="f" style="margin:10px 0">פאסווארט<input id="lp" type="password" autocomplete="${signup ? 'new-password' : 'current-password'}"></label>
+   <label class="f" style="margin:10px 0">Email<input id="le" type="email" autocomplete="username" style="direction:ltr"></label>
+   <label class="f" style="margin:10px 0">Password<input id="lp" type="password" autocomplete="${signup ? 'new-password' : 'current-password'}"></label>
    <div id="lerr" class="bal" style="min-height:20px;font-size:13px"></div>
-   <button class="btn" style="width:100%;padding:10px;font-size:15px" id="lbtn">${signup ? 'מאך דעם אקאונט' : 'אריין'}</button>
+   <button class="btn" style="width:100%;padding:10px;font-size:15px" id="lbtn">${signup ? 'מאך דעם אקאונט' : 'Log in'}</button>
    <div class="row" style="justify-content:space-between;margin:12px 0 0">
     ${signup ? '<a class="name" onclick="vLogin()">איך האב שוין א פאסווארט</a>' : '<a class="name" onclick="vLogin(\'signup\')">ערשטע מאל דא?</a><a class="name" onclick="forgotPw()">פארגעסן דעם פאסווארט?</a>'}
    </div></div>`);
