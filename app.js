@@ -188,8 +188,10 @@ let started = false;
 async function start() {
   document.body.classList.remove('locked');
   setupUser();
+  const want = AREA;
   if (AREA === 'tu' && !canView('tuition')) AREA = '';
   if (AREA === 'fund' && !canFund()) AREA = '';
+  if (want && !AREA) setTimeout(() => toast('🔒 ' + (want === 'tu' ? 'שכר לימוד' : 'פאנדרעיזינג') + ' איז נישט אפן פאר אייך'), 300);
   if (!AREA && !canFund()) AREA = 'tu';
   if (!AREA && !canView('tuition')) AREA = 'fund';
   if (AREA) setArea(AREA, true); else vChooser();
@@ -417,7 +419,7 @@ function wire() {
 function setArea(a, keepView) {
   AREA = a; try { sessionStorage.setItem('yg_area', a); } catch (e) { }
   document.body.classList.toggle('area-tu', a === 'tu');
-  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.16.1</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.16.1</small>';
+  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.16.2</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.16.2</small>';
   $('#btnArea').style.display = canFund() && canView('tuition') ? '' : 'none';
   $('#btnArea').textContent = a === 'tu' ? '⇄ צו פאנדרעיזינג' : '⇄ צו שכר לימוד';
   if (!keepView || (a === 'tu') !== TU_VIEWS.includes(view)) view = a === 'tu' ? 'thome' : 'home';
@@ -882,7 +884,7 @@ function vSettings() {
   $('#main').innerHTML = `<div dir="ltr" style="text-align:left"><h2>Settings</h2><p class="sub">Only the admin sees this page.</p>
   <div class="cols"><div class="box"><h3 style="margin-top:0">Users</h3>
    <p class="sub">Only the e-mails on this list can log in. To add a user: add the e-mail here; the user opens the website, clicks <b>"ערשטע מאל דא?"</b> and makes a password.</p>
-   <table><thead><tr><th style="text-align:left">Name</th><th style="text-align:left">E-mail</th><th style="text-align:left">📱 Cell phone (SMS)</th><th>Admin</th><th style="text-align:left">🔒 Sections</th><th></th></tr></thead><tbody id="ulist">
+   <table><thead><tr><th style="text-align:left">Name</th><th style="text-align:left">E-mail</th><th style="text-align:left">📱 Cell phone (SMS)</th><th>Admin</th><th style="text-align:left">🔒 Access</th><th></th></tr></thead><tbody id="ulist">
    ${TEAM.map(t => urow(t)).join('')}</tbody></table>
    <div class="row" style="margin-top:10px"><button class="btn ghost sm" onclick="addURow()">+ New user</button><div class="spacer"></div><button class="btn" onclick="saveUsers()">Save users</button></div>
    <div id="uerr" class="bal" style="font-size:13px"></div>
@@ -910,22 +912,38 @@ function urow(t) {
   const pv = Array.isArray(t.perms) ? t.perms : null;
   return `<tr data-old="${esc(t.email)}" data-perms="${esc(pv ? JSON.stringify(pv) : '')}"><td><input class="un" value="${esc(t.name)}" style="width:100%"></td><td><input class="ue" type="email" value="${esc(t.email)}" style="width:100%;direction:ltr"></td><td><input class="up" type="tel" value="${esc(t.phone || '')}" placeholder="845-555-1234" style="width:100%;direction:ltr"></td><td style="text-align:center"><input class="ua" type="checkbox" ${t.is_admin ? 'checked' : ''}></td><td><button class="btn ghost sm upb" onclick="permForm(this.closest('tr'))">${permLabel(pv)}</button></td><td><button class="btn red sm" onclick="this.closest('tr').remove()">✕</button></td></tr>`;
 }
-const permLabel = pv => pv ? '🔒 ' + pv.length + ' of ' + SECTIONS.length : '✓ All';
-// Edit one user's sections (kept on the row until "Save users")
+const FUND_SECTIONS = () => SECTIONS.filter(([v]) => v !== 'tuition');
+const permLabel = pv => {
+  if (!pv) return '✓ Both · all';
+  const tu = pv.includes('tuition'), nf = pv.filter(v => v !== 'tuition').length, all = FUND_SECTIONS().length;
+  if (tu && !nf) return '🎓 Tuition only';
+  if (!tu) return '💵 Fundraising only' + (nf < all ? ' · ' + nf + ' of ' + all : '');
+  return '✓ Both' + (nf < all ? ' · ' + nf + ' of ' + all : '');
+};
+// Edit one user's access (kept on the row until "Save users"): which part(s) of the program, and which fundraising sections
 function permForm(tr) {
   window._permTr = tr;
   const cur = tr.dataset.perms ? JSON.parse(tr.dataset.perms) : null, name = tr.querySelector('.un').value || tr.querySelector('.ue').value;
-  modal(`<div dir="ltr" style="text-align:left"><h2>🔒 Sections for ${esc(name)}</h2>
-   <p class="sub">Which parts of the main page this user can open. The home page is always shown. Admins always see everything.</p>
-   ${tr.querySelector('.ua').checked ? '<p class="sub"><b>This user is an admin</b> – the choice below only matters if admin is turned off.</p>' : ''}
-   <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;margin:10px 0">${SECTIONS.map(([v, l]) => `<label style="display:flex;gap:8px;align-items:center;font-size:14px" dir="rtl"><input type="checkbox" class="pcb" value="${v}" ${!cur || cur.includes(v) ? 'checked' : ''}> ${l}</label>`).join('')}</div>
-   <div class="row"><button class="btn ghost sm" onclick="document.querySelectorAll('.pcb').forEach(c=>c.checked=true)">All</button><button class="btn ghost sm" onclick="document.querySelectorAll('.pcb').forEach(c=>c.checked=false)">None</button><div class="spacer"></div>
-   <button class="btn ghost" onclick="closeM()">Back</button><button class="btn" onclick="permSet()">OK</button></div>
+  const tu = !cur || cur.includes('tuition'), fu = !cur || cur.some(v => v !== 'tuition');
+  const area = tu && fu ? 'both' : tu ? 'tu' : 'fund';
+  const radio = (v, l) => `<label style="display:flex;gap:8px;align-items:center;font-size:15px;margin:4px 0"><input type="radio" name="parea" value="${v}" ${area === v ? 'checked' : ''} onchange="permAreaCh()"> ${l}</label>`;
+  modal(`<div dir="ltr" style="text-align:left"><h2>🔒 Access for ${esc(name)}</h2>
+   ${tr.querySelector('.ua').checked ? '<p class="sub"><b>This user is an admin</b> – admins always see everything; the choice below only matters if admin is turned off.</p>' : ''}
+   <h3 style="margin:10px 0 4px">Which part of the program?</h3>
+   ${radio('both', '🎓 + 💵 Both – tuition and fundraising')}${radio('tu', '🎓 Tuition (שכר לימוד) only')}${radio('fund', '💵 Fundraising only')}
+   <div id="pfund"><h3 style="margin:14px 0 4px">Fundraising sections</h3><p class="sub">The home page is always shown.</p>
+   <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;margin:10px 0">${FUND_SECTIONS().map(([v, l]) => `<label style="display:flex;gap:8px;align-items:center;font-size:14px" dir="rtl"><input type="checkbox" class="pcb" value="${v}" ${!cur || cur.includes(v) || !fu ? 'checked' : ''}> ${l}</label>`).join('')}</div>
+   <div class="row"><button class="btn ghost sm" onclick="document.querySelectorAll('.pcb').forEach(c=>c.checked=true)">All</button><button class="btn ghost sm" onclick="document.querySelectorAll('.pcb').forEach(c=>c.checked=false)">None</button></div></div>
+   <div class="row" style="margin-top:12px"><div class="spacer"></div><button class="btn ghost" onclick="closeM()">Back</button><button class="btn" onclick="permSet()">OK</button></div>
    <p class="sub" style="margin-top:8px">Then press <b>Save users</b>.</p></div>`, 'narrow');
+  permAreaCh();
 }
+function permAreaCh() { const a = (document.querySelector('input[name=parea]:checked') || {}).value; $('#pfund').style.display = a === 'tu' ? 'none' : ''; }
 function permSet() {
-  const tr = window._permTr, v = [...document.querySelectorAll('.pcb:checked')].map(c => c.value);
-  const pv = v.length === SECTIONS.length ? null : v;
+  const tr = window._permTr, a = document.querySelector('input[name=parea]:checked').value;
+  const f = [...document.querySelectorAll('.pcb:checked')].map(c => c.value);
+  if (a !== 'tu' && !f.length) { toast('Pick at least one fundraising section'); return; }
+  const pv = a === 'tu' ? ['tuition'] : a === 'fund' ? f : (f.length === FUND_SECTIONS().length ? null : f.concat('tuition'));
   tr.dataset.perms = pv ? JSON.stringify(pv) : '';
   tr.querySelector('.upb').textContent = permLabel(pv);
   closeM(); toast('Press "Save users" to keep it');

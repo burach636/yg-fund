@@ -30,7 +30,7 @@ Backend is **Supabase** (project `qrudivrakwoathgbzrwd`).
 - **Users**: Supabase Auth with email and password.
   - Access is allowed only for emails listed in table `team` (email, name, is_admin). RLS uses `is_team()` and `is_admin()`.
   - The admin manages `team` from the app's Settings page.
-  - Section access: `team.perms text[]` (SETUP.sql section 7; null = everything, admins always everything). `SECTIONS`, `canView(v)`, `applyPerms()` in app.js hide nav buttons, home tiles and home columns; `go()` refuses. Settings > users table > "🔒 Sections". This is UI-level hiding: all team members can still read the event log and the JLS file through RLS.
+  - Section access: `team.perms text[]` (SETUP.sql section 7; null = everything, admins always everything). `SECTIONS`, `canView(v)`, `applyPerms()` in app.js hide nav buttons, home tiles and home columns; `go()` refuses. Settings > users table > "🔒 Access" (`permForm`): first which part – both / 🎓 tuition only (`perms = ['tuition']`) / 💵 fundraising only (fund sections without 'tuition') – then which fundraising sections; `permLabel` shows e.g. "🎓 Tuition only". If the area picked at login is not allowed, `start()` opens the allowed one with a toast. This is UI-level hiding: all team members can still read the event log and the JLS file through RLS.
   - The free plan's email sending is rate-limited. To add a user without email, use **Supabase > Authentication > Users > Add user > Create new user** with **Auto Confirm User** checked.
 
 ## Files
