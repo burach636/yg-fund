@@ -5,7 +5,7 @@
 // ---------- tasks: private / two people ----------
 const myKey = () => (myEmail || '').toLowerCase();
 // A private task is seen only by the person who made it (UI filter + RLS on events, see SETUP.sql).
-const taskVisible = x => x && x.title && !x.del && (!x.priv || (x.owner || '').toLowerCase() === myKey());
+const taskVisible = x => x && x.title && !x.del && (!x.priv || (x.owner || '').toLowerCase() === myKey()) && (x.area || 'fund') === (AREA || 'fund');   // tuition tasks (area 'tu') only in the tuition area
 const taskMine = x => x.who === me || x.who2 === me;
 const taskWho = x => [x.who, x.who2].filter(Boolean).join(' + ') || 'נישט צוגעטיילט';
 // Every event on a private task carries priv+owner, so the database never shows it to others.
@@ -40,7 +40,6 @@ function vHome() {
     <div class="tile t5" onclick="go('rcpt')"><i>🧾</i><h3>רעסיטס/סטעיטמענטס</h3><b>${rcNew}</b><span>נאך נישט געדרוקט</span><span>זינט ${fmtD(F.start)}</span></div>
     <div class="tile t6" onclick="go('reports')"><i>📊</i><h3>באריכטן</h3><b>${money(thisYr)}</b><span>אריינגעקומען ${HEB.gem((HEB.parts(t) || {}).y || 0)}</span><span>לויט חדשים און יארן</span></div>
     <div class="tile t7" onclick="go('jrep')"><i>📑</i><h3>רופארטס</h3><b>${jrDefs().length || 1}</b><span>ליסטעס פון JLS צו קאלן</span><span>${esc((jrDefs()[0] || { name: 'דינער מהרי"ט 2026' }).name)}</span></div>
-    <div class="tile t8" onclick="go('tuition')"><i>🎓</i><h3>שכר לימוד</h3><b>${TU && !TU.missing ? money(tuCalc().tot.due) : '🎓'}</b><span>${TU && !TU.missing ? 'שולדיג שוין יעצט' : 'JLS קאמפעני ' + (+SET().tuitionCompany || 15)}</span><span>פאמיליעס, קינדער, באלאנסן</span></div>
   </div>
   <div class="cols">
    <div class="hcol t2"><h3>מיינע To-Do פאר היינט</h3>

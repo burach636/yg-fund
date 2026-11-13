@@ -199,3 +199,17 @@ nav button.navhome{font-size:16.5px;font-weight:800;color:#fff;background:linear
 nav button.navhome.on{color:var(--gold2);border-bottom-color:var(--gold)}
 nav button.navhome:hover{filter:brightness(1.12)}
 .tile.t8{background:#eef0fb;border-top-color:#5864b8}
+/* area chooser (after login) */
+.chooser{max-width:860px;margin:40px auto;text-align:center}
+.chooser h2{margin-bottom:26px}
+.choose2{display:grid;grid-template-columns:1fr 1fr;gap:26px}
+.choice{cursor:pointer;border-radius:18px;padding:42px 20px;border-top:6px solid;box-shadow:0 6px 24px rgba(0,0,0,.08);transition:transform .15s,box-shadow .15s}
+.choice:hover{transform:translateY(-4px);box-shadow:0 12px 32px rgba(0,0,0,.14)}
+.choice i{font-style:normal;font-size:64px;display:block}
+.choice h3{font-size:30px;margin:12px 0 6px}
+.choice p{color:#6b6b6b;margin:0}
+.choice.c1{background:#eef0fb;border-top-color:#5864b8}
+.choice.c2{background:#fdf6e3;border-top-color:#c9a227}
+@media(max-width:640px){.choose2{grid-template-columns:1fr}}
+.areabtn{margin-inline-start:10px}
+body.area-tu header{background:linear-gradient(90deg,#1f2a5c,#2c3f8a)}

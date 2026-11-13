@@ -47,8 +47,11 @@ async function gunzip(blob) { const s = blob.stream().pipeThrough(new Decompress
 // ---------- state ----------
 let JD = null;            // imported JLS data
 let IDX = null;           // derived indexes
-let S = { acct: {}, task: {}, call: {}, hist: {}, fr: {}, frin: {}, frex: {}, frexp: {}, shul: {}, rcpt: {}, stmt: {}, frmail: {}, jrep: {}, settings: { s: { users: ['באניצער 1', 'באניצער 2', 'באניצער 3'], defFreq: 'm12', maxYears: 5 } } };
+let S = { acct: {}, task: {}, call: {}, hist: {}, fr: {}, frin: {}, frex: {}, frexp: {}, shul: {}, rcpt: {}, stmt: {}, tust: {}, frmail: {}, jrep: {}, settings: { s: { users: ['באניצער 1', 'באניצער 2', 'באניצער 3'], defFreq: 'm12', maxYears: 5 } } };
 let status = {}, me = '', view = 'home';
+// Two areas after login: 'fund' (fundraising) and 'tu' (tuition, tuition.js); kept per tab
+let AREA = (() => { try { return sessionStorage.getItem('yg_area') || ''; } catch (e) { return ''; } })();
+const TU_VIEWS = ['thome', 'tuition', 'tubill', 'tustmt'];
 let ui = { todayF: 'all', todayN: 50, accQ: '', accF: 'yg', accN: 100, accSort: 'abc', accShul: '', todoF: 'mine', todoDone: false };
 const SET = () => S.settings.s;
 
@@ -185,7 +188,11 @@ let started = false;
 async function start() {
   document.body.classList.remove('locked');
   setupUser();
-  render();
+  if (AREA === 'tu' && !canView('tuition')) AREA = '';
+  if (AREA === 'fund' && !canFund()) AREA = '';
+  if (!AREA && !canFund()) AREA = 'tu';
+  if (!AREA && !canView('tuition')) AREA = 'fund';
+  if (AREA) setArea(AREA, true); else vChooser();
   if (started) return; started = true;
   setInterval(poll, 15000);
   idleWatch();
@@ -396,22 +403,43 @@ function wire() {
   window.addEventListener('dragover', e => e.preventDefault());
   window.addEventListener('drop', e => { e.preventDefault(); dc = 0; $('#dropmask').classList.remove('on'); const f = e.dataTransfer.files[0]; if (f) { closeM(); importFile(f); } });
 }
+function setArea(a, keepView) {
+  AREA = a; try { sessionStorage.setItem('yg_area', a); } catch (e) { }
+  document.body.classList.toggle('area-tu', a === 'tu');
+  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.16</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.16</small>';
+  $('#btnArea').style.display = canFund() && canView('tuition') ? '' : 'none';
+  $('#btnArea').textContent = a === 'tu' ? '⇄ צו פאנדרעיזינג' : '⇄ צו שכר לימוד';
+  if (!keepView || (a === 'tu') !== TU_VIEWS.includes(view)) view = a === 'tu' ? 'thome' : 'home';
+  render(); window.scrollTo(0, 0);
+}
+function chooseArea() { if (!canFund() || !canView('tuition')) return; setArea(AREA === 'tu' ? 'fund' : 'tu'); }
+function vChooser() {
+  document.querySelectorAll('nav [data-v]').forEach(b => { b.style.display = 'none'; });
+  $('#main').innerHTML = `<div class="chooser"><h2>שלום ${esc(me)}! וואו ווילט איר אריינגיין?</h2><div class="choose2">
+    <div class="choice c1" onclick="setArea('tu')"><i>🎓</i><h3>שכר לימוד</h3><p>עלטערן, תלמידים, Billing, סטעיטמענטס</p></div>
+    <div class="choice c2" onclick="setArea('fund')"><i>💵</i><h3>פאנדרעיזינג</h3><p>נדבות, רעסיטס, פאנדרעיזערס, שולן, רופארטס</p></div></div></div>`;
+}
 function render() {
+  if (!AREA) { vChooser(); return; }
   impInfo();
   const sb = document.querySelector('nav [data-v=settings]'); if (sb) sb.style.display = isAdmin() ? '' : 'none';
   if (view === 'settings' && !isAdmin()) view = 'home';
-  if (!canView(view)) view = 'home';
+  if (AREA === 'tu' && (view === 'home' || (!TU_VIEWS.includes(view) && view !== 'todo' && view !== 'settings'))) view = 'thome';
+  if (AREA === 'fund' && TU_VIEWS.includes(view)) view = 'home';
+  if (!canView(view)) view = AREA === 'tu' ? 'thome' : 'home';
+  document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x.dataset.v === view && (!x.dataset.a || x.dataset.a === AREA)));
   if (!JD) { vWelcome(); return; }
   counts();
-  ({ home: vHome, tuition: vTuition, rcpt: vRcpt, jrep: vJrep, todo: vTodo, fund: vFund, shuls: vShuls, today: vToday, pledges: vPledges, accounts: vAccounts, reports: vReports, settings: vSettings }[view] || vHome)();
+  ({ home: vHome, thome: vTuHome, tubill: vTuBill, tustmt: vTuStmt, tuition: vTuition, rcpt: vRcpt, jrep: vJrep, todo: vTodo, fund: vFund, shuls: vShuls, today: vToday, pledges: vPledges, accounts: vAccounts, reports: vReports, settings: vSettings }[view] || vHome)();
   applyPerms();
 }
 // ---------- which main sections each user may open (team.perms; null = everything; admins always everything) ----------
-const SECTIONS = [['accounts', '👥 נדבות'], ['rcpt', '🧾 רעסיטס/סטעיטמענטס'], ['todo', '✅ To-Do'], ['fund', '💵 פאנדרעיזינג חשבונות'], ['shuls', '🕍 שולן'], ['today', '📋 היינט צו בעטן'], ['pledges', '📞 פלעדזשעס'], ['reports', '📊 באריכטן'], ['jrep', '📑 רופארטס'], ['tuition', '🎓 שכר לימוד']];
+const SECTIONS = [['accounts', '👥 נדבות'], ['rcpt', '🧾 רעסיטס/סטעיטמענטס'], ['todo', '✅ To-Do'], ['fund', '💵 פאנדרעיזינג חשבונות'], ['shuls', '🕍 שולן'], ['today', '📋 היינט צו בעטן'], ['pledges', '📞 פלעדזשעס'], ['reports', '📊 באריכטן'], ['jrep', '📑 רופארטס'], ['tuition', '🎓 שכר לימוד (גאנצער טייל)']];
 const myPerms = () => { const t = TEAM.find(a => a.email.toLowerCase() === myEmail.toLowerCase()); return t && !t.is_admin && Array.isArray(t.perms) ? t.perms : null; };
-const canView = v => v === 'home' || v === 'settings' || !myPerms() || myPerms().includes(v);
+const canView = v => { if (TU_VIEWS.includes(v)) v = 'tuition'; return v === 'home' || v === 'settings' || !myPerms() || myPerms().includes(v); };
+const canFund = () => !myPerms() || myPerms().some(v => v !== 'tuition');
 function applyPerms() {
-  document.querySelectorAll('nav [data-v]').forEach(b => { if (b.dataset.v !== 'settings') b.style.display = canView(b.dataset.v) ? '' : 'none'; });
+  document.querySelectorAll('nav [data-v]').forEach(b => { if (b.dataset.v !== 'settings') b.style.display = canView(b.dataset.v) && (!b.dataset.a || b.dataset.a === AREA) ? '' : 'none'; });
   document.querySelectorAll('.tile[onclick]').forEach(t => { const m = t.getAttribute('onclick').match(/go\('(\w+)'\)/); if (m && !canView(m[1])) t.remove(); });
   if (!canView('todo')) document.querySelectorAll('.hcol.t2').forEach(e => e.remove());
   if (!canView('shuls')) document.querySelectorAll('.hcol.t4').forEach(e => e.remove());
@@ -430,7 +458,8 @@ function counts() {
   const mk = monthKey(); let n = 0;
   IDX.pl.forEach((g, c) => { if (g.open > 0.009 && !(S.call[c + '|' + mk] || {}).v) n++; });
   $('#cPl').textContent = n || '';
-  const t = todayS(); $('#cTodo').textContent = Object.values(S.task).filter(x => taskVisible(x) && !x.done && taskMine(x) && x.due && x.due <= t).length || '';
+  const t = todayS(), nT = Object.values(S.task).filter(x => taskVisible(x) && !x.done && taskMine(x) && x.due && x.due <= t).length || '';
+  $('#cTodo').textContent = AREA === 'tu' ? '' : nT; $('#cTodoT').textContent = AREA === 'tu' ? nT : '';
 }
 
 // ---------- TODAY ----------
@@ -545,6 +574,7 @@ async function saveTask(id) {
   if (priv) { who = me; who2 = ''; }
   if (who2 === who) who2 = '';
   const p = { title, due: $('#td').value || todayS(), who, who2, code, pri: $('#tp').value, note: $('#tn').value.trim(), repeat: $('#tr').value, done: false, priv };
+  if (!id && AREA === 'tu') p.area = 'tu';
   if (priv) p.owner = myEmail.toLowerCase();
   await emitTask(id || uid(), p);
   closeM(); render(); toast('✓ אפגעהיטן');

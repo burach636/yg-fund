@@ -284,23 +284,28 @@
   // Students: ONLY number, family code, names, class and start/end dates are decoded – never SSNum, DOB,
   // medical, bus, legal-name or any other column.
   function tuition(db, co, step, acc) {
-    const isCo = v => v === co, since = (new Date().getFullYear() - 4) + '-01-01';
-    const t = { co, name: '', payments: [], charges: [], students: [] };
+    const isCo = v => v === co;
+    const t = { co, name: '', payments: [], charges: [], contracts: [], students: [] };
     for (const r of db.rows(db.table('Lists'), ['Type', 'Value', 'ValueNum']))
       if ((r.Type === 'FCompanies' || r.Type === 'Companies') && r.ValueNum === co) t.name = clean(r.Value);
     step('שכר לימוד – באצאלונגען...');
-    for (const r of db.rows(db.table('MPayments'), ['PaymentNum', 'Code', 'Date', 'Amount', 'Type', 'PMethod', 'CheckNum', 'Notes', 'Refunded'], { col: 'Company', test: isCo }))
-      if (!r.Date || r.Date >= since) t.payments.push([r.PaymentNum, r.Code, r.Date || '', r.Amount || 0, clean(r.Type || r.PMethod), clean(r.CheckNum), clean(r.Notes).slice(0, 200), r.Refunded || 0]);
-    step('שכר לימוד – טשארדזשעס...');
-    for (const r of db.rows(db.table('MCharges'), ['ChargeNum', 'Code', 'DueDate', 'Amount', 'Paid', 'BalanceDue', 'Desc', 'Hold', 'Note', 'DateE', 'StudentNum', 'Period'], { col: 'Company', test: isCo }))
-      if ((r.DueDate || r.DateE || '9') >= since || Math.abs(r.BalanceDue || 0) > 0.005)
-        t.charges.push([r.ChargeNum, r.Code, r.DueDate || '', r.Amount || 0, r.Paid || 0, r.BalanceDue || 0, clean(r.Desc), r.Hold ? 1 : 0, clean(r.Note).slice(0, 200), r.DateE || '', r.StudentNum || 0, clean(r.Period)]);
+    for (const r of db.rows(db.table('MPayments'), ['PaymentNum', 'Code', 'Date', 'Amount', 'Type', 'PMethod', 'CheckNum', 'Notes', 'Refunded', 'Period', 'PStudentNum', 'ReceiptNum'], { col: 'Company', test: isCo }))
+      t.payments.push([r.PaymentNum, r.Code, r.Date || '', r.Amount || 0, clean(r.Type || r.PMethod), clean(r.CheckNum), clean(r.Notes).slice(0, 150), r.Refunded || 0, clean(r.Period), r.PStudentNum || 0, clean(r.ReceiptNum)]);
+    step('שכר לימוד – בילס (אלע יארן)...');
+    for (const r of db.rows(db.table('MCharges'), ['ChargeNum', 'Code', 'DueDate', 'Amount', 'Paid', 'BalanceDue', 'Desc', 'Hold', 'Note', 'DateE', 'CStudentNum', 'Period', 'ItemNum'], { col: 'Company', test: isCo }))
+      t.charges.push([r.ChargeNum, r.Code, r.DueDate || '', r.Amount || 0, r.Paid || 0, r.BalanceDue || 0, clean(r.Desc), r.Hold ? 1 : 0, clean(r.Note).slice(0, 150), r.DateE || '', r.CStudentNum || 0, clean(r.Period), clean(r.ItemNum)]);
+    step('שכר לימוד – קאנטראקטן...');
+    try {   // MYearly = the yearly contracts that create the monthly bills
+      for (const r of db.rows(db.table('MYearly'), ['YearlyID', 'Code', 'DateStart', 'DateEnd', 'ItemNum', 'Desc', 'Amount', 'Type', 'Period', 'CompanyStudents', 'Scholarship', 'ContractNotes', 'Payment'], { col: 'Company', test: isCo }))
+        t.contracts.push([r.YearlyID || 0, r.Code, r.DateStart || '', r.DateEnd || '', clean(r.ItemNum), clean(r.Desc), r.Amount || 0, clean(r.Type), clean(r.Period), r.CompanyStudents || 0, r.Scholarship ? 1 : 0, clean(r.ContractNotes).slice(0, 200), r.Payment ? 1 : 0]);
+    } catch (e) { /* optional */ }
     step('שכר לימוד – תלמידים...');
-    const fam = new Set(); t.charges.forEach(c => fam.add(c[1])); t.payments.forEach(p => fam.add(p[1]));
+    const fam = new Set(); t.charges.forEach(c => fam.add(c[1])); t.payments.forEach(p => fam.add(p[1])); t.contracts.forEach(c => fam.add(c[1]));
+    const sNums = new Set(); t.charges.forEach(c => c[10] && sNums.add(c[10])); t.contracts.forEach(c => c[9] && sNums.add(c[9])); t.payments.forEach(p => p[9] && sNums.add(p[9]));
     try {
       for (const r of db.rows(db.table('Students'), ['StudentNum', 'FamilyNum', 'Code', 'FName', 'LName', 'FNameH', 'LNameH', 'Class', 'StartDate', 'EndDate'])) {
         const code = +clean(r.Code) || r.FamilyNum || 0;
-        if (!code || !fam.has(code)) continue;   // only families with tuition activity in this company
+        if (!code || !(fam.has(code) || sNums.has(r.StudentNum))) continue;   // only students of this company's families
         t.students.push([r.StudentNum, code, clean(r.FName), clean(r.LName), clean(r.FNameH), clean(r.LNameH), clean(r.Class), r.StartDate || '', r.EndDate || '']);
       }
     } catch (e) { /* optional */ }

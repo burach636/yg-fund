@@ -10,24 +10,29 @@
 <body class="locked">
 <header>
   <div class="logo3d sm" title='ישיבת מהרי"ט ד&#39;סאטמאר'><div class="in"><img src="logo.png" alt='ישיבת מהרי"ט ד&#39;סאטמאר'><i class="shine"></i></div></div>
-  <div class="logo">YG Fund<small>פאנדרעיזינג סיסטעם · v1.15</small></div>
+  <div class="logo" id="logoTxt">YG Fund<small>פאנדרעיזינג סיסטעם · v1.16</small></div>
+  <button class="btn ghost sm areabtn" id="btnArea" onclick="chooseArea()" style="display:none">⇄ ווקסל</button>
   <div class="spacer"></div>
   <div class="imp" id="impInfo"></div>
   <button class="btn gold" id="btnImport">⟳ דערהיינטיג פון JLS</button>
   <div class="who" id="whoBox"></div>
 </header>
 <nav id="nav">
-  <button data-v="home" class="on navhome">🏠 Dashboard</button>
-  <button data-v="accounts">👥 נדבות</button>
-  <button data-v="rcpt">🧾 רעסיטס/סטעיטמענטס</button>
-  <button data-v="todo">✅ To-Do <span class="cnt" id="cTodo"></span></button>
-  <button data-v="fund">💵 פאנדרעיזינג חשבונות</button>
-  <button data-v="shuls">🕍 שולן</button>
-  <button data-v="today">📋 היינט צו בעטן <span class="cnt" id="cToday"></span></button>
-  <button data-v="pledges">📞 פלעדזשעס דעם חודש <span class="cnt" id="cPl"></span></button>
-  <button data-v="reports">📊 באריכטן</button>
-  <button data-v="jrep">📑 רופארטס</button>
-  <button data-v="tuition">🎓 שכר לימוד</button>
+  <button data-v="home" data-a="fund" class="on navhome">🏠 Dashboard</button>
+  <button data-v="accounts" data-a="fund">👥 נדבות</button>
+  <button data-v="rcpt" data-a="fund">🧾 רעסיטס/סטעיטמענטס</button>
+  <button data-v="todo" data-a="fund">✅ To-Do <span class="cnt" id="cTodo"></span></button>
+  <button data-v="fund" data-a="fund">💵 פאנדרעיזינג חשבונות</button>
+  <button data-v="shuls" data-a="fund">🕍 שולן</button>
+  <button data-v="today" data-a="fund">📋 היינט צו בעטן <span class="cnt" id="cToday"></span></button>
+  <button data-v="pledges" data-a="fund">📞 פלעדזשעס דעם חודש <span class="cnt" id="cPl"></span></button>
+  <button data-v="reports" data-a="fund">📊 באריכטן</button>
+  <button data-v="jrep" data-a="fund">📑 רופארטס</button>
+  <button data-v="thome" data-a="tu" class="navhome">🏠 Dashboard</button>
+  <button data-v="tuition" data-a="tu">👨‍👦 עלטערן און תלמידים</button>
+  <button data-v="tubill" data-a="tu">🧾 Billing</button>
+  <button data-v="tustmt" data-a="tu">📄 סטעיטמענטס</button>
+  <button data-v="todo" data-a="tu">✅ To-Do <span class="cnt" id="cTodoT"></span></button>
   <button data-v="settings">⚙️ Settings</button>
 </nav>
 <main id="main"><div class="empty">לאדנט...</div></main>

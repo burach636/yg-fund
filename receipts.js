@@ -285,7 +285,7 @@ function stPage(r) {
    </tbody><tfoot><tr><td colspan="4" class="r">סך הכל צו באצאלן · Total due</td><td><b>$${rcMoney(r.bal)}</b></td></tr></tfoot></table>
    <div class="ft">Please make checks payable to <b>Yeshivas Maharit Satmar</b> · P.O. Box 1367 · Monroe NY 10949<br>All contributions are tax deductible · ID #45-4099550</div></div>`;
 }
-function stDoc(R, autoPrint) {
+function stDoc(R, autoPrint, pageFn) {
   return `<!doctype html><html><head><meta charset="utf-8"><title>סטעיטמענטס</title>
 <link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;700;900&display=swap" rel="stylesheet">
 <style>
@@ -305,7 +305,7 @@ td{padding:6px 8px;border-bottom:1px solid #e6d9df}td.r,th:nth-child(2){font-fam
 tfoot td{border:none;border-top:2px solid #660033;font-size:13pt;padding-top:9px}tfoot td.r{text-align:right}
 .ft{position:absolute;left:.7in;right:.7in;bottom:.5in;text-align:center;font-size:10pt;color:#6b4a58;border-top:1px solid #e6d9df;padding-top:8px}
 @media screen{.pg{margin:16px auto;box-shadow:0 4px 20px rgba(0,0,0,.4)}}@media print{html,body{background:#fff}}
-</style></head><body>${R.map(stPage).join('')}
+</style></head><body>${R.map(pageFn || stPage).join('')}
 ${autoPrint ? `<script>window.onload=function(){(document.fonts?document.fonts.ready:Promise.resolve()).then(function(){setTimeout(function(){window.print()},300)})}<\/script>` : ''}</body></html>`;
 }
 function stOpen(R, autoPrint) {
@@ -357,13 +357,14 @@ function loadLibs() {   // html2canvas + jsPDF, only when the first e-mail is se
   return (_libs = Promise.all([add('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'), add('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')]).catch(e => { _libs = null; throw e; }));
 }
 // Render the same page that is printed into a one-page Letter PDF (Blob)
-async function rcPdf(d) {
+async function rcPdf(d) { return docPdf(rcDoc([d], (ui.rc || { bg: true }).bg !== false, false)); }
+async function docPdf(html) {
   await loadLibs();
   const fr = document.createElement('iframe');
   fr.style.cssText = 'position:fixed;left:-10000px;top:0;width:8.5in;height:11in;border:0';
   document.body.appendChild(fr);
   try {
-    fr.contentDocument.open(); fr.contentDocument.write(rcDoc([d], (ui.rc || { bg: true }).bg !== false, false).replace('background:#888', 'background:#fff')); fr.contentDocument.close();
+    fr.contentDocument.open(); fr.contentDocument.write(html.replace('background:#888', 'background:#fff')); fr.contentDocument.close();
     await new Promise(r => { const w = fr.contentWindow; if (w.document.readyState === 'complete') r(); else w.addEventListener('load', r); });
     if (fr.contentDocument.fonts) await fr.contentDocument.fonts.ready;
     await Promise.all([...fr.contentDocument.images].map(im => im.complete ? 0 : new Promise(r => { im.onload = im.onerror = r; })));
