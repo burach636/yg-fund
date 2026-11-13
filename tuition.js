@@ -81,16 +81,16 @@ function vTuition() {
      <button class="btn ghost" onclick="tuXls()">⬇ Excel</button></div>
    <div class="row" style="margin:10px 0;flex-wrap:wrap;gap:6px">
     <input id="tuq" placeholder="🔍 נאמען, תלמיד, טעלעפאן, #קאוד" value="${esc(ui.tuQ || '')}" style="max-width:260px" oninput="ui.tuQ=this.value;clearTimeout(window._tuT);window._tuT=setTimeout(()=>{vTuition();const e=$('#tuq');e.focus();e.setSelectionRange(e.value.length,e.value.length)},300)">
-    ${chip('tuF', 'cur', '🎓 לערנען יעצט')}${chip('tuF', 'due', '⏰ שולדיג יעצט')}${chip('tuF', 'bal', '📒 מיט באלאנס')}${chip('tuF', 'all', 'אלע')}
+    ${chip('tuF', 'cur', '🎓 לערנען יעצט')}${chip('tuF', 'due', '⏰ שולדיג יעצט')}${chip('tuF', 'bal', '📒 מיט באלאנס')}${chip('tuF', 'all', 'אלע (אויך פריער)')}
     <select class="mini" onchange="ui.tuW=this.value;vTuition()"><option value="">👤 אלע</option><option value="__me" ${ui.tuW === '__me' ? 'selected' : ''}>👤 מיינע</option><option value="__none" ${ui.tuW === '__none' ? 'selected' : ''}>👤 נישט צוגעטיילט</option>${USERS().map(u => `<option ${ui.tuW === u ? 'selected' : ''}>${esc(u)}</option>`).join('')}</select>
     <select class="mini" onchange="ui.tuSort=this.value;vTuition()"><option value="due">סארטיר: שולדיג יעצט</option><option value="bal" ${srt === 'bal' ? 'selected' : ''}>סארטיר: באלאנס</option><option value="abc" ${srt === 'abc' ? 'selected' : ''}>סארטיר: א-ב</option></select>
     <span class="dim">${R.length.toLocaleString()} פאמיליעס</span></div>
    <table><thead><tr><th>פאמיליע</th><th>תלמידים</th><th>טעלעפאן</th><th class="num">שולדיג יעצט</th><th class="num">באלאנס</th><th>לעצטע באצאלונג</th><th></th></tr></thead><tbody>
    ${R.slice(0, ui.tuN).map(f => {
     const a = IDX.by.get(f.code) || { ph: [] }, st = S.acct[f.code] || {};
-    const kids = f.kids.filter(k => !k[8] || k[8] >= todayS());
+    const kids = f.kids.slice().sort((x, y) => (!!x[8] - !!y[8]) || (y[7] || '').localeCompare(x[7] || ''));   // learning now first, then those who learned before
     return `<tr><td><a class="name" onclick="tuFamily(${f.code})">${tuFamName(f.code)}</a> <small class="dim">#${f.code}</small>${lastNoteHTML(f.code, true)}</td>
-     <td style="font-size:13px">${(kids.length ? kids : f.kids).slice(0, 5).map(k => esc(k[4] || k[2]) + (k[6] ? ` <small class="dim">${esc(k[6])}</small>` : '')).join('<br>') || '—'}</td>
+     <td style="font-size:13px">${kids.slice(0, 6).map(k => `<span style="${k[8] ? 'opacity:.55' : ''}">${esc(k[4] || k[2])}${k[6] ? ` <small class="dim">${esc(k[6])}</small>` : ''}${k[8] ? ` <small class="dim">(געלערנט ביז ${HEB.gem(tuHY(k[8]))})</small>` : ''}</span>`).join('<br>') + (kids.length > 6 ? '<br>…' : '') || '—'}</td>
      <td style="font-size:13px" class="ltr">${a.ph.slice(0, 2).map(p => callBtn(p[1], f.code) + ' ' + esc(p[1])).join('<br>')}</td>
      <td class="num ${f.due > 0.5 ? 'bal' : ''}"><b>${money(f.due)}</b></td><td class="num">${money(f.bal)}</td>
      <td style="font-size:13px">${f.last ? fmtD(f.last) : '—'}</td>
@@ -112,7 +112,7 @@ function tuFamily(code) {
    <p class="sub">${esc(a.a || '')}<br>${a.ph.slice(0, 3).map(p => callBtn(p[1], code) + ' ' + esc(p[0] + ' ' + p[1])).join(' · ')}</p>
    <div class="tiles" style="margin:8px 0;grid-template-columns:repeat(4,1fr)"><div class="tile t7"><h3>שולדיג יעצט</h3><b class="bal">${money(f.due)}</b></div><div class="tile t3"><h3>באלאנס</h3><b>${money(f.bal)}</b></div>
     <div class="tile t6"><h3>געטשארדזשט דאס יאר</h3><b>${money(f.yrBilled)}</b></div><div class="tile t5"><h3>באצאלט דאס יאר</h3><b class="zero">${money(f.yrPaid)}</b></div></div>
-   <h3>👦 תלמידים</h3><table><thead><tr><th>נאמען</th><th>קלאס</th><th>אנגעהויבן</th><th>געענדיגט</th></tr></thead><tbody>
+   <h3>👦 תלמידים</h3><table><thead><tr><th>נאמען</th><th>קלאס</th><th>אנגעהויבן</th><th>געלערנט ביז</th></tr></thead><tbody>
     ${f.kids.map(k => `<tr style="${k[8] && k[8] < todayS() ? 'opacity:.55' : ''}"><td><b>${esc((k[4] + ' ' + k[5]).trim())}</b> <small class="dim">${esc((k[2] + ' ' + k[3]).trim())}</small></td><td>${esc(k[6])}</td><td>${fmtD(k[7])}</td><td>${k[8] ? fmtD(k[8]) : ''}</td></tr>`).join('') || '<tr><td colspan="4" class="empty">—</td></tr>'}</tbody></table>
    <h3>📜 קאנטראקטן (יעדעס יאר תשרי)</h3><div class="scroll" style="max-height:200px"><table><thead><tr><th>יאר</th><th>וואס</th><th>תלמיד</th><th class="num">סכום</th><th>פון – ביז</th><th>נאטיץ</th></tr></thead><tbody>
     ${f.ct.slice().sort((x, y) => (y[2] || '').localeCompare(x[2] || '')).map(c => `<tr style="${c[3] && c[3] < todayS() ? 'opacity:.6' : ''}"><td>${HEB.gem(tuHY(c[2]))}</td><td>${esc(c[5] || c[4])}${c[10] ? ' <span class="tag gray">סקאלערשיפ</span>' : ''}</td><td style="font-size:13px">${esc(kidOf(c[9]))}</td><td class="num">${money(c[6])}</td><td style="font-size:13px">${fmtD(c[2])} – ${c[3] ? fmtD(c[3]) : ''}</td><td style="font-size:12px">${esc(c[11])}</td></tr>`).join('') || '<tr><td colspan="6" class="empty">—</td></tr>'}</tbody></table></div>

@@ -419,7 +419,7 @@ function wire() {
 function setArea(a, keepView) {
   AREA = a; try { sessionStorage.setItem('yg_area', a); } catch (e) { }
   document.body.classList.toggle('area-tu', a === 'tu');
-  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.16.3</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.16.3</small>';
+  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.16.4</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.16.4</small>';
   $('#btnArea').style.display = canFund() && canView('tuition') ? '' : 'none';
   $('#btnArea').textContent = a === 'tu' ? '⇄ צו פאנדרעיזינג' : '⇄ צו שכר לימוד';
   if (!keepView || (a === 'tu') !== TU_VIEWS.includes(view)) view = a === 'tu' ? 'thome' : 'home';
