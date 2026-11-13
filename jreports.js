@@ -91,7 +91,7 @@ function jrForm(id) {
    <div style="grid-column:1/-1"><div class="sub" style="margin:4px 0">ווערטן (ליידיג = יעדער ווערט):</div><div id="jv" class="chips"></div></div>
    <label class="f">🏷️ נאר מיט דעם פלאג (אפציאנאל)<select id="jt"><option value="">—</option>${tags.map(t => `<option ${t === d.tag ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>
    <label style="display:flex;gap:8px;align-items:center;font-size:14px"><input type="checkbox" id="ja" ${d.active ? 'checked' : ''}> נאר אקטיווע אקאונטס</label></div>
-   <div class="row" style="justify-content:flex-end;margin-top:14px">${id ? `<button class="btn red" onclick="jrDel('${id}')">אויסמעקן</button><div class="spacer"></div>` : ''}<button class="btn ghost" onclick="closeM()">צוריק</button><button class="btn" onclick="jrSave('${id || ''}')">היט אפ</button></div>`, 'narrow');
+   <div class="row" style="justify-content:flex-end;margin-top:14px">${id ? `<button class="btn red" onclick="jrDel('${id}')">אויסמעקן</button><div class="spacer"></div>` : ''}<button class="btn ghost" onclick="closeM()">Back</button><button class="btn" onclick="jrSave('${id || ''}')">Save</button></div>`, 'narrow');
   window._jrSel = new Set((d.vals || []).map(String));
   jrVals();
 }

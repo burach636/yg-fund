@@ -184,10 +184,10 @@ function rcEdit(i) {
    ${f('reh', 'נאמען אויף לשון קודש (אדרעס)', d.heb, false, true)}${f('ree', 'נאמען אויף ענגליש', d.eng, true, true)}
    ${f('re1', 'גאס', d.addr[0], true)}${f('re2', 'שטאט, סטעיט, זיפ', d.addr[1], true)}
    ${f('reb', 'Received by', d.by, false, true)}</div>
-   <div class="row" style="justify-content:flex-end;margin-top:14px">${d.edited ? `<button class="btn red" onclick="rcEditSave('${esc(d.key)}',true)">צוריק צו JLS</button><div class="spacer"></div>` : ''}<button class="btn ghost" onclick="closeM()">צוריק</button><button class="btn ghost" onclick="rcEditSave('${esc(d.key)}',false,${i})">👁 היט אפ און קוק אן</button><button class="btn" onclick="rcEditSave('${esc(d.key)}')">היט אפ</button></div>`, 'narrow');
+   <div class="row" style="justify-content:flex-end;margin-top:14px">${d.edited ? `<button class="btn red" onclick="rcEditSave('${esc(d.key)}',true)">Reset to JLS</button><div class="spacer"></div>` : ''}<button class="btn ghost" onclick="closeM()">Back</button><button class="btn ghost" onclick="rcEditSave('${esc(d.key)}',false,${i})">👁 Save &amp; preview</button><button class="btn" onclick="rcEditSave('${esc(d.key)}')">Save</button></div>`, 'narrow');
 }
 async function rcEditSave(key, reset, preview) {
-  if (reset) { await emit('rcpt', key, { ed: null }); closeM(); render(); toast('✓ צוריק ווי אין JLS'); return; }
+  if (reset) { await emit('rcpt', key, { ed: null }); closeM(); render(); toast('✓ Reset to JLS'); return; }
   const amt = $('#rea').value.trim(), date = $('#red').value.trim();
   if (amt && !(+amt > 0)) { toast('⚠️ סכום איז נישט ריכטיג'); return; }
   if (date && !validD(date)) { toast('⚠️ טאג: למשל 2026-11-12'); return; }
@@ -425,8 +425,8 @@ function rcMailOne(i) {
   const d = rcData(p), to = emailOf(p[1]);
   modal(`<h2>✉️ שיק די רעסיט אין אימעיל</h2><p class="sub">${esc(d.top || d.eng)} · <b>$${rcMoney(d.amt)}</b> · ${fmtD(d.date)}</p>
    <label class="f">צו וועלכן אימעיל<input id="mto" type="email" style="direction:ltr" value="${esc(to)}" placeholder="name@example.com"></label>
-   <label style="display:flex;gap:8px;align-items:center;font-size:13px;margin-top:8px"><input type="checkbox" id="msave" ${to ? '' : 'checked'}> היט אפ דעם אימעיל ביי דעם נדבן</label>
-   <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn ghost" onclick="closeM()">צוריק</button><button class="btn" id="msend" onclick="rcMailGo(${i})">✉️ שיק</button></div>`, 'narrow');
+   <label style="display:flex;gap:8px;align-items:center;font-size:13px;margin-top:8px"><input type="checkbox" id="msave" ${to ? '' : 'checked'}> Save this e-mail on the donor</label>
+   <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn ghost" onclick="closeM()">Back</button><button class="btn" id="msend" onclick="rcMailGo(${i})">✉️ שיק</button></div>`, 'narrow');
 }
 async function rcMailGo(i) {
   const p = window._rcL[i], to = $('#mto').value.trim().toLowerCase();
@@ -478,8 +478,8 @@ function acctMail(code) {
    <label class="f" style="grid-column:1/-1">CC – נאך אימעילס (אפציאנאל), עטליכע מיט קאמעס<input id="amc" style="direction:ltr" value="${esc(d.cc || '')}"></label>
    <label class="f" style="grid-column:1/-1">סאבדזשעקט<input id="ams" dir="auto" value="${esc(d.subject || '')}"></label>
    <label class="f" style="grid-column:1/-1">דער בריוו<textarea id="amb" dir="auto" rows="9">${esc(d.body || ('לכבוד ' + (a.h || a.n) + ',\n\n'))}</textarea></label></div>
-   <label style="display:flex;gap:8px;align-items:center;font-size:13px;margin-top:8px"><input type="checkbox" id="amsave" ${to ? '' : 'checked'}> היט אפ דעם אימעיל ביי דעם נדבן</label>
-   <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn ghost" onclick="openAcct(${+code})">צוריק</button><button class="btn" id="amgo" onclick="acctMailGo(${+code})">✉️ שיק</button></div>`, 'narrow');
+   <label style="display:flex;gap:8px;align-items:center;font-size:13px;margin-top:8px"><input type="checkbox" id="amsave" ${to ? '' : 'checked'}> Save this e-mail on the donor</label>
+   <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn ghost" onclick="openAcct(${+code})">Back</button><button class="btn" id="amgo" onclick="acctMailGo(${+code})">✉️ שיק</button></div>`, 'narrow');
   setTimeout(() => $(to ? '#ams' : '#amt').focus(), 50);
 }
 async function acctMailGo(code) {

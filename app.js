@@ -158,7 +158,7 @@ async function afterLogin(session) {
   try { await loadTeam(); } catch (e) { TEAM = []; setupErr = e; }
   if (setupErr || !TEAM.length) { vSetupHelp(setupErr); return; }
   if (!TEAM.some(x => x.email.toLowerCase() === myEmail.toLowerCase())) {
-    loginShell(`<div class="box" style="text-align:right;background:#fff"><h2>נישט ערלויבט</h2><p class="sub">דער אימעיל <b>${esc(myEmail)}</b> איז נישט אויף דער ליסטע. דער אדמין דארף אייך צולייגן אין סעטינגס.</p><button class="btn" onclick="logout()">צוריק</button></div>`);
+    loginShell(`<div class="box" style="text-align:right;background:#fff"><h2>נישט ערלויבט</h2><p class="sub">דער אימעיל <b>${esc(myEmail)}</b> איז נישט אויף דער ליסטע. דער אדמין דארף אייך צולייגן אין סעטינגס.</p><button class="btn" onclick="logout()">Back</button></div>`);
     return;
   }
   busy('לאדנט...');
@@ -263,7 +263,7 @@ function vNewPw() {
    <label class="f" style="margin:10px 0">נייער פאסווארט<input id="np1" type="password" autocomplete="new-password"></label>
    <label class="f" style="margin:10px 0">נאכאמאל<input id="np2" type="password" autocomplete="new-password"></label>
    <div id="nerr" class="bal" style="min-height:20px;font-size:13px"></div>
-   <button class="btn" style="width:100%;padding:10px" onclick="saveNewPw(true)">היט אפ</button></div>`);
+   <button class="btn" style="width:100%;padding:10px" onclick="saveNewPw(true)">Save</button></div>`);
 }
 async function saveNewPw(fromRecovery) {
   const a = $('#np1').value, b = $('#np2').value, err = $('#nerr');
@@ -297,7 +297,7 @@ function noteForm(code) {
    <label class="f">וואס האט ער געענטפערט?<textarea id="nn" rows="3"></textarea></label>
    <div class="grid2" style="margin-top:10px"><label class="f">ווער קאלט אים ווייטער<select id="nw"><option value="">נישט צוגעטיילט</option>${USERS().map(u => `<option ${u === st.assigned ? 'selected' : ''}>${esc(u)}</option>`).join('')}</select></label>
    <label class="f">רימיינד ווידער (אפציאנאל)${dateField('nd', '', { clear: true })}</label></div>
-   <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn ghost" onclick="closeM()">צוריק</button><button class="btn" onclick="saveNote(${+code})">היט אפ</button></div>`, 'narrow');
+   <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn ghost" onclick="closeM()">Back</button><button class="btn" onclick="saveNote(${+code})">Save</button></div>`, 'narrow');
   setTimeout(() => $('#nn').focus(), 50);
 }
 async function saveNote(code) {
@@ -502,7 +502,7 @@ function askForm(code) {
   <label class="f">ווייטער בעטן${dateField('nx', '', { clear: true })}</label></div>
   <label class="f" style="margin-top:10px">נאטיץ<textarea id="nt" rows="2"></textarea></label>
   <p class="sub" style="margin-top:8px">💡 באצאלונגען זעלבסט פארשרייבט מען ווייטער אין JLS. דא איז נאר א נאטיץ.</p>
-  <div class="row" style="justify-content:flex-end"><button class="btn ghost" onclick="closeM()">צוריק</button><button class="btn" onclick="saveAsk(${code})">היט אפ</button></div>`, 'narrow');
+  <div class="row" style="justify-content:flex-end"><button class="btn ghost" onclick="closeM()">Back</button><button class="btn" onclick="saveAsk(${code})">Save</button></div>`, 'narrow');
 }
 async function saveAsk(code) {
   const res = $('#res').value, amt = +$('#amt').value || 0, fq = $('#fq').value, nt = $('#nt').value.trim(), t = todayS();
@@ -526,7 +526,7 @@ function taskForm(id, code) {
   <label class="f">וויכטיגקייט<select id="tp"><option value="norm">נארמאל</option><option value="hi" ${x.pri === 'hi' ? 'selected' : ''}>דרינגענד</option></select></label>
   <label class="f">איבערחזרן<select id="tr"><option value="">נישט</option>${['m1', 'm3', 'm6', 'm12', 'yt'].map(k => `<option value="${k}" ${x.repeat === k ? 'selected' : ''}>${FREQ[k][0]}</option>`).join('')}</select></label>
   <label class="f" style="grid-column:1/-1">נאטיץ<input id="tn" value="${esc(x.note || '')}"></label></div>
-  <div class="row" style="justify-content:flex-end;margin-top:14px">${id ? `<button class="btn red" onclick="delTask('${id}')">אויסמעקן</button><div class="spacer"></div>` : ''}<button class="btn ghost" onclick="closeM()">צוריק</button><button class="btn" onclick="saveTask('${id || ''}')">היט אפ</button></div>`, 'narrow');
+  <div class="row" style="justify-content:flex-end;margin-top:14px">${id ? `<button class="btn red" onclick="delTask('${id}')">אויסמעקן</button><div class="spacer"></div>` : ''}<button class="btn ghost" onclick="closeM()">Back</button><button class="btn" onclick="saveTask('${id || ''}')">Save</button></div>`, 'narrow');
   setTimeout(() => $('#tt').focus(), 50);
 }
 async function saveTask(id) {
@@ -564,7 +564,7 @@ function vPledges() {
    <td class="num bal">${money(r.g.dueNow)}</td><td class="num">${money(r.g.open)}</td>
    <td class="num" style="font-size:13px">${r.y && r.y.last ? money(r.y.lastAmt) + '<br>' + fmtD(r.y.last) : '—'}</td>
    <td style="font-size:13px">${r.g.sol ? esc(r.g.sol) + '<br>' : ''}${whoSel(`assign(${r.c},this.value)`, r.st.assigned || '')}${lastNoteHTML(r.c, true)}</td>
-   <td><div class="acts" style="justify-content:flex-start">${r.called ? `<button class="btn ghost sm" onclick="setCalled(${r.c},false)">צוריק</button>` : `<button class="btn sm" onclick="callForm(${r.c})">✓ געקאלט</button>`}<button class="btn ghost sm" onclick="noteForm(${r.c})">📝</button></div></td></tr>`).join('') || '<tr><td colspan="8" class="empty">קיין אפענע פלעדזשעס</td></tr>'}
+   <td><div class="acts" style="justify-content:flex-start">${r.called ? `<button class="btn ghost sm" onclick="setCalled(${r.c},false)">Undo</button>` : `<button class="btn sm" onclick="callForm(${r.c})">✓ געקאלט</button>`}<button class="btn ghost sm" onclick="noteForm(${r.c})">📝</button></div></td></tr>`).join('') || '<tr><td colspan="8" class="empty">קיין אפענע פלעדזשעס</td></tr>'}
   </tbody></table>`;
 }
 function callForm(c) {
@@ -572,7 +572,7 @@ function callForm(c) {
   modal(`<h2>געקאלט: ${esc(a.h || a.n)}</h2><div class="grid2">
   <label class="f">רעזולטאט<select id="cr"><option>וועט באצאלן</option><option>האט באצאלט</option><option>נישט געענטפערט</option><option>קאלן צוריק שפעטער</option><option>אנדערש</option></select></label>
   <label class="f">נאטיץ<input id="cn"></label></div>
-  <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn ghost" onclick="closeM()">צוריק</button><button class="btn" onclick="saveCall(${c})">היט אפ</button></div>`, 'narrow');
+  <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn ghost" onclick="closeM()">Back</button><button class="btn" onclick="saveCall(${c})">Save</button></div>`, 'narrow');
 }
 async function saveCall(c) {
   const r = $('#cr').value, n = $('#cn').value.trim();
@@ -677,7 +677,7 @@ function openAcct(code) {
    <label class="f">🕍 געטראפן אין שול${shulSel('ash', st.shul || '')}</label>
    <label class="f">VIP<select id="av"><option value="">ניין</option><option value="1" ${st.vip ? 'selected' : ''}>⭐ יא</option></select></label>
    <label class="f" style="grid-column:1/-1">נאטיצן<textarea id="ao" rows="2">${esc(st.notes || '')}</textarea></label></div>
-   <div class="row" style="margin:8px 0 0;justify-content:flex-end"><button class="btn gold sm" onclick="askForm(${code})">✓ געבעטן</button><button class="btn sm" onclick="saveAcct(${code})">היט אפ</button></div></div></div>
+   <div class="row" style="margin:8px 0 0;justify-content:flex-end"><button class="btn gold sm" onclick="askForm(${code})">✓ געבעטן</button><button class="btn sm" onclick="saveAcct(${code})">Save</button></div></div></div>
   <div class="tabs2">${[['pay', 'באצאלונגען'], ['pl', 'פלעדזשעס'], ['hist', 'היסטאריע (' + hist.length + ')'], ['tasks', 'ארבעטן (' + tasks.filter(t => !t[1].done).length + ')']].map(([kk, l]) => `<button class="${acctTab === kk ? 'on' : ''}" onclick="acctTab='${kk}';openAcct(${code})">${l}</button>`).join('')}</div>
   <div class="scroll">${tabBody[acctTab]}</div>`);
 }

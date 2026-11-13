@@ -167,7 +167,7 @@ function frForm(id) {
    <label class="f">סכום $<input id="fa" type="number" step="0.01" value="${esc(x.amt)}"></label>
    <label class="f">צו וועמען<input id="ft" list="frnames" value="${esc(x.to || '')}"><datalist id="frnames">${names.map(n => `<option value="${esc(n)}">`).join('')}</datalist></label>
    <label class="f">נאטיץ (טשעק נומער א.א.וו.)<input id="fn" value="${esc(x.note || '')}"></label></div>
-   <div class="row" style="justify-content:flex-end;margin-top:14px">${id ? `<button class="btn red" onclick="frDel('fr','${id}')">אויסמעקן</button><div class="spacer"></div>` : ''}<button class="btn ghost" onclick="closeM()">צוריק</button><button class="btn" onclick="frSave('${id || ''}')">היט אפ</button></div>`, 'narrow');
+   <div class="row" style="justify-content:flex-end;margin-top:14px">${id ? `<button class="btn red" onclick="frDel('fr','${id}')">אויסמעקן</button><div class="spacer"></div>` : ''}<button class="btn ghost" onclick="closeM()">Back</button><button class="btn" onclick="frSave('${id || ''}')">Save</button></div>`, 'narrow');
   setTimeout(() => $('#fa').focus(), 50);
 }
 async function frSave(id) {
@@ -181,7 +181,7 @@ function frInForm(id) {
    <label class="f">טאג${dateField('id_', x.date)}</label>
    <label class="f">סכום $<input id="ia" type="number" step="0.01" value="${esc(x.amt)}"></label>
    <label class="f" style="grid-column:1/-1">פון וועמען / נאטיץ<input id="in_" value="${esc(x.note || '')}"></label></div>
-   <div class="row" style="justify-content:flex-end;margin-top:14px">${id ? `<button class="btn red" onclick="frDel('frin','${id}')">אויסמעקן</button><div class="spacer"></div>` : ''}<button class="btn ghost" onclick="closeM()">צוריק</button><button class="btn" onclick="frInSave('${id || ''}')">היט אפ</button></div>`, 'narrow');
+   <div class="row" style="justify-content:flex-end;margin-top:14px">${id ? `<button class="btn red" onclick="frDel('frin','${id}')">אויסמעקן</button><div class="spacer"></div>` : ''}<button class="btn ghost" onclick="closeM()">Back</button><button class="btn" onclick="frInSave('${id || ''}')">Save</button></div>`, 'narrow');
 }
 async function frInSave(id) {
   const amt = +$('#ia').value; if (!amt) { $('#ia').focus(); return; }
@@ -194,7 +194,7 @@ function frExForm(id) {
    <label class="f">טאג${dateField('xd', x.date)}</label>
    <label class="f">סכום $<input id="xa" type="number" step="0.01" value="${esc(x.amt)}"></label>
    <label class="f" style="grid-column:1/-1">פאר וואס / נאטיץ<input id="xn" value="${esc(x.note || '')}"></label></div>
-   <div class="row" style="justify-content:flex-end;margin-top:14px">${id ? `<button class="btn red" onclick="frDel('frex','${id}')">אויסמעקן</button><div class="spacer"></div>` : ''}<button class="btn ghost" onclick="closeM()">צוריק</button><button class="btn" onclick="frExSave('${id || ''}')">היט אפ</button></div>`, 'narrow');
+   <div class="row" style="justify-content:flex-end;margin-top:14px">${id ? `<button class="btn red" onclick="frDel('frex','${id}')">אויסמעקן</button><div class="spacer"></div>` : ''}<button class="btn ghost" onclick="closeM()">Back</button><button class="btn" onclick="frExSave('${id || ''}')">Save</button></div>`, 'narrow');
   setTimeout(() => $('#xa').focus(), 50);
 }
 async function frExSave(id) {
@@ -290,7 +290,7 @@ function shulForm(id) {
    <label class="f" style="grid-column:1/-1">אדרעס<input id="sa" value="${esc(x.addr || '')}" style="direction:ltr"></label>
    <label class="f" style="grid-column:1/-1">נאטיץ (גבאי, צייטן א.א.וו.)<input id="snt" value="${esc(x.notes || '')}"></label>
    <label style="display:flex;gap:8px;align-items:center;font-size:14px"><input type="checkbox" id="sp" ${x.paused ? 'checked' : ''}> אפגעשטעלט (נישט אריין אין דער ריי)</label></div>
-   <div class="row" style="justify-content:flex-end;margin-top:14px">${id ? `<button class="btn red" onclick="shulDel('${id}')">אויסמעקן</button><div class="spacer"></div>` : ''}<button class="btn ghost" onclick="closeM()">צוריק</button><button class="btn" onclick="shulSave('${id || ''}')">היט אפ</button></div>`, 'narrow');
+   <div class="row" style="justify-content:flex-end;margin-top:14px">${id ? `<button class="btn red" onclick="shulDel('${id}')">אויסמעקן</button><div class="spacer"></div>` : ''}<button class="btn ghost" onclick="closeM()">Back</button><button class="btn" onclick="shulSave('${id || ''}')">Save</button></div>`, 'narrow');
   setTimeout(() => $('#sn').focus(), 50);
 }
 async function shulSave(id) {
@@ -311,7 +311,7 @@ async function shulMove(id, dir) {
 function shulStartForm() {
   modal(`<h2>📅 ווען הייבט זיך אן די ריי?</h2><p class="sub">קלייבט א מיטוואך. פון דעמאלט, יעדע 2 וואכן, קומט ארויף די קומענדיגע שול.</p>
    <label class="f">ערשטע מיטוואך${dateField('ss', shulStart())}</label>
-   <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn ghost" onclick="closeM()">צוריק</button><button class="btn" onclick="shulStartSave()">היט אפ</button></div>`, 'narrow');
+   <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn ghost" onclick="closeM()">Back</button><button class="btn" onclick="shulStartSave()">Save</button></div>`, 'narrow');
 }
 async function shulStartSave() {
   const v = $('#ss').value; if (!v) return;
@@ -447,7 +447,7 @@ function frMailForm(k) {
    <label class="f" style="grid-column:1/-1">סאבדזשעקט<input id="fms" value="${esc(frFill(s.frMailSubject || FR_SUBJ_DEF, F, p))}"></label>
    <label class="f" style="grid-column:1/-1">דער בריוו<textarea id="fmb" rows="12">${esc(frFill(s.frMailBody || FR_BODY_DEF, F, p))}</textarea></label></div>
    <label style="display:flex;gap:8px;align-items:center;font-size:13px;margin-top:8px"><input type="checkbox" id="fmx" checked> לייג צו אן Excel: די נדבנים מיט זייערע נדבות פון די 2 וואכן, און אלע באצאלונגען</label>
-   <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn ghost" onclick="closeM()">צוריק</button><button class="btn" id="fmgo" onclick="frMailGo(${k})">✉️ שיק</button></div>`, 'narrow');
+   <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn ghost" onclick="closeM()">Back</button><button class="btn" id="fmgo" onclick="frMailGo(${k})">✉️ שיק</button></div>`, 'narrow');
 }
 async function frMailGo(k) {
   const F = fundCalc(), p = F.periods[k], to = $('#fmt').value.trim(), cc = $('#fmc').value.trim();
@@ -518,7 +518,7 @@ function expForm(id) {
    <label class="f">וואס (באשרייבונג)<input id="xs" value="${esc(x.desc || '')}" placeholder="קעיטערינג, האל, בלומען..."></label>
    <label class="f" style="grid-column:1/-1">📎 אינוואיס (PDF אדער בילד)<input id="xf" type="file" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx"></label>
    ${x.file ? `<div style="grid-column:1/-1" class="sub">איצטיגע: <a class="name" onclick="expOpen('${id}')">📎 ${esc(x.file.name)}</a> · <label><input type="checkbox" id="xfr"> אראפנעמען</label></div>` : ''}</div>
-   <div class="row" style="justify-content:flex-end;margin-top:14px">${id ? `<button class="btn red" onclick="expDel('${id}')">אויסמעקן</button><div class="spacer"></div>` : ''}<button class="btn ghost" onclick="closeM()">צוריק</button><button class="btn" id="xgo" onclick="expSave('${id || ''}')">היט אפ</button></div>`, 'narrow');
+   <div class="row" style="justify-content:flex-end;margin-top:14px">${id ? `<button class="btn red" onclick="expDel('${id}')">אויסמעקן</button><div class="spacer"></div>` : ''}<button class="btn ghost" onclick="closeM()">Back</button><button class="btn" id="xgo" onclick="expSave('${id || ''}')">Save</button></div>`, 'narrow');
   setTimeout(() => $('#xa').focus(), 50);
 }
 async function expSave(id) {
