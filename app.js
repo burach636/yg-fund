@@ -419,7 +419,7 @@ function wire() {
 function setArea(a, keepView) {
   AREA = a; try { sessionStorage.setItem('yg_area', a); } catch (e) { }
   document.body.classList.toggle('area-tu', a === 'tu');
-  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.17.2</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.17.2</small>';
+  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.17.3</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.17.3</small>';
   $('#btnArea').style.display = canFund() && canView('tuition') ? '' : 'none';
   $('#btnArea').textContent = a === 'tu' ? '⇄ צו פאנדרעיזינג' : '⇄ צו שכר לימוד';
   if (!keepView || (a === 'tu') !== TU_VIEWS.includes(view)) view = a === 'tu' ? 'thome' : 'home';
@@ -894,6 +894,7 @@ function vSettings() {
    <label class="f" style="margin-bottom:8px">Only donors who gave in the last ... years<input id="sy" type="number" min="1" max="50" value="${s.maxYears || 5}"></label>
    <label class="f" style="margin-bottom:8px">JLS company number (payments and pledges)<input id="sc" type="number" value="${s.company || 32}"></label>
    <label class="f" style="margin-bottom:8px">JLS tuition company number (0 = off)<input id="stc" type="number" value="${s.tuitionCompany === 0 ? 0 : (s.tuitionCompany || 15)}"></label>
+   <label style="display:flex;gap:8px;align-items:flex-start;font-size:14px;margin:6px 0 10px"><input type="checkbox" id="smu" ${s.mailFromUser ? 'checked' : ''} style="margin-top:3px"> <span>✉️ E-mails go out from the sender's own address (the e-mail they log in with). Answers always come back to them; their address shows as the sender once it is added in Gmail as "Send mail as".</span></label>
    <button class="btn" onclick="saveSettings()">Save</button></div>
   <div class="box"><h3 style="margin-top:0">Last JLS update</h3><p class="sub">${new Date(JD.importedAt).toLocaleString()} · ${esc(JD.importedBy || '')} · ${esc((JD.source || {}).name || '')}<br>${JD.accounts.length.toLocaleString()} accounts · ${JD.payments.length.toLocaleString()} payments · ${JD.pledges.length.toLocaleString()} pledges · ${esc(JD.companyName)}</p>
    <h3>Import from the desktop version</h3>
@@ -1009,7 +1010,7 @@ async function jlsSchema(file) {
 }
 async function saveSettings() {
   const old = SET().company || 32, nc = +$('#sc').value || 32;
-  await emit('settings', 's', { defFreq: $('#sf').value, maxYears: +$('#sy').value || 5, company: nc, tuitionCompany: $('#stc').value === '' ? 15 : +$('#stc').value, skipOnce: $('#so').checked });
+  await emit('settings', 's', { defFreq: $('#sf').value, maxYears: +$('#sy').value || 5, company: nc, tuitionCompany: $('#stc').value === '' ? 15 : +$('#stc').value, mailFromUser: $('#smu').checked, skipOnce: $('#so').checked });
   toast(nc !== old ? 'Company changed – update from JLS for it to take effect' : '✓ Saved');
   render();
 }

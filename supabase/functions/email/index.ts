@@ -41,8 +41,20 @@ async function handle(req: Request): Promise<Response> {
   const auth = req.headers.get('authorization') || '';
   if (!auth.startsWith('Bearer ')) return json({ error: 'not logged in' }, 401);
   try {
-    if (!(await isTeam(auth))) return json({ error: 'not allowed' }, 403);
+    const team = await isTeam(auth);
+    if (!team) return json({ error: 'not allowed' }, 403);
     const b = await req.json();
+    // "Send from my own address" (app setting mailFromUser): the caller's e-mail from their (already verified) token.
+    // Gmail sends it as From only if that address is a verified "Send mail as" alias of GMAIL_USER, otherwise Gmail
+    // puts GMAIL_USER back as From by itself; Reply-To is always the caller, so answers reach them.
+    let me: { email: string, name: string } | null = null;
+    if (b.asMe) {
+      try {
+        const pl = JSON.parse(atob(auth.slice(7).split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+        const em = String(pl.email || '').toLowerCase(), row = team.find((t: any) => String(t.email).toLowerCase() === em);
+        if (em && row && EMAIL_RE.test(em)) me = { email: em, name: String(row.name || '').replace(/[<>"]/g, '') };
+      } catch (_) { /* fall back to the shared sender */ }
+    }
     // one address, or several separated by commas / semicolons (e.g. the office)
     const toList = String(b.to || '').split(/[,;\s]+/).map(x => x.trim().toLowerCase()).filter(Boolean).slice(0, 10);
     const badTo = toList.find(x => !EMAIL_RE.test(x));
@@ -65,7 +77,8 @@ async function handle(req: Request): Promise<Response> {
     const filename = String(b.filename || 'receipt.pdf').replace(/[^\w.\- ]/g, '_');
     if (pdf.length > 7_000_000) return json({ error: 'attachment too big' }, 400);
     const gUser = ENV('GMAIL_USER'), gPass = ENV('GMAIL_APP_PASSWORD').replace(/\s+/g, '');
-    const from = ENV('EMAIL_FROM') || (gUser ? 'Yeshivas Maharit Satmar <' + gUser + '>' : ''), replyTo = ENV('EMAIL_REPLY_TO');
+    let from = ENV('EMAIL_FROM') || (gUser ? 'Yeshivas Maharit Satmar <' + gUser + '>' : ''), replyTo = ENV('EMAIL_REPLY_TO');
+    if (me) { replyTo = me.email; if (gUser && gPass) from = (me.name ? '"' + me.name + '" ' : '') + '<' + me.email + '>'; }
     if (!from) return json({ error: 'EMAIL_FROM is not set' }, 500);
     if (gUser && gPass) {   // Gmail over SMTP (port 465, TLS)
       const tr = nodemailer.createTransport({ host: 'smtp.gmail.com', port: 465, secure: true, auth: { user: gUser, pass: gPass }, connectionTimeout: 12000, greetingTimeout: 8000, socketTimeout: 15000 });

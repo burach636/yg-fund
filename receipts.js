@@ -403,7 +403,7 @@ async function mailSend(to, subject, html, blob, filename, tag, cc) {
     }
     if (up.error) throw new Error('ארויפלייגן דעם צוגעלייגטן פייל (3 מאל פרובירט): ' + up.error.message);
   }
-  const payload = { to, cc: cc || '', subject, html, pdfPath, filename };
+  const payload = { to, cc: cc || '', subject, html, pdfPath, filename, asMe: !!SET().mailFromUser };
   // The function may have been created as "email" or "EMAIL" (names are case-sensitive): try the last one that worked first
   let fn = '', res;
   for (const name of [...new Set([localStorage.getItem('yg_mailfn') || 'EMAIL', 'EMAIL', 'email'])]) {
