@@ -271,11 +271,18 @@ function vStmt() {
   </tbody></table>`;
 }
 function stAll(v) { stRows().forEach(r => { ui.st.sel[r.c] = v; }); vStmt(); }
+// Letterhead (the owner's Word template "BW", letterhead.jpg) behind every statement page – fundraising and tuition.
+// Placed like in the .dotx: 8.773in x 11.418in, 0.157in left / 0.154in above the page edge. Setting stmtLH (default on).
+const stLH = () => SET().stmtLH !== false;
+function stHead() {
+  return stLH() ? `<img class="lhbg" src="${location.origin}/letterhead.jpg" alt="">`
+    : `<div class="hd"><img src="${location.origin}/logo.png"><div><div class="yn">ישיבה גדולה ומתיבתא תו"י מהרי"ט דסאטמאר</div><div class="ya">Yeshivas Maharit Satmar · P.O. Box 1367 · Monroe NY 10949 · Tel 845.782.1380</div></div></div>`;
+}
 function stPage(r) {
   const a = r.a, s = SET(), suf = s.rcptSuffix != null ? s.rcptSuffix : 'הי"ו', ad = rcAddr(a), t = todayS();
   const camp = n => JD.campaigns[n] || '';
-  return `<div class="pg">
-   <div class="hd"><img src="${location.origin}/logo.png"><div><div class="yn">ישיבה גדולה ומתיבתא תו"י מהרי"ט דסאטמאר</div><div class="ya">Yeshivas Maharit Satmar · P.O. Box 1367 · Monroe NY 10949 · Tel 845.782.1380</div></div></div>
+  return `<div class="pg${stLH() ? ' lh' : ''}">
+   ${stHead()}
    <div class="row2"><div class="to"><div class="hn">${esc(a.h ? a.h + (suf ? ' ' + suf : '') : '')}</div><div class="en">${esc(a.n)}</div><div class="en">${esc(ad[0])}</div><div class="en">${esc(ad[1])}</div></div>
     <div class="dt"><b>STATEMENT · חשבון</b><br>${rcDate(t)}<br>${HEB.fmtHeb(t)}<br>Account #${r.c}</div></div>
    <div class="ttl">${esc(s.stmtTitle || 'לכבוד ידידינו החשוב')} ${esc(a.h || a.n)} ${esc(suf)}</div>
@@ -304,6 +311,8 @@ th{background:#660033;color:#fff;padding:6px 8px;font-weight:600;font-size:10pt;
 td{padding:6px 8px;border-bottom:1px solid #e6d9df}td.r,th:nth-child(2){font-family:'Frank Ruhl Libre',serif}
 tfoot td{border:none;border-top:2px solid #660033;font-size:13pt;padding-top:9px}tfoot td.r{text-align:right}
 .ft{position:absolute;left:.7in;right:.7in;bottom:.5in;text-align:center;font-size:10pt;color:#6b4a58;border-top:1px solid #e6d9df;padding-top:8px}
+.pg.lh{padding:2.75in .85in .8in}.pg.lh>*{position:relative;z-index:1}.pg.lh>.lhbg{position:absolute;z-index:0;left:-.157in;top:-.154in;width:8.773in;height:11.418in;max-width:none}
+.pg.lh .row2{margin-top:0}.pg.lh .ttl{margin-top:.3in}.pg.lh .ft{position:absolute;bottom:.62in;left:.85in;right:.85in;border-top:none;font-size:9pt}
 @media screen{.pg{margin:16px auto;box-shadow:0 4px 20px rgba(0,0,0,.4)}}@media print{html,body{background:#fff}}
 </style></head><body>${R.map(pageFn || stPage).join('')}
 ${autoPrint ? `<script>window.onload=function(){(document.fonts?document.fonts.ready:Promise.resolve()).then(function(){setTimeout(function(){window.print()},300)})}<\/script>` : ''}</body></html>`;
@@ -341,9 +350,10 @@ function stSettings() {
   modal(`<div dir="ltr" style="text-align:left"><h2>⚙️ Statement text</h2>
    <label class="f">Top line (before the name)<input id="stt" dir="rtl" value="${esc(s.stmtTitle || 'לכבוד ידידינו החשוב')}"></label>
    <label class="f" style="margin-top:10px">The letter<textarea id="stx" dir="rtl" rows="6">${esc(s.stmtText || STMT_TEXT_DEF)}</textarea></label>
+   <label style="display:flex;gap:8px;align-items:center;font-size:14px;margin-top:10px"><input type="checkbox" id="stlh" ${stLH() ? 'checked' : ''}> Print on the letterhead (also tuition statements)</label>
    <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn ghost" onclick="closeM()">Back</button><button class="btn" onclick="stSaveSet()">Save</button></div></div>`, 'narrow');
 }
-async function stSaveSet() { await emit('settings', 's', { stmtTitle: $('#stt').value.trim(), stmtText: $('#stx').value.trim() }); closeM(); render(); toast('✓ Saved'); }
+async function stSaveSet() { await emit('settings', 's', { stmtTitle: $('#stt').value.trim(), stmtText: $('#stx').value.trim(), stmtLH: $('#stlh').checked }); closeM(); render(); toast('✓ Saved'); }
 
 // ---------- ✉️ e-mail receipts (PDF attachment, sent by the Supabase function "email") ----------
 const MAIL_SUBJ_DEF = 'קבלה – Yeshivas Maharit Satmar – {amount}';

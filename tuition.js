@@ -300,8 +300,8 @@ const tuM$ = n => (n < 0 ? '-$' : '$') + rcMoney(Math.abs(n));
 function tuStPage(r) {
   const a = r.a, s = SET(), ad = rcAddr(a), t = todayS(), st = r.st, M = r.M;
   const nm = a.h ? a.h + ' ' + (s.tuSuffix != null ? s.tuSuffix : 'נ"י') : '';
-  return `<div class="pg tu">
-   <div class="hd"><img src="${location.origin}/logo.png"><div><div class="yn">ישיבה גדולה ומתיבתא תו"י מהרי"ט דסאטמאר</div><div class="ya">Yeshivas Maharit Satmar · P.O. Box 1367 · Monroe NY 10949 · Tel 845.782.1380</div></div></div>
+  return `<div class="pg tu${stLH() ? ' lh' : ''}">
+   ${stHead()}
    <div class="tutop"><span>בס"ד</span><span>${rcDate(t)} · ${HEB.fmtHeb(t)}</span></div>
    <div class="row2" style="margin-top:.2in"><div class="to"><div class="en">${esc(a.n)}</div><div class="en">${esc(ad[0])}</div><div class="en">${esc(ad[1])}</div><div class="en" style="font-size:9pt;color:#777">#${r.c}</div></div>
     <div class="dt"><div class="hn" style="text-align:right;font-size:14pt">${esc(nm)}</div></div></div>
@@ -328,6 +328,7 @@ const TU_ST_CSS = `<style>.pg.tu{padding:.45in .6in}.tutop{display:flex;justify-
 .tuboxes{display:grid;grid-template-columns:1fr 1fr 1.6fr;gap:10px;margin-top:.15in;direction:rtl;font-size:10pt}.tubox{border:1px solid #e6d9df;border-radius:6px;padding:6px 8px}
 .tubox>div{display:flex;justify-content:space-between;gap:6px}.tubh{font-weight:700;color:#660033;border-bottom:1px solid #e6d9df;margin-bottom:3px}.tubt{border-top:1px solid #660033;font-weight:700;margin-top:3px}
 .tunote{display:block!important;font-family:'Frank Ruhl Libre',serif;font-size:10.5pt;line-height:1.45}.tunote2{margin-top:.12in;font-family:'Frank Ruhl Libre',serif;font-size:10.5pt;line-height:1.5;text-align:center;direction:rtl}
+.pg.tu.lh{padding:2.6in .8in .75in}.pg.tu.lh .tuttl{margin-top:.05in;font-size:19pt}.pg.tu.lh .tutop{margin-top:0}.pg.tu.lh .row2{margin-top:.05in!important}.pg.tu.lh table{font-size:9.5pt}.pg.tu.lh td{padding:3px 6px}.pg.tu.lh .ft{bottom:.6in}
 .tutot{margin-top:.12in;text-align:center;font-size:13pt;border-top:2px solid #660033;border-bottom:2px solid #660033;padding:5px}</style>`;
 const tuStDoc = (R, autoPrint) => stDoc(R, autoPrint, tuStPage).replace('</head>', TU_ST_CSS + '</head>').replace('<title>סטעיטמענטס</title>', '<title>שכר לימוד</title>');
 function tuStRow(code) { const f = tuCalc().L.find(x => x.code === +code); if (!f) return null; const M = tuStMonth(), st = tuStCalc(f, M); return { c: f.code, f, M, st, bal: st.bal, a: IDX.by.get(f.code) || { h: '', n: '#' + f.code, a: '' } }; }
@@ -363,6 +364,7 @@ function tuStXls() {
 function tuStSettings() {
   const s = SET();
   modal(`<div dir="ltr" style="text-align:left"><h2>⚙️ Tuition statement text</h2>
+   <label style="display:flex;gap:8px;align-items:center;font-size:14px;margin-bottom:10px"><input type="checkbox" id="tlh" ${stLH() ? 'checked' : ''}> Print on the letterhead (also fundraising statements)</label>
    <label class="f">After the Hebrew name<input id="tst" dir="rtl" value="${esc(s.tuSuffix != null ? s.tuSuffix : 'נ"י')}"></label>
    <label class="f" style="margin-top:10px">Box text (contact for questions)<textarea id="tsx" dir="rtl" rows="4">${esc(s.tuStText || TU_ST_DEF)}</textarea></label>
    <label class="f" style="margin-top:10px">Bottom text<textarea id="tsn" dir="rtl" rows="4">${esc(s.tuStNote2 != null ? s.tuStNote2 : TU_ST_NOTE2)}</textarea></label>
@@ -370,7 +372,7 @@ function tuStSettings() {
    <label class="f" style="margin-top:10px">E-mail text ({name} {amount} {month})<textarea id="tmb" dir="rtl" rows="5">${esc(s.tuMailBody || TU_MAIL_BODY)}</textarea></label>
    <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn ghost" onclick="closeM()">Back</button><button class="btn" onclick="tuStSaveSet()">Save</button></div></div>`, 'narrow');
 }
-async function tuStSaveSet() { await emit('settings', 's', { tuSuffix: $('#tst').value.trim(), tuStText: $('#tsx').value.trim(), tuStNote2: $('#tsn').value.trim(), tuMailSubject: $('#tms').value.trim(), tuMailBody: $('#tmb').value.trim() }); closeM(); render(); toast('✓ Saved'); }
+async function tuStSaveSet() { await emit('settings', 's', { stmtLH: $('#tlh').checked, tuSuffix: $('#tst').value.trim(), tuStText: $('#tsx').value.trim(), tuStNote2: $('#tsn').value.trim(), tuMailSubject: $('#tms').value.trim(), tuMailBody: $('#tmb').value.trim() }); closeM(); render(); toast('✓ Saved'); }
 
 // ---------- ✉️ e-mail a statement (PDF) to a family ----------
 const TU_MAIL_SUBJ = 'שכר לימוד סטעיטמענט – חודש {month}';
