@@ -299,14 +299,23 @@
       for (const r of db.rows(db.table('MYearly'), ['YearlyID', 'Code', 'DateStart', 'DateEnd', 'ItemNum', 'Desc', 'Amount', 'Type', 'Period', 'CompanyStudents', 'Scholarship', 'ContractNotes', 'Payment'], { col: 'Company', test: isCo }))
         t.contracts.push([r.YearlyID || 0, r.Code, r.DateStart || '', r.DateEnd || '', clean(r.ItemNum), clean(r.Desc), r.Amount || 0, clean(r.Type), clean(r.Period), r.CompanyStudents || 0, r.Scholarship ? 1 : 0, clean(r.ContractNotes).slice(0, 200), r.Payment ? 1 : 0]);
     } catch (e) { /* optional */ }
+    // Only students who learn in THIS company: JLS keeps every student's company per year in StudentDate
     step('שכר לימוד – תלמידים...');
-    const fam = new Set(); t.charges.forEach(c => fam.add(c[1])); t.payments.forEach(p => fam.add(p[1])); t.contracts.forEach(c => fam.add(c[1]));
-    const sNums = new Set(); t.charges.forEach(c => c[10] && sNums.add(c[10])); t.contracts.forEach(c => c[9] && sNums.add(c[9])); t.payments.forEach(p => p[9] && sNums.add(p[9]));
+    const en = new Map();   // studentNum -> [{start, end, cls, period}]
     try {
-      for (const r of db.rows(db.table('Students'), ['StudentNum', 'FamilyNum', 'Code', 'FName', 'LName', 'FNameH', 'LNameH', 'Class', 'StartDate', 'EndDate'])) {
-        const code = +clean(r.Code) || r.FamilyNum || 0;
-        if (!code || !(fam.has(code) || sNums.has(r.StudentNum))) continue;   // only students of this company's families
-        t.students.push([r.StudentNum, code, clean(r.FName), clean(r.LName), clean(r.FNameH), clean(r.LNameH), clean(r.Class), r.StartDate || '', r.EndDate || '']);
+      for (const r of db.rows(db.table('StudentDate'), ['StudentNum', 'DateStart', 'DateEnd', 'Period', 'Class', 'HebrewClass', 'Company'], { col: 'Company', test: isCo }))
+        if (r.StudentNum) (en.get(r.StudentNum) || en.set(r.StudentNum, []).get(r.StudentNum)).push({ start: r.DateStart || '', end: r.DateEnd || '', cls: clean(r.HebrewClass) || clean(r.Class), period: clean(r.Period) });
+    } catch (e) { /* table missing: no students rather than students of other schools */ }
+    t.enroll = [];
+    const today = new Date().toISOString().slice(0, 10);
+    try {
+      for (const r of db.rows(db.table('Students'), ['StudentNum', 'FamilyNum', 'Code', 'FName', 'LName', 'FNameH', 'LNameH'])) {
+        const L = en.get(r.StudentNum); if (!L) continue;   // never learned in this company
+        const code = +clean(r.Code) || r.FamilyNum || 0; if (!code) continue;
+        L.sort((a, b) => (a.start || '').localeCompare(b.start || ''));
+        const last = L[L.length - 1], start = L[0].start, end = last.end && last.end < today ? last.end : '';
+        t.students.push([r.StudentNum, code, clean(r.FName), clean(r.LName), clean(r.FNameH), clean(r.LNameH), last.cls, start, end]);
+        L.forEach(x => t.enroll.push([r.StudentNum, x.period, x.start, x.end, x.cls]));
       }
     } catch (e) { /* optional */ }
     return t;

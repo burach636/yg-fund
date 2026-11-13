@@ -31,10 +31,11 @@ function tuCalc() {
   const today = todayS(), ys = tuYearStart(), fam = new Map();
   const F = c => fam.get(c) || (fam.set(c, { code: c, kids: [], ch: [], pay: [], ct: [], billed: 0, paid: 0, bal: 0, due: 0, yrBilled: 0, yrPaid: 0, last: '', cur: false }), fam.get(c));
   TU.students.forEach(s => { const f = F(s[1]); f.kids.push(s); if (!s[8] || s[8] >= today) f.cur = true; });
-  TU.contracts.forEach(c => { const f = F(c[1]); f.ct.push(c); if (c[2] <= today && (!c[3] || c[3] >= today)) f.cur = true; });
+  const byKids = TU.students.length > 0;   // "learning now" = has a TCYG student now (from JLS StudentDate)
+  TU.contracts.forEach(c => { const f = F(c[1]); f.ct.push(c); if (!byKids && c[2] <= today && (!c[3] || c[3] >= today)) f.cur = true; });
   TU.charges.forEach(c => {
     const f = F(c[1]); f.ch.push(c);
-    if (c[2] >= ys) { f.yrBilled += c[3]; f.cur = true; }
+    if (c[2] >= ys) { f.yrBilled += c[3]; if (!byKids) f.cur = true; }
     f.bal += c[5];
     if (!c[7] && c[5] > 0.005 && c[2] && c[2] <= today) f.due += c[5];
   });
@@ -259,7 +260,9 @@ function tuStCalc(f, M) {
   const bal = old + L.reduce((s, x) => s + x.ch - x.pay, 0);
   const perKid = new Map(); f.ch.forEach(c => { if (!c[7] && c[2] <= M.de && c[5] > 0.005) { const k = kid(c[10]) || '—'; perKid.set(k, (perKid.get(k) || 0) + c[5]); } });
   const items = new Map(); L.filter(x => x.ch).forEach(x => { const k = x.item + '|' + x.ch; const o = items.get(k) || { item: x.item, amt: x.ch, n: 0 }; o.n++; items.set(k, o); });
-  const kids = f.kids.filter(k => (!k[7] || k[7] <= M.de) && (!k[8] || k[8] >= M.ds));
+  // students learning in TCYG in this month (JLS StudentDate), with that year's class
+  const kids = TU.enroll ? f.kids.map(k => { const e = TU.enroll.find(x => x[0] === k[0] && (!x[2] || x[2] <= M.de) && (!x[3] || x[3] >= M.ds)); return e ? k.slice(0, 6).concat([e[4] || k[6]], k.slice(7)) : null; }).filter(Boolean)
+    : f.kids.filter(k => (!k[7] || k[7] <= M.de) && (!k[8] || k[8] >= M.ds));
   return { old, prevYr: Math.min(prevYr, bal), L, bal, perKid: [...perKid], items: [...items.values()], kids };
 }
 function tuStRows() {
