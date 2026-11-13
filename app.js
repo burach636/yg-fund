@@ -419,7 +419,7 @@ function wire() {
 function setArea(a, keepView) {
   AREA = a; try { sessionStorage.setItem('yg_area', a); } catch (e) { }
   document.body.classList.toggle('area-tu', a === 'tu');
-  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.17</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.17</small>';
+  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.17.1</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.17.1</small>';
   $('#btnArea').style.display = canFund() && canView('tuition') ? '' : 'none';
   $('#btnArea').textContent = a === 'tu' ? '⇄ צו פאנדרעיזינג' : '⇄ צו שכר לימוד';
   if (!keepView || (a === 'tu') !== TU_VIEWS.includes(view)) view = a === 'tu' ? 'thome' : 'home';
@@ -428,7 +428,7 @@ function setArea(a, keepView) {
 function chooseArea() { if (!canFund() || !canView('tuition')) return; setArea(AREA === 'tu' ? 'fund' : 'tu'); }
 function vChooser() {
   document.querySelectorAll('nav [data-v]').forEach(b => { b.style.display = 'none'; });
-  $('#main').innerHTML = `<div class="chooser"><h2>שלום ${esc(me)}! וואו ווילט איר אריינגיין?</h2><div class="choose2">
+  $('#main').innerHTML = `<div class="chooser"><h2>וואו ווילט איר אריינגיין?</h2><div class="choose2">
     <div class="choice c1" onclick="setArea('tu')"><i>🎓</i><h3>שכר לימוד</h3><p>עלטערן, תלמידים, Billing, סטעיטמענטס</p></div>
     <div class="choice c2" onclick="setArea('fund')"><i>💵</i><h3>פאנדרעיזינג</h3><p>נדבות, רעסיטס, פאנדרעיזערס, שולן, רופארטס</p></div></div></div>`;
 }

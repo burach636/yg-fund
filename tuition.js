@@ -165,7 +165,7 @@ function vTuHome() {
   const owe = L.filter(f => f.due > 0.5).sort((a, b) => b.due - a.due).slice(0, 10);
   const lastPays = TU.payments.filter(p => !p[7] && p[2] <= t).sort((a, b) => b[2].localeCompare(a[2])).slice(0, 10);
   const thisM = (() => { const h = HEB.parts(t); let b = 0, p = 0; TU.charges.forEach(c => { const x = HEB.parts(c[2]); if (x && x.y === h.y && x.m === h.m && !c[7]) b += c[3]; }); TU.payments.forEach(q => { const x = HEB.parts(q[2]); if (!q[7] && x && x.y === h.y && x.m === h.m) p += q[3]; }); return { b, p, m: HEB.MONTHS[h.m] }; })();
-  $('#main').innerHTML = `<div class="row"><div><h2>🎓 שכר לימוד – שלום ${esc(me)}!</h2><p class="sub">${fmtDual(t)} · JLS קאמפעני ${TU.co}${TU.name ? ' – ' + esc(TU.name) : ''} · דערהיינטיגט ${fmtD((TU.importedAt || '').slice(0, 10))}</p></div></div>
+  $('#main').innerHTML = `<div class="row"><div><h2>🎓 שכר לימוד</h2><p class="sub">${fmtDual(t)} · JLS קאמפעני ${TU.co}${TU.name ? ' – ' + esc(TU.name) : ''} · דערהיינטיגט ${fmtD((TU.importedAt || '').slice(0, 10))}</p></div></div>
    <div class="tiles">
     <div class="tile t1" onclick="ui.tuF='cur';go('tuition')"><i>👨‍👦</i><h3>עלטערן</h3><b>${tot.curFams.toLocaleString()}</b><span>${tot.kids.toLocaleString()} תלמידים לערנען יעצט</span></div>
     <div class="tile t6" onclick="go('tubill')"><i>🧾</i><h3>Billing ${HEB.gem(y)}</h3><b>${money(tot.yrBilled)}</b><span>${tot.yrBilled ? Math.round(tot.yrPaid / tot.yrBilled * 100) + '% באצאלט' : ''}</span></div>

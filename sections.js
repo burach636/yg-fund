@@ -30,7 +30,7 @@ function vHome() {
   const hyNow = (HEB.parts(t) || {}).y; let thisYr = 0; JD.payments.forEach(p => { if (!p[9] && validD(p[2]) && (HEB.parts(p[2]) || {}).y === hyNow) thisYr += p[3]; });
   const askToday = todayItems('all').filter(x => x.kind === 'ask').length;
   $('#main').innerHTML = `
-  <div class="row"><div><h2>שלום ${esc(me)}!</h2><p class="sub">${fmtDual(t)}</p></div></div>
+  <div class="row"><div><h2>🏠 Dashboard</h2><p class="sub">${fmtDual(t)}</p></div></div>
   ${next ? `<div class="banner" onclick="go('shuls')">🕍 <div><b>${next.date === t ? 'היינט' : 'מיטוואך ' + fmtDual(next.date)}</b> גייט מען נאך געלט אין: <b class="big">${esc(next.s.name)}</b><br><span class="ltr">${esc(next.s.addr || '')}</span></div></div>` : ''}
   <div class="tiles">
     <div class="tile t1" onclick="go('accounts')"><i>👥</i><h3>נדבות</h3><b>${IDX.yg.size.toLocaleString()}</b><span>נדבנים · ${money(sinceRH)} זינט ראש השנה</span><span>${askToday} צו בעטן היינט</span></div>
