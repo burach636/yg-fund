@@ -184,8 +184,8 @@
     return clean(p);
   }
 
-  function extract(bytes, company, progress) {
-    company = company || 32;
+  function extract(bytes, company, progress, opts) {
+    company = company || 32; opts = opts || {};
     const step = progress || (() => {});
     step('עפענען די פייל...');
     const db = new Jet(bytes);
@@ -273,9 +273,38 @@
         if (acc.has(r.Code) && clean(r.Note)) out.notes.push([r.Code, r.NDate || '', clean(r.Note).slice(0, 1000), clean(r.UserName), clean(r.NCategory)]);
     } catch (e) { /* optional */ }
 
+    if (opts.tuition) { try { out.tuition = tuition(db, +opts.tuition, step, acc); } catch (e) { out.tuitionError = String(e && e.message || e); } }
+
     out.accounts = Array.from(acc.values());
     step('פארטיג');
     return out;
+  }
+
+  // Tuition (שכר לימוד) for one JLS company (the owner's is 15): charges, payments and students.
+  // Students: ONLY number, family code, names, class and start/end dates are decoded – never SSNum, DOB,
+  // medical, bus, legal-name or any other column.
+  function tuition(db, co, step, acc) {
+    const isCo = v => v === co, since = (new Date().getFullYear() - 4) + '-01-01';
+    const t = { co, name: '', payments: [], charges: [], students: [] };
+    for (const r of db.rows(db.table('Lists'), ['Type', 'Value', 'ValueNum']))
+      if ((r.Type === 'FCompanies' || r.Type === 'Companies') && r.ValueNum === co) t.name = clean(r.Value);
+    step('שכר לימוד – באצאלונגען...');
+    for (const r of db.rows(db.table('MPayments'), ['PaymentNum', 'Code', 'Date', 'Amount', 'Type', 'PMethod', 'CheckNum', 'Notes', 'Refunded'], { col: 'Company', test: isCo }))
+      if (!r.Date || r.Date >= since) t.payments.push([r.PaymentNum, r.Code, r.Date || '', r.Amount || 0, clean(r.Type || r.PMethod), clean(r.CheckNum), clean(r.Notes).slice(0, 200), r.Refunded || 0]);
+    step('שכר לימוד – טשארדזשעס...');
+    for (const r of db.rows(db.table('MCharges'), ['ChargeNum', 'Code', 'DueDate', 'Amount', 'Paid', 'BalanceDue', 'Desc', 'Hold', 'Note', 'DateE', 'StudentNum', 'Period'], { col: 'Company', test: isCo }))
+      if ((r.DueDate || r.DateE || '9') >= since || Math.abs(r.BalanceDue || 0) > 0.005)
+        t.charges.push([r.ChargeNum, r.Code, r.DueDate || '', r.Amount || 0, r.Paid || 0, r.BalanceDue || 0, clean(r.Desc), r.Hold ? 1 : 0, clean(r.Note).slice(0, 200), r.DateE || '', r.StudentNum || 0, clean(r.Period)]);
+    step('שכר לימוד – תלמידים...');
+    const fam = new Set(); t.charges.forEach(c => fam.add(c[1])); t.payments.forEach(p => fam.add(p[1]));
+    try {
+      for (const r of db.rows(db.table('Students'), ['StudentNum', 'FamilyNum', 'Code', 'FName', 'LName', 'FNameH', 'LNameH', 'Class', 'StartDate', 'EndDate'])) {
+        const code = +clean(r.Code) || r.FamilyNum || 0;
+        if (!code || !fam.has(code)) continue;   // only families with tuition activity in this company
+        t.students.push([r.StudentNum, code, clean(r.FName), clean(r.LName), clean(r.FNameH), clean(r.LNameH), clean(r.Class), r.StartDate || '', r.EndDate || '']);
+      }
+    } catch (e) { /* optional */ }
+    return t;
   }
 
   // Names only: every table with its column names/types and row count. Reads no values at all.

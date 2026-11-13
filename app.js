@@ -355,16 +355,23 @@ async function unzipMdb(buf) {
 async function doImport(buf, name, source) {
   if (buf[0] === 0x50 && buf[1] === 0x4B) { busy('עפנט דעם ZIP...'); buf = await unzipMdb(buf); }
   await new Promise(r => setTimeout(r, 30));
-  const data = JLS.extract(buf, +SET().company || 32, t => { $('#busyTxt').textContent = t; });
+  const tco = SET().tuitionCompany === 0 ? 0 : (+SET().tuitionCompany || 15);
+  const data = JLS.extract(buf, +SET().company || 32, t => { $('#busyTxt').textContent = t; }, { tuition: tco });
   data.source = source; data.importedBy = me;
   busy('לייגט ארויף אויפן אינטערנעט...');
+  const tu = data.tuition; delete data.tuition;
+  if (tu) {   // tuition goes to its own file, loaded only when the tuition section is opened
+    tu.importedAt = data.importedAt;
+    await q(sb.storage.from('jls').upload('jls-tuition.json.gz', await gz(JSON.stringify(tu)), { upsert: true, contentType: 'application/gzip' }));
+    TU = tu; tuVersion = -1;
+  }
   const blob = await gz(JSON.stringify(data));
   try { await q(sb.storage.from('jls').upload('jls.json.gz', blob, { upsert: true, contentType: 'application/gzip' })); }
   catch (e) { if (/bucket/i.test(e.message || '')) throw new Error('אין Supabase פעלט דער "jls" Storage bucket – לאזט נאכאמאל לויפן SETUP.sql'); throw e; }
   const m = await q(sb.from('jls_meta').select('version').eq('id', 1).single());
   const v = (m.version || 0) + 1;
   await q(sb.from('jls_meta').update({ version: v, imported_at: data.importedAt, imported_by: me, summary: { accounts: data.accounts.length, payments: data.payments.length, pledges: data.pledges.length } }).eq('id', 1));
-  JD = data; buildIndex(); jlsVersion = v;
+  JD = data; buildIndex(); jlsVersion = v; if (TU) tuVersion = v;
   busy(false); render();
   toast('✓ דערהיינטיגט פון JLS: ' + data.accounts.length.toLocaleString() + ' אקאונטס, ' + data.payments.length.toLocaleString() + ' באצאלונגען, ' + data.pledges.length.toLocaleString() + ' פלעדזשעס');
 }
@@ -396,11 +403,11 @@ function render() {
   if (!canView(view)) view = 'home';
   if (!JD) { vWelcome(); return; }
   counts();
-  ({ home: vHome, rcpt: vRcpt, jrep: vJrep, todo: vTodo, fund: vFund, shuls: vShuls, today: vToday, pledges: vPledges, accounts: vAccounts, reports: vReports, settings: vSettings }[view] || vHome)();
+  ({ home: vHome, tuition: vTuition, rcpt: vRcpt, jrep: vJrep, todo: vTodo, fund: vFund, shuls: vShuls, today: vToday, pledges: vPledges, accounts: vAccounts, reports: vReports, settings: vSettings }[view] || vHome)();
   applyPerms();
 }
 // ---------- which main sections each user may open (team.perms; null = everything; admins always everything) ----------
-const SECTIONS = [['accounts', '👥 נדבות'], ['rcpt', '🧾 רעסיטס/סטעיטמענטס'], ['todo', '✅ To-Do'], ['fund', '💵 פאנדרעיזינג חשבונות'], ['shuls', '🕍 שולן'], ['today', '📋 היינט צו בעטן'], ['pledges', '📞 פלעדזשעס'], ['reports', '📊 באריכטן'], ['jrep', '📑 רופארטס']];
+const SECTIONS = [['accounts', '👥 נדבות'], ['rcpt', '🧾 רעסיטס/סטעיטמענטס'], ['todo', '✅ To-Do'], ['fund', '💵 פאנדרעיזינג חשבונות'], ['shuls', '🕍 שולן'], ['today', '📋 היינט צו בעטן'], ['pledges', '📞 פלעדזשעס'], ['reports', '📊 באריכטן'], ['jrep', '📑 רופארטס'], ['tuition', '🎓 שכר לימוד']];
 const myPerms = () => { const t = TEAM.find(a => a.email.toLowerCase() === myEmail.toLowerCase()); return t && !t.is_admin && Array.isArray(t.perms) ? t.perms : null; };
 const canView = v => v === 'home' || v === 'settings' || !myPerms() || myPerms().includes(v);
 function applyPerms() {
@@ -843,6 +850,7 @@ function vSettings() {
    <label style="display:flex;gap:8px;align-items:center;margin-bottom:10px;font-size:14px"><input type="checkbox" id="so" ${s.skipOnce ? 'checked' : ''}> <span>Donors who gave <b>only once</b> – do not ask automatically (can still be set per donor)</span></label>
    <label class="f" style="margin-bottom:8px">Only donors who gave in the last ... years<input id="sy" type="number" min="1" max="50" value="${s.maxYears || 5}"></label>
    <label class="f" style="margin-bottom:8px">JLS company number (payments and pledges)<input id="sc" type="number" value="${s.company || 32}"></label>
+   <label class="f" style="margin-bottom:8px">JLS tuition company number (0 = off)<input id="stc" type="number" value="${s.tuitionCompany === 0 ? 0 : (s.tuitionCompany || 15)}"></label>
    <button class="btn" onclick="saveSettings()">Save</button></div>
   <div class="box"><h3 style="margin-top:0">Last JLS update</h3><p class="sub">${new Date(JD.importedAt).toLocaleString()} · ${esc(JD.importedBy || '')} · ${esc((JD.source || {}).name || '')}<br>${JD.accounts.length.toLocaleString()} accounts · ${JD.payments.length.toLocaleString()} payments · ${JD.pledges.length.toLocaleString()} pledges · ${esc(JD.companyName)}</p>
    <h3>Import from the desktop version</h3>
@@ -942,7 +950,7 @@ async function jlsSchema(file) {
 }
 async function saveSettings() {
   const old = SET().company || 32, nc = +$('#sc').value || 32;
-  await emit('settings', 's', { defFreq: $('#sf').value, maxYears: +$('#sy').value || 5, company: nc, skipOnce: $('#so').checked });
+  await emit('settings', 's', { defFreq: $('#sf').value, maxYears: +$('#sy').value || 5, company: nc, tuitionCompany: $('#stc').value === '' ? 15 : +$('#stc').value, skipOnce: $('#so').checked });
   toast(nc !== old ? 'Company changed – update from JLS for it to take effect' : '✓ Saved');
   render();
 }
