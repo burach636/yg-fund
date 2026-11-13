@@ -115,7 +115,15 @@ function jrExcel() {
 // ---------- 🏷️ tags (flags) on accounts: acct.tags = ['...'] ----------
 const tagsOf = c => ((S.acct[c] || {}).tags || []).filter(Boolean);
 // Ready-made flags the owner asked for (shown as quick buttons on every donor); any other text can still be added
-const PRESET_TAGS = ['גרויסע נדבות - ווארים [משל יודא בירנבוים]', 'גרויסע נדבות - אלגעמיין [הערצקא אפיס]', 'היימיש-ווארים', 'היימיש-געבט', 'היימיש-איגנארירט', '5 גארפיעלד-ווארים', '5 גארפיעלד-נייס', 'בני יואל טאטע', 'מהרי"ט טאטע', 'היימישע רבנים', 'קאלטע רבנים', 'יוצאי ישיבתינו', 'אברכים'];
+const TAG_RENAMES = { 'גרויסע נדבות - ווארים [משל יודא בירנבוים]': 'גרויסע נדבות - ווארים' };
+// One-time rename of flags whose name was changed (runs after the log is loaded)
+async function tagMigrate() {
+  for (const [c, st] of Object.entries(S.acct)) {
+    const T = st.tags || []; if (!T.some(t => TAG_RENAMES[t])) continue;
+    await emit('acct', c, { tags: [...new Set(T.map(t => TAG_RENAMES[t] || t))] });
+  }
+}
+const PRESET_TAGS = ['גרויסע נדבות - ווארים', 'גרויסע נדבות - אלגעמיין [הערצקא אפיס]', 'היימיש-ווארים', 'היימיש-געבט', 'היימיש-איגנארירט', '5 גארפיעלד-ווארים', '5 גארפיעלד-נייס', 'בני יואל טאטע', 'מהרי"ט טאטע', 'היימישע רבנים', 'קאלטע רבנים', 'יוצאי ישיבתינו', 'אברכים'];
 function allTags() { const m = new Map(); Object.values(S.acct).forEach(st => (st.tags || []).forEach(t => t && m.set(t, (m.get(t) || 0) + 1))); return PRESET_TAGS.concat([...m.keys()].filter(t => !PRESET_TAGS.includes(t)).sort((a, b) => a.localeCompare(b, 'he'))); }
 const tagHue = t => { let h = 0; for (const ch of t) h = (h * 31 + ch.charCodeAt(0)) % 360; return h; };
 const tagChip = (t, x) => `<span class="tagc" style="background:hsl(${tagHue(t)},70%,92%);border-color:hsl(${tagHue(t)},45%,75%);color:hsl(${tagHue(t)},45%,28%)">🏷️ ${esc(t)}${x || ''}</span>`;

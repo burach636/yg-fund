@@ -163,7 +163,7 @@ async function afterLogin(session) {
   }
   busy('לאדנט...');
   try { await pullLog(); await loadJLS(); } catch (e) { busy(false); toast('⚠️ ' + (e.message || e)); return; }
-  try { await ensureRcptTask(); await ensureFundMailTask(); } catch (e) { }
+  try { await ensureRcptTask(); await ensureFundMailTask(); await tagMigrate(); } catch (e) { }
   busy(false);
   await start();
 }
@@ -655,7 +655,7 @@ function openAcct(code) {
     hist: `<div class="row"><input id="hn" placeholder="שרייבט א נאטיץ..." style="flex:1"><button class="btn" onclick="addNote(${code})">צולייגן</button></div><div class="hist">${hist.map(h => `<div><small>${fmtD(h.d)} · ${esc(h.by || '')} ${h.src === 'JLS' ? '<span class="tag gray">JLS</span>' : ''}</small><br>${esc(h.t)}</div>`).join('') || '<div class="sub">נאך קיין היסטאריע</div>'}</div>`,
     tasks: `<div class="row"><button class="btn gold sm" onclick="taskForm(null,${code})">+ נייע ארבעט</button></div>${tasks.map(([id, x]) => `<div class="ph"><span>${x.done ? '✅' : '⬜'} ${esc(x.title)} <small class="heb">${fmtD(x.due)} · ${esc(x.who || '')}</small></span><button class="btn ghost sm" onclick="taskForm('${id}')">ענדער</button></div>`).join('') || '<div class="sub">קיין ארבעטן</div>'}`
   };
-  modal(`<div class="row" style="margin:0"><div><h2 style="margin:0">${esc(a.h || a.n)} ${st.vip ? '⭐' : ''}</h2><div class="heb" style="margin:0;font-size:16px">${esc(a.h ? a.n : '')}</div></div><div class="spacer"></div><span class="num" style="color:var(--muted)">#${code}</span><button class="btn ghost sm" onclick="xlsAcct(${code})">⬇ Excel</button><button class="btn ghost sm" onclick="closeM()">✕</button></div>
+  modal(`<div class="row" style="margin:0"><div><h2 style="margin:0">${esc(a.h || a.n)} ${st.vip ? '⭐' : ''}</h2><div class="heb" style="margin:0;font-size:16px">${esc(a.h ? a.n : '')}</div></div><div class="spacer"></div><span class="num" style="color:var(--muted)">#${code}</span><button class="btn ghost sm" onclick="acctMail(${code})">✉️ אימעיל</button><button class="btn ghost sm" onclick="xlsAcct(${code})">⬇ Excel</button><button class="btn ghost sm" onclick="closeM()">✕</button></div>
   <div class="stats" style="margin:14px 0">
    <div class="stat"><b>${g ? money(g.total) : '$0'}</b><span>${esc(JD.companyName)} סך הכל (${g ? g.count : 0})</span></div>
    <div class="stat"><b>${g && g.last ? money(g.lastAmt) : '—'}</b><span>לעצטע: ${g ? fmtD(g.last) : '—'}</span></div>

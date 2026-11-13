@@ -468,3 +468,33 @@ function mailSettingsHTML() {
   return `<h3>✉️ E-mail</h3><div class="grid2"><label class="f" style="grid-column:1/-1">Subject ({name}, {amount}, {date})<input id="msj" dir="auto" value="${esc(s.mailSubject || MAIL_SUBJ_DEF)}"></label>
    <label class="f" style="grid-column:1/-1">The e-mail text<textarea id="mbd" dir="auto" rows="6">${esc(s.mailBody || MAIL_BODY_DEF)}</textarea></label></div>`;
 }
+
+// ---------- ✉️ a plain e-mail to one donor (own subject and text, optional CC) ----------
+function acctMail(code) {
+  const a = IDX.by.get(+code); if (!a) return;
+  const to = emailOf(code), d = window._am && window._am.code === +code ? window._am : {};
+  modal(`<h2>✉️ אימעיל צו ${esc(a.h || a.n)}</h2>
+   <div class="grid2"><label class="f" style="grid-column:1/-1">צו<input id="amt" type="email" style="direction:ltr" value="${esc(to)}" placeholder="name@example.com"></label>
+   <label class="f" style="grid-column:1/-1">CC – נאך אימעילס (אפציאנאל), עטליכע מיט קאמעס<input id="amc" style="direction:ltr" value="${esc(d.cc || '')}"></label>
+   <label class="f" style="grid-column:1/-1">סאבדזשעקט<input id="ams" dir="auto" value="${esc(d.subject || '')}"></label>
+   <label class="f" style="grid-column:1/-1">דער בריוו<textarea id="amb" dir="auto" rows="9">${esc(d.body || ('לכבוד ' + (a.h || a.n) + ',\n\n'))}</textarea></label></div>
+   <label style="display:flex;gap:8px;align-items:center;font-size:13px;margin-top:8px"><input type="checkbox" id="amsave" ${to ? '' : 'checked'}> היט אפ דעם אימעיל ביי דעם נדבן</label>
+   <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn ghost" onclick="openAcct(${+code})">צוריק</button><button class="btn" id="amgo" onclick="acctMailGo(${+code})">✉️ שיק</button></div>`, 'narrow');
+  setTimeout(() => $(to ? '#ams' : '#amt').focus(), 50);
+}
+async function acctMailGo(code) {
+  const to = $('#amt').value.trim().toLowerCase(), cc = $('#amc').value.trim(), subject = $('#ams').value.trim(), body = $('#amb').value;
+  const okList = v => v.split(/[,;\s]+/).filter(Boolean).every(x => /^\S+@\S+\.\S+$/.test(x));
+  if (!to || !okList(to)) { toast('⚠️ דער אימעיל איז נישט ריכטיג'); return; }
+  if (cc && !okList(cc)) { toast('⚠️ א CC אימעיל איז נישט ריכטיג'); return; }
+  if (!subject) { $('#ams').focus(); toast('⚠️ שרייבט א סאבדזשעקט'); return; }
+  window._am = { code, cc, subject, body };   // kept if sending fails, so nothing is lost
+  $('#amgo').disabled = true;
+  try {
+    if ($('#amsave').checked && to !== emailOf(code)) await emit('acct', code, { email: to });
+    busy('שיקט...');
+    await mailSend(to, subject, mailHtml(body), null, '', 'acct-' + code, cc);
+    await emit('hist', uid(), { code, text: '✉️ אימעיל געשיקט צו ' + to + (cc ? ' (CC ' + cc + ')' : '') + ': ' + subject });
+    window._am = null; busy(false); toast('✓ געשיקט צו ' + to); openAcct(code);
+  } catch (e) { busy(false); $('#amgo').disabled = false; rcMailErr(e); toast('⚠️ ' + (e.message || e)); }
+}

@@ -31,6 +31,7 @@ function gem(n: number) {
   return s.length === 1 ? s + "'" : s.slice(0, -1) + '"' + s.slice(-1);
 }
 const hebD = (s: string) => { if (!validD(s)) return ''; const [y, m, d] = s.split('-').map(Number); const p = hfmt.formatToParts(new Date(y, m - 1, d, 12)); const g = (t: string) => (p.find(x => x.type === t) || {} as any).value; return gem(+g('day')) + ' ' + (HM[g('month')] || g('month')) + ' ' + gem(+g('year')); };
+const hebYear = (s: string) => { const [y, m, d] = s.split('-').map(Number); return +((hfmt.formatToParts(new Date(y, m - 1, d, 12)).find(x => x.type === 'year') || {} as any).value || 0); };
 const frDay = (s: string) => { const [y, m, d] = s.split('-'); return hebD(s) + ' (' + +m + '/' + +d + '/' + y + ')'; };
 
 // ---------- data ----------
@@ -53,19 +54,21 @@ function fundCalc(JD: any, S: any) {   // same rules as fundCalc() in sections.j
   JD.payments.forEach((p: any) => { if (validD(p[2]) && p[2] >= start && p[2] <= t && !p[9]) income.push({ d: p[2], amt: p[3], code: p[1], src: 'JLS' }); });
   Object.values(S.frin).forEach((x: any) => { if (!x.del && x.date >= start) income.push({ d: x.date, amt: +x.amt || 0, note: x.note, src: 'app' }); });
   const exempt = Object.values(S.frex).filter((x: any) => !x.del && x.date >= start) as any[];
-  const expenses = Object.values(S.frexp).filter((x: any) => !x.del && validD(x.date) && x.date >= start) as any[];   // dinner expenses
+  const expenses = Object.values(S.frexp).filter((x: any) => !x.del && validD(x.date)) as any[];   // dinner expenses, by Jewish year
   const paid = Object.values(S.fr).filter((x: any) => !x.del) as any[];
   const periods: any[] = [];
   if (t >= start) { const n = Math.floor(daysBetween(start, t) / 14); for (let k = 0; k <= n; k++) periods.push({ k, from: addDays(start, 14 * k), to: addDays(start, 14 * k + 13), income: 0, count: 0, ex: 0, exp: 0, owed: 0, paid: 0 }); }
   income.forEach(i => { const p = periods[Math.floor(daysBetween(start, i.d) / 14)]; if (p) { p.income += i.amt; p.count++; } });
   exempt.forEach(e => { const p = periods[Math.floor(daysBetween(start, e.date) / 14)]; if (p) p.ex += +e.amt || 0; });
-  expenses.forEach(e => { const p = periods[Math.floor(daysBetween(start, e.date) / 14)]; if (p) p.exp += +e.amt || 0; });
-  periods.forEach(p => { p.owed = (p.income - p.ex - p.exp) * pct / 100; p.paid = paid.filter(x => x.date >= p.from && x.date <= p.to).reduce((a, x) => a + (+x.amt || 0), 0); });
-  const totIn = income.reduce((a, i) => a + i.amt, 0), totEx = exempt.reduce((a, x) => a + (+x.amt || 0), 0) + expenses.filter(x => x.date <= t).reduce((a, x) => a + (+x.amt || 0), 0), totPaid = paid.reduce((a, x) => a + (+x.amt || 0), 0);
-  return { pct, start, income, periods, balance: (totIn - totEx) * pct / 100 - totPaid };
+  // the year's income first covers that year's dinner expenses (same as fundCalc in sections.js)
+  const left: Record<number, number> = {};
+  expenses.forEach(e => { const y = +e.hy || hebYear(e.date); left[y] = (left[y] || 0) + (+e.amt || 0); });
+  periods.forEach(p => { const y = hebYear(p.from), base = p.income - p.ex, ded = Math.min(Math.max(base, 0), left[y] || 0); p.exp = ded; left[y] = (left[y] || 0) - ded; p.owed = (base - ded) * pct / 100; p.paid = paid.filter(x => x.date >= p.from && x.date <= p.to).reduce((a, x) => a + (+x.amt || 0), 0); });
+  const totPaid = paid.reduce((a, x) => a + (+x.amt || 0), 0);
+  return { pct, start, income, periods, balance: periods.reduce((a, p) => a + p.owed, 0) - totPaid };
 }
 const SUBJ_DEF = 'טשעקס פאר די פאנדרעיזערס – {from} ביז {to}: {amount}';
-const BODY_DEF = 'שלום,\n\nביטע מאכט טשעקס פאר די פאנדרעיזערס פאר די 2 וואכן {from} ביז {to}:\n\nאריינגעקומען: {income} ({count} באצאלונגען)\nאן פראצענט: {exempt}\nדינער עקספענסעס: {expenses}\n{pct}% פאר די פאנדרעיזערס: {amount}\n\nשוין באצאלט פאר די 2 וואכן: {paid}\nסך הכל נאך שולדיג ביז היינט: {balance}\n\nבייגעלייגט איז אן Excel מיט אלע באצאלונגען פון די 2 וואכן.\n\nא דאנק,\nYG Fund';
+const BODY_DEF = 'שלום,\n\nביטע מאכט טשעקס פאר די פאנדרעיזערס פאר די 2 וואכן {from} ביז {to}:\n\nאריינגעקומען: {income} ({count} באצאלונגען)\nאן פראצענט: {exempt}\nדינער עקספענסעס: {expenses}\n{pct}% פאר די פאנדרעיזערס: {amount}\n\nשוין באצאלט פאר די 2 וואכן: {paid}\nסך הכל נאך שולדיג ביז היינט: {balance}\n\nבייגעלייגט איז אן Excel מיט די נדבנים און זייערע נדבות פון די 2 וואכן.\n\nא דאנק,\nYG Fund';
 const fill = (t: string, F: any, p: any) => { const v: any = { from: frDay(p.from), to: frDay(p.to), count: p.count, income: money(p.income), exempt: money(p.ex), expenses: money(p.exp || 0), pct: F.pct, amount: money(p.owed), paid: money(p.paid), balance: money(F.balance) }; return t.replace(/\{(\w+)\}/g, (m, k) => v[k] != null ? v[k] : m); };
 const esc = (s: string) => s.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' } as any)[c]);
 function b64(u: Uint8Array) { let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode(...u.subarray(i, i + 0x8000)); return btoa(s); }
@@ -109,8 +112,12 @@ async function handle(req: Request): Promise<Response> {
     const by = new Map(JD.accounts.map((a: any) => [a.c, a]));
     const L = F.income.filter((i: any) => i.d >= p.from && i.d <= p.to).sort((a: any, b: any) => a.d.localeCompare(b.d));
     const rows = [['טאג', 'טאג (אידיש)', '#', 'נאמען', 'English', 'סכום', F.pct + '%', 'פון']].concat(L.map((i: any) => { const a: any = i.code ? by.get(i.code) : null; return [i.d, hebD(i.d), i.code || '', a ? (a.h || a.n) : (i.note || ''), a ? a.n : '', r2(i.amt), r2(i.amt * F.pct / 100), i.src === 'JLS' ? 'JLS' : 'מאנועל']; }));
+    const dm = new Map<any, any>();
+    L.forEach((i: any) => { const k = i.code || ('~' + (i.note || '')); const o = dm.get(k) || { code: i.code, note: i.note, n: 0, t: 0, dates: [] }; o.n++; o.t += i.amt; o.dates.push(i.d); dm.set(k, o); });
+    const drows = [['#', 'נאמען', 'English', 'טעלעפאן', 'וויפיל נדבות', 'סך הכל', F.pct + '%', 'טעג']].concat([...dm.values()].sort((a: any, b: any) => b.t - a.t).map((o: any) => { const a: any = o.code ? by.get(o.code) : null; return [o.code || '', a ? (a.h || a.n) : (o.note || 'אריינקומען'), a ? a.n : '', a && a.ph && a.ph[0] ? a.ph[0][1] : '', o.n, r2(o.t), r2(o.t * F.pct / 100), o.dates.sort().join(', ')]; }));
     const blob = XLSX.make([
-      { name: 'סך הכל', rows: [['', 'סכום'], ['פון', p.from], ['ביז', p.to], ['באצאלונגען', p.count], ['אריינגעקומען', r2(p.income)], ['אן פראצענט', r2(p.ex)], ['דינער עקספענסעס', r2(p.exp || 0)], [F.pct + '% פאר די פאנדרעיזערס', r2(p.owed)], ['שוין באצאלט פאר די 2 וואכן', r2(p.paid)], ['נאך שולדיג ביז היינט', r2(F.balance)]], widths: [32, 18] },
+      { name: 'סך הכל', rows: [['', 'סכום'], ['פון', p.from], ['ביז', p.to], ['באצאלונגען', p.count], ['אריינגעקומען', r2(p.income)], ['אן פראצענט', r2(p.ex)], ['דינער עקספענסעס (אראפגערעכנט)', r2(p.exp || 0)], [F.pct + '% פאר די פאנדרעיזערס', r2(p.owed)], ['שוין באצאלט פאר די 2 וואכן', r2(p.paid)], ['נאך שולדיג ביז היינט', r2(F.balance)]], widths: [32, 18] },
+      { name: 'נדבנים', rows: drows },
       { name: 'באצאלונגען', rows }]);
     const html = '<div dir="rtl" style="font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#222">' + esc(body).replace(/\n/g, '<br>') + '</div>';
     await send(s.frOffice, s.frCc || '', subject, html, { filename: 'Fundraisers-' + p.from + '-' + p.to + '.xlsx', content: b64(new Uint8Array(await blob.arrayBuffer())) });
