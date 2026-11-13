@@ -91,38 +91,43 @@ function fundCalc() {
   if (JD) JD.payments.forEach(p => { if (validD(p[2]) && p[2] >= start && p[2] <= t && !p[9]) income.push({ d: p[2], amt: p[3], code: p[1], src: 'JLS' }); });
   Object.entries(S.frin).forEach(([id, x]) => { if (!x.del && x.date >= start) income.push({ d: x.date, amt: +x.amt || 0, note: x.note, id, src: 'app' }); });
   const exempt = Object.entries(S.frex || {}).filter(([, x]) => !x.del && x.date >= start).map(([id, x]) => Object.assign({ id }, x, { amt: +x.amt || 0 })).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  // Dinner expenses: subtracted from the income before the fundraisers' % (in the 2 weeks of their date)
+  const expenses = Object.entries(S.frexp || {}).filter(([, x]) => !x.del && validD(x.date)).map(([id, x]) => Object.assign({ id }, x, { amt: +x.amt || 0 })).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
   const paid = Object.entries(S.fr).filter(([, x]) => !x.del).map(([id, x]) => Object.assign({ id }, x)).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
   const periods = [];
   if (t >= start) {
     const n = Math.floor(daysBetween(start, t) / 14);
-    for (let k = 0; k <= n; k++) periods.push({ k, from: addDays(start, 14 * k), to: addDays(start, 14 * k + 13), income: 0, count: 0, ex: 0, owed: 0, paid: 0, bal: 0 });
+    for (let k = 0; k <= n; k++) periods.push({ k, from: addDays(start, 14 * k), to: addDays(start, 14 * k + 13), income: 0, count: 0, ex: 0, exp: 0, owed: 0, paid: 0, bal: 0 });
   }
   income.forEach(i => { const p = periods[Math.floor(daysBetween(start, i.d) / 14)]; if (p) { p.income += i.amt; p.count++; } });
   exempt.forEach(e => { const p = periods[Math.floor(daysBetween(start, e.date) / 14)]; if (p) p.ex += e.amt; });
+  expenses.forEach(e => { if (e.date < start) return; const p = periods[Math.floor(daysBetween(start, e.date) / 14)]; if (p) p.exp += e.amt; });
   let cumO = 0, cumP = 0;
   periods.forEach(p => {
-    p.owed = (p.income - p.ex) * pct / 100;
+    p.owed = (p.income - p.ex - p.exp) * pct / 100;
     p.paid = paid.filter(x => x.date >= p.from && x.date <= p.to).reduce((s, x) => s + (+x.amt || 0), 0);
     cumO += p.owed; cumP += p.paid; p.bal = cumO - cumP;
   });
   const totPaid = paid.reduce((s, x) => s + (+x.amt || 0), 0), totIn = income.reduce((s, i) => s + i.amt, 0), totEx = exempt.reduce((s, x) => s + x.amt, 0);
-  const totOwed = (totIn - totEx) * pct / 100;
-  return { pct, start, income, paid, exempt, periods, totIn, totEx, totOwed, totPaid, balance: totOwed - totPaid, cur: periods[periods.length - 1] };
+  const totExp = expenses.filter(e => e.date >= start && e.date <= t).reduce((s, x) => s + x.amt, 0);
+  const totOwed = (totIn - totEx - totExp) * pct / 100;
+  return { pct, start, income, paid, exempt, expenses, totExp, periods, totIn, totEx, totOwed, totPaid, balance: totOwed - totPaid, cur: periods[periods.length - 1] };
 }
 function vFund() {
   const F = fundCalc();
   $('#main').innerHTML = `<div class="row"><div><h2>פאנדרעיזינג חשבונות</h2><p class="sub">פון יעדן דאלער וואס קומט אריין זינט ${fmtDual(F.start)} באקומען די פאנדרעיזערס <b>${F.pct}%</b>. עס ווערט אויסגערעכנט יעדע 2 וואכן. די באצאלונגען צו זיי ווערן אראפגערעכנט.</p></div><div class="spacer"></div>
-   ${SET().frAuto ? `<span class="tag ok" title="ווערט געשיקט אליין ${SET().frAutoDays != null ? SET().frAutoDays : 2} טעג נאך די 2 וואכן">⏰ אויטאמאטיש</span>` : ''}<button class="btn" onclick="frMailForm()">✉️ אימעיל צום אפיס</button><button class="btn ghost" onclick="xlsFund()">⬇ Excel</button><button class="btn ghost" onclick="fundSettings()" title="${F.pct}% · ${fmtD(F.start)}">⚙️ Settings</button><button class="btn ghost" onclick="frInForm()">+ אריינקומען (נישט אין JLS)</button><button class="btn ghost" onclick="frExForm()">+ סכום אן פראצענט</button><button class="btn gold" onclick="frForm()">+ באצאלט די פאנדרעיזערס</button></div>
+   ${SET().frAuto ? `<span class="tag ok" title="ווערט געשיקט אליין ${SET().frAutoDays != null ? SET().frAutoDays : 2} טעג נאך די 2 וואכן">⏰ אויטאמאטיש</span>` : ''}<button class="btn" onclick="frMailForm()">✉️ אימעיל צום אפיס</button><button class="btn ghost" onclick="xlsFund()">⬇ Excel</button><button class="btn ghost" onclick="fundSettings()" title="${F.pct}% · ${fmtD(F.start)}">⚙️ Settings</button><button class="btn ghost" onclick="frInForm()">+ אריינקומען (נישט אין JLS)</button><button class="btn ghost" onclick="frExForm()">+ סכום אן פראצענט</button><button class="btn ghost" onclick="expForm()">🍽️ + דינער עקספענס</button><button class="btn gold" onclick="frForm()">+ באצאלט די פאנדרעיזערס</button></div>
   <div class="stats">
    <div class="stat"><b>${money(F.totIn)}</b><span>אריינגעקומען זינט ${fmtD(F.start)}</span></div>
    ${F.totEx ? `<div class="stat"><b>${money(F.totEx)}</b><span>אן פראצענט (אראפגערעכנט)</span></div>` : ''}
+   <div class="stat click" onclick="document.getElementById('expbox').scrollIntoView({behavior:'smooth'})"><b>${money(F.totExp)}</b><span>🍽️ דינער עקספענסעס (אראפגערעכנט)</span></div>
    <div class="stat"><b>${money(F.totOwed)}</b><span>${F.pct}% קומט די פאנדרעיזערס</span></div>
    <div class="stat"><b>${money(F.totPaid)}</b><span>שוין באצאלט (${F.paid.length} מאל)</span></div>
    <div class="stat"><b class="${F.balance > 0.009 ? 'bal' : 'zero'}">${money(F.balance)}</b><span>${F.balance >= 0 ? 'נאך שולדיג' : 'איבערבאצאלט'}</span></div></div>
   <p class="sub">💡 די JLS באצאלונגען זענען ביז דער לעצטער דערהיינטיגונג (${new Date(JD.importedAt).toLocaleDateString()}). דערהיינטיגט פון JLS כדי עס זאל זיין גענוי.</p>
   <div class="cols"><div><h3>יעדע 2 וואכן</h3>
-   <table><thead><tr><th>תקופה</th><th>באצאל.</th><th>אריינגעקומען</th>${F.totEx ? '<th>אן %</th>' : ''}<th>${F.pct}%</th><th>באצאלט</th><th>באלאנס</th><th></th></tr></thead><tbody>
-   ${F.periods.slice().reverse().map(p => `<tr><td style="font-size:13px;white-space:nowrap">${fmtD(p.from)} –<br>${fmtD(p.to)}${p === F.cur ? ' <span class="tag ask">יעצט</span>' : ''}</td><td class="num">${p.count}</td><td class="num">${money(p.income)}</td>${F.totEx ? `<td class="num">${p.ex ? '−' + money(p.ex) : ''}</td>` : ''}<td class="num"><b>${money(p.owed)}</b></td><td class="num">${p.paid ? money(p.paid) : ''}</td><td class="num ${p.bal > 0.009 ? 'bal' : 'zero'}">${money(p.bal)}</td><td><button class="btn ghost sm" onclick="frPeriod(${p.k})">ווייז</button> <button class="btn ghost sm" title="שיק אימעיל צום אפיס" onclick="frMailForm(${p.k})">✉️</button>${(S.frmail[p.from] || {}).sent ? `<br><span class="tag ok">✉️ ${fmtD(S.frmail[p.from].sent)}</span>` : ''}</td></tr>`).join('') || `<tr><td colspan="8" class="empty">הייבט זיך אן ${fmtD(F.start)}</td></tr>`}
+   <table><thead><tr><th>תקופה</th><th>באצאל.</th><th>אריינגעקומען</th>${F.totEx ? '<th>אן %</th>' : ''}${F.totExp ? '<th>🍽️ עקספענסעס</th>' : ''}<th>${F.pct}%</th><th>באצאלט</th><th>באלאנס</th><th></th></tr></thead><tbody>
+   ${F.periods.slice().reverse().map(p => `<tr><td style="font-size:13px;white-space:nowrap">${fmtD(p.from)} –<br>${fmtD(p.to)}${p === F.cur ? ' <span class="tag ask">יעצט</span>' : ''}</td><td class="num">${p.count}</td><td class="num">${money(p.income)}</td>${F.totEx ? `<td class="num">${p.ex ? '−' + money(p.ex) : ''}</td>` : ''}${F.totExp ? `<td class="num">${p.exp ? '−' + money(p.exp) : ''}</td>` : ''}<td class="num"><b>${money(p.owed)}</b></td><td class="num">${p.paid ? money(p.paid) : ''}</td><td class="num ${p.bal > 0.009 ? 'bal' : 'zero'}">${money(p.bal)}</td><td><button class="btn ghost sm" onclick="frPeriod(${p.k})">ווייז</button> <button class="btn ghost sm" title="שיק אימעיל צום אפיס" onclick="frMailForm(${p.k})">✉️</button>${(S.frmail[p.from] || {}).sent ? `<br><span class="tag ok">✉️ ${fmtD(S.frmail[p.from].sent)}</span>` : ''}</td></tr>`).join('') || `<tr><td colspan="9" class="empty">הייבט זיך אן ${fmtD(F.start)}</td></tr>`}
    </tbody></table></div>
   <div><h3>באצאלונגען צו די פאנדרעיזערס</h3>
    <table><thead><tr><th>טאג</th><th>סכום</th><th>צו וועמען</th><th>נאטיץ</th><th></th></tr></thead><tbody>
@@ -130,14 +135,17 @@ function vFund() {
    </tbody></table>
    ${F.exempt.length ? `<h3>סכומים אן פראצענט</h3><table><tbody>${F.exempt.map(x => `<tr><td class="num">${fmtD(x.date)}</td><td class="num">−${money(x.amt)}</td><td style="font-size:13px">${esc(x.note || '')}</td><td><button class="btn ghost sm" onclick="frExForm('${x.id}')">ענדער</button></td></tr>`).join('')}</tbody></table>` : ''}
    ${Object.values(S.frin).some(x => !x.del) ? `<h3>אריינקומען וואס איז נישט אין JLS</h3><table><tbody>${Object.entries(S.frin).filter(([, x]) => !x.del).sort((a, b) => b[1].date.localeCompare(a[1].date)).map(([id, x]) => `<tr><td class="num">${fmtD(x.date)}</td><td class="num">${money(x.amt)}</td><td style="font-size:13px">${esc(x.note || '')}</td><td><button class="btn ghost sm" onclick="frInForm('${id}')">ענדער</button></td></tr>`).join('')}</tbody></table>` : ''}
-  </div></div>`;
+  </div></div>
+  ${expSection(F)}`;
+  const qi = $('#expq');
+  if (qi) { if (ui._expFocus) { qi.focus(); qi.setSelectionRange(qi.value.length, qi.value.length); ui._expFocus = false; } let tm; qi.oninput = () => { clearTimeout(tm); tm = setTimeout(() => { ui.expQ = qi.value; ui._expFocus = true; vFund(); }, 300); }; }
 }
 function frPeriod(k) {
   const F = fundCalc(), p = F.periods[k]; if (!p) return;
   const L = F.income.filter(i => i.d >= p.from && i.d <= p.to).sort((a, b) => a.d.localeCompare(b.d));
   modal(`<div class="row"><h2 style="margin:0">${fmtD(p.from)} – ${fmtD(p.to)}</h2><div class="spacer"></div><button class="btn ghost sm" onclick="closeM()">✕</button></div>
    <div class="row"><button class="btn ghost sm" onclick="xlsPeriod(${k})">⬇ Excel</button></div>
-   <p class="sub">${p.count} באצאלונגען · ${money(p.income)}${p.ex ? ' · אן פראצענט: −' + money(p.ex) : ''} · ${F.pct}% = <b>${money(p.owed)}</b></p>
+   <p class="sub">${p.count} באצאלונגען · ${money(p.income)}${p.ex ? ' · אן פראצענט: −' + money(p.ex) : ''}${p.exp ? ' · 🍽️ עקספענסעס: −' + money(p.exp) : ''} · ${F.pct}% = <b>${money(p.owed)}</b></p>
    <div class="scroll" style="max-height:60vh"><table><thead><tr><th>טאג</th><th>נאמען</th><th>סכום</th><th>${F.pct}%</th></tr></thead><tbody>
    ${L.map(i => `<tr><td class="num">${fmtD(i.d)}</td><td>${i.code ? `<a class="name" onclick="closeM();openAcct(${i.code})">${esc(acctName(i.code))}</a>` : esc(i.note || 'אריינקומען')}</td><td class="num">${money(i.amt)}</td><td class="num">${money(i.amt * F.pct / 100)}</td></tr>`).join('') || '<tr><td colspan="4" class="empty">גארנישט</td></tr>'}
    </tbody></table></div>`);
@@ -192,10 +200,11 @@ function incomeRows(F, list) {
 function xlsFund() {
   const F = fundCalc();
   xlsx([
-    { name: 'סך הכל', rows: [['', 'סכום'], ['אריינגעקומען זינט ' + F.start, r2(F.totIn)], ['אן פראצענט', r2(F.totEx)], [F.pct + '% פאר די פאנדרעיזערס', r2(F.totOwed)], ['שוין באצאלט', r2(F.totPaid)], ['נאך שולדיג', r2(F.balance)], ['דערהיינטיגט פון JLS', new Date(JD.importedAt).toLocaleString()]], widths: [34, 20] },
+    { name: 'סך הכל', rows: [['', 'סכום'], ['אריינגעקומען זינט ' + F.start, r2(F.totIn)], ['אן פראצענט', r2(F.totEx)], ['דינער עקספענסעס', r2(F.totExp)], [F.pct + '% פאר די פאנדרעיזערס', r2(F.totOwed)], ['שוין באצאלט', r2(F.totPaid)], ['נאך שולדיג', r2(F.balance)], ['דערהיינטיגט פון JLS', new Date(JD.importedAt).toLocaleString()]], widths: [34, 20] },
     { name: 'יעדע 2 וואכן', rows: [['פון', 'ביז', 'פון (אידיש)', 'ביז (אידיש)', 'באצאלונגען', 'אריינגעקומען', 'אן פראצענט', F.pct + '%', 'באצאלט', 'באלאנס']].concat(F.periods.map(p => [p.from, p.to, hebD(p.from), hebD(p.to), p.count, r2(p.income), r2(p.ex), r2(p.owed), r2(p.paid), r2(p.bal)])) },
     { name: 'באצאלט פאנדרעיזערס', rows: [['טאג', 'טאג (אידיש)', 'סכום', 'צו וועמען', 'נאטיץ', 'ארייןגעלייגט דורך']].concat(F.paid.map(x => [x.date, hebD(x.date), r2(x.amt), x.to || '', x.note || '', x.by || ''])) },
     { name: 'אן פראצענט', rows: [['טאג', 'טאג (אידיש)', 'סכום', 'נאטיץ']].concat(F.exempt.map(x => [x.date, hebD(x.date), r2(x.amt), x.note || ''])) },
+    { name: 'דינער עקספענסעס', rows: expRows(F.expenses) },
     { name: 'אלע אריינגעקומענע', rows: incomeRows(F, F.income.slice().sort((a, b) => a.d.localeCompare(b.d))) }
   ], 'fundraising-' + todayS() + '.xlsx');
 }
@@ -221,7 +230,7 @@ function fundSettings() {
    <label class="f">Send ... days after the 2 weeks end<input id="fad" type="number" min="0" max="10" value="${SET().frAutoDays != null ? SET().frAutoDays : 2}"></label>
    <label class="f">Who gets the reminder every 2 weeks<select id="fw">${USERS().map(u => `<option ${u === frMailWho() ? 'selected' : ''}>${esc(u)}</option>`).join('')}</select></label>
    <label class="f" style="grid-column:1/-1">Subject<input id="fsj" dir="auto" value="${esc(SET().frMailSubject || FR_SUBJ_DEF)}"></label>
-   <label class="f" style="grid-column:1/-1">Text ({from} {to} {count} {income} {exempt} {pct} {amount} {paid} {balance})<textarea id="fbd" dir="auto" rows="8">${esc(SET().frMailBody || FR_BODY_DEF)}</textarea></label></div>
+   <label class="f" style="grid-column:1/-1">Text ({from} {to} {count} {income} {exempt} {expenses} {pct} {amount} {paid} {balance})<textarea id="fbd" dir="auto" rows="8">${esc(SET().frMailBody || FR_BODY_DEF)}</textarea></label></div>
    <div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn ghost" onclick="closeM()">Back</button><button class="btn" onclick="fundSaveSet()">Save</button></div></div>`, 'narrow');
 }
 async function fundSaveSet() {
@@ -404,11 +413,11 @@ function callSave() {
 
 // ---------- ✉️ e-mail to the office: checks for the fundraisers' percentage, per 2-week period ----------
 const FR_SUBJ_DEF = 'טשעקס פאר די פאנדרעיזערס – {from} ביז {to}: {amount}';
-const FR_BODY_DEF = 'שלום,\n\nביטע מאכט טשעקס פאר די פאנדרעיזערס פאר די 2 וואכן {from} ביז {to}:\n\nאריינגעקומען: {income} ({count} באצאלונגען)\nאן פראצענט: {exempt}\n{pct}% פאר די פאנדרעיזערס: {amount}\n\nשוין באצאלט פאר די 2 וואכן: {paid}\nסך הכל נאך שולדיג ביז היינט: {balance}\n\nבייגעלייגט איז אן Excel מיט אלע באצאלונגען פון די 2 וואכן.\n\nא דאנק,\nYG Fund';
+const FR_BODY_DEF = 'שלום,\n\nביטע מאכט טשעקס פאר די פאנדרעיזערס פאר די 2 וואכן {from} ביז {to}:\n\nאריינגעקומען: {income} ({count} באצאלונגען)\nאן פראצענט: {exempt}\nדינער עקספענסעס: {expenses}\n{pct}% פאר די פאנדרעיזערס: {amount}\n\nשוין באצאלט פאר די 2 וואכן: {paid}\nסך הכל נאך שולדיג ביז היינט: {balance}\n\nבייגעלייגט איז אן Excel מיט אלע באצאלונגען פון די 2 וואכן.\n\nא דאנק,\nYG Fund';
 const frMailWho = () => SET().frMailWho || ((TEAM.find(t => t.is_admin) || TEAM[0] || {}).name) || me;
 const frDay = s => { const [y, m, d] = s.split('-'); return HEB.fmtHeb(s) + ' (' + +m + '/' + +d + '/' + y + ')'; };
 function frFill(t, F, p) {
-  const v = { from: frDay(p.from), to: frDay(p.to), count: p.count, income: money(p.income), exempt: money(p.ex), pct: F.pct, amount: money(p.owed), paid: money(p.paid), balance: money(F.balance) };
+  const v = { from: frDay(p.from), to: frDay(p.to), count: p.count, income: money(p.income), exempt: money(p.ex), expenses: money(p.exp || 0), pct: F.pct, amount: money(p.owed), paid: money(p.paid), balance: money(F.balance) };
   return t.replace(/\{(\w+)\}/g, (m, k) => v[k] != null ? v[k] : m);
 }
 function frMailForm(k) {
@@ -437,7 +446,7 @@ async function frMailGo(k) {
     if ($('#fmx').checked) {
       const L = F.income.filter(i => i.d >= p.from && i.d <= p.to).sort((a, b) => a.d.localeCompare(b.d));
       blob = XLSX.make([
-        { name: 'סך הכל', rows: [['', 'סכום'], ['פון', p.from], ['ביז', p.to], ['באצאלונגען', p.count], ['אריינגעקומען', r2(p.income)], ['אן פראצענט', r2(p.ex)], [F.pct + '% פאר די פאנדרעיזערס', r2(p.owed)], ['שוין באצאלט פאר די 2 וואכן', r2(p.paid)], ['נאך שולדיג ביז היינט', r2(F.balance)]], widths: [32, 18] },
+        { name: 'סך הכל', rows: [['', 'סכום'], ['פון', p.from], ['ביז', p.to], ['באצאלונגען', p.count], ['אריינגעקומען', r2(p.income)], ['אן פראצענט', r2(p.ex)], ['דינער עקספענסעס', r2(p.exp || 0)], [F.pct + '% פאר די פאנדרעיזערס', r2(p.owed)], ['שוין באצאלט פאר די 2 וואכן', r2(p.paid)], ['נאך שולדיג ביז היינט', r2(F.balance)]], widths: [32, 18] },
         { name: 'באצאלונגען', rows: incomeRows(F, L) }]);
     }
     await mailSend(to, $('#fms').value.trim(), mailHtml($('#fmb').value), blob, 'Fundraisers-' + p.from + '-' + p.to + '.xlsx', 'fund-' + p.from, cc);
@@ -456,3 +465,74 @@ async function ensureFundMailTask() {
   await emitTask(id, { title: '✉️ שיק אימעיל צום אפיס – טשעקס פאר די פאנדרעיזערס (' + fmtD(prev.from) + ' ביז ' + fmtD(prev.to) + ')', due: F.cur.from, who: frMailWho(), who2: '', code: '', pri: 'norm', note: '', repeat: '', done: false, priv: false, fm: { from: prev.from, to: prev.to } });
 }
 function frMailTask(id) { const x = S.task[id]; if (!x || !x.fm) return; const k = fundCalc().periods.findIndex(p => p.from === x.fm.from); go('fund'); frMailForm(k < 0 ? null : k); }
+
+// ---------- 🍽️ dinner expenses (event kind frexp): date, vendor, desc, amt, file {path, name, type, size} ----------
+// The invoice is kept in Storage (bucket jls, invoices/...), uploaded as a plain binary file with retries.
+const expRows = L => [['טאג', 'טאג (אידיש)', 'פון וועמען', 'וואס', 'סכום', 'אינוואיס', 'ארייןגעלייגט דורך']].concat(L.map(x => [x.date, hebD(x.date), x.vendor || '', x.desc || '', r2(x.amt), x.file ? x.file.name : '', x.by || '']));
+function expFiltered(F) {
+  const q = (ui.expQ || '').trim().toLowerCase(), words = q.split(/\s+/).filter(Boolean);
+  return F.expenses.filter(x => !words.length || words.every(w => ((x.vendor || '') + ' ' + (x.desc || '') + ' ' + x.date + ' ' + fmtD(x.date) + ' ' + x.amt + ' ' + (x.file ? x.file.name : '')).toLowerCase().includes(w)));
+}
+function expSection(F) {
+  const L = expFiltered(F), tot = L.reduce((s, x) => s + x.amt, 0), all = F.expenses.reduce((s, x) => s + x.amt, 0);
+  return `<div class="box" id="expbox" style="margin-top:18px"><div class="row" style="margin:0 0 10px"><h3 style="margin:0">🍽️ דינער עקספענסעס</h3>
+    <span class="sub" style="margin:0">ווערט אראפגערעכנט פון אריינגעקומענעם געלט איידער מען רעכנט די ${F.pct}%</span><div class="spacer"></div>
+    <button class="btn ghost sm" onclick="xlsx([{name:'דינער עקספענסעס',rows:expRows(expFiltered(fundCalc()))}],'dinner-expenses-'+todayS()+'.xlsx')">⬇ Excel</button><button class="btn gold sm" onclick="expForm()">+ נייע עקספענס</button></div>
+   <div class="row"><input id="expq" placeholder="🔍 זוך: פון וועמען, וואס, סכום, טאג..." value="${esc(ui.expQ || '')}" style="flex:1;min-width:240px;font-size:15px">
+    <b>${L.length} · ${money(tot)}</b>${L.length !== F.expenses.length ? `<span class="sub" style="margin:0">(פון ${F.expenses.length} · ${money(all)})</span>` : ''}</div>
+   <table><thead><tr><th>טאג</th><th>פון וועמען</th><th>וואס</th><th>סכום</th><th>אינוואיס</th><th></th></tr></thead><tbody>
+   ${L.map(x => `<tr><td class="num" style="font-size:13px">${fmtD(x.date)}</td><td><b>${esc(x.vendor || '')}</b></td><td style="font-size:13px">${esc(x.desc || '')}<br><small class="dim">${esc(x.by || '')}</small></td><td class="num"><b>${money(x.amt)}</b></td>
+    <td>${x.file ? `<button class="btn ghost sm" title="${esc(x.file.name)}" onclick="expOpen('${x.id}')">📎 ${esc(x.file.name.length > 22 ? x.file.name.slice(0, 20) + '…' : x.file.name)}</button>` : '<span class="dim">—</span>'}</td>
+    <td><button class="btn ghost sm" onclick="expForm('${x.id}')">ענדער</button></td></tr>`).join('') || '<tr><td colspan="6" class="empty">נאך קיין עקספענסעס</td></tr>'}
+   </tbody>${L.length ? `<tfoot><tr><td colspan="3" style="text-align:left"><b>סך הכל</b></td><td class="num"><b>${money(tot)}</b></td><td colspan="2"></td></tr></tfoot>` : ''}</table></div>`;
+}
+function expForm(id) {
+  const x = id ? S.frexp[id] : { date: todayS(), vendor: '', desc: '', amt: '' };
+  const vendors = [...new Set(Object.values(S.frexp).filter(v => !v.del).map(v => v.vendor).filter(Boolean))];
+  modal(`<h2>🍽️ ${id ? 'ענדער דינער עקספענס' : 'נייע דינער עקספענס'}</h2><div class="grid2">
+   <label class="f">טאג${dateField('xd', x.date)}</label>
+   <label class="f">סכום $<input id="xa" type="number" step="0.01" value="${esc(x.amt)}"></label>
+   <label class="f">פון וועמען (פירמע)<input id="xv" list="xvl" value="${esc(x.vendor || '')}"><datalist id="xvl">${vendors.map(v => `<option value="${esc(v)}">`).join('')}</datalist></label>
+   <label class="f">וואס (באשרייבונג)<input id="xs" value="${esc(x.desc || '')}" placeholder="קעיטערינג, האל, בלומען..."></label>
+   <label class="f" style="grid-column:1/-1">📎 אינוואיס (PDF אדער בילד)<input id="xf" type="file" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx"></label>
+   ${x.file ? `<div style="grid-column:1/-1" class="sub">איצטיגע: <a class="name" onclick="expOpen('${id}')">📎 ${esc(x.file.name)}</a> · <label><input type="checkbox" id="xfr"> אראפנעמען</label></div>` : ''}</div>
+   <div class="row" style="justify-content:flex-end;margin-top:14px">${id ? `<button class="btn red" onclick="expDel('${id}')">אויסמעקן</button><div class="spacer"></div>` : ''}<button class="btn ghost" onclick="closeM()">צוריק</button><button class="btn" id="xgo" onclick="expSave('${id || ''}')">היט אפ</button></div>`, 'narrow');
+  setTimeout(() => $('#xa').focus(), 50);
+}
+async function expSave(id) {
+  const amt = +$('#xa').value; if (!amt) { $('#xa').focus(); toast('⚠️ שרייבט דעם סכום'); return; }
+  const vendor = $('#xv').value.trim(); if (!vendor) { $('#xv').focus(); toast('⚠️ שרייבט פון וועמען'); return; }
+  const nid = id || uid(), p = { date: $('#xd').value || todayS(), vendor, desc: $('#xs').value.trim(), amt, by: me, del: false };
+  const f = $('#xf').files[0];
+  $('#xgo').disabled = true;
+  try {
+    if (f) {
+      if (f.size > 20 * 1024 * 1024) throw new Error('דער פייל איז צו גרויס (מער ווי 20MB)');
+      busy('לייגט ארויף די אינוואיס...');
+      const path = 'invoices/' + nid + '-' + Date.now() + '.bin';
+      let up;
+      for (let k = 1; k <= 3; k++) {
+        up = await sb.storage.from('jls').upload(path, f, { contentType: 'application/octet-stream', upsert: true });
+        if (!up.error) break;
+        if (k < 3) await new Promise(r => setTimeout(r, 1500 * k));
+      }
+      busy(false);
+      if (up.error) throw new Error('ארויפלייגן די אינוואיס (3 מאל פרובירט): ' + up.error.message);
+      p.file = { path, name: f.name, type: f.type || 'application/octet-stream', size: f.size };
+    } else if ($('#xfr') && $('#xfr').checked) p.file = null;
+    await emit('frexp', nid, p);
+    closeM(); render(); toast('✓ אפגעהיטן');
+  } catch (e) { busy(false); $('#xgo').disabled = false; toast('⚠️ ' + (e.message || e)); }
+}
+async function expDel(id) { if (!confirm('אויסמעקן די עקספענס?')) return; await emit('frexp', id, { del: true }); closeM(); render(); }
+// Open the saved invoice (the window is opened first, so the browser does not block it)
+async function expOpen(id) {
+  const x = S.frexp[id]; if (!x || !x.file) return;
+  const w = window.open('', '_blank');
+  try {
+    const { data, error } = await sb.storage.from('jls').download(x.file.path);
+    if (error) throw error;
+    const url = URL.createObjectURL(new Blob([data], { type: x.file.type || 'application/octet-stream' }));
+    if (w) w.location = url; else { const a = document.createElement('a'); a.href = url; a.download = x.file.name; document.body.appendChild(a); a.click(); a.remove(); }
+  } catch (e) { if (w) w.close(); toast('⚠️ ' + (e.message || e)); }
+}

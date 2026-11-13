@@ -47,7 +47,7 @@ async function gunzip(blob) { const s = blob.stream().pipeThrough(new Decompress
 // ---------- state ----------
 let JD = null;            // imported JLS data
 let IDX = null;           // derived indexes
-let S = { acct: {}, task: {}, call: {}, hist: {}, fr: {}, frin: {}, frex: {}, shul: {}, rcpt: {}, stmt: {}, frmail: {}, jrep: {}, settings: { s: { users: ['באניצער 1', 'באניצער 2', 'באניצער 3'], defFreq: 'm12', maxYears: 5 } } };
+let S = { acct: {}, task: {}, call: {}, hist: {}, fr: {}, frin: {}, frex: {}, frexp: {}, shul: {}, rcpt: {}, stmt: {}, frmail: {}, jrep: {}, settings: { s: { users: ['באניצער 1', 'באניצער 2', 'באניצער 3'], defFreq: 'm12', maxYears: 5 } } };
 let status = {}, me = '', view = 'home';
 let ui = { todayF: 'all', todayN: 50, accQ: '', accF: 'yg', accN: 100, accSort: 'abc', accShul: '', todoF: 'mine', todoDone: false };
 const SET = () => S.settings.s;

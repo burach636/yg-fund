@@ -44,7 +44,17 @@ function vJrep() {
   if (!S.jrep.r983) { jrEnsureDefault().then(render); }
   const D = jrDefs(), cur = D.find(d => d.id === ui.jr) || D[0];
   window._ln = lastNotes();
-  const L = cur ? jrRun(cur) : [];
+  const all = cur ? jrRun(cur) : [];
+  // search box + "who calls" filter (mine / not assigned / a user)
+  const q = (ui.jrQ || '').trim().toLowerCase(), words = q.split(/\s+/).filter(Boolean), qd = q.replace(/\D/g, ''), who = ui.jrWho || '';
+  const L = all.filter(a => {
+    if (words.length && !(words.every(w => a._s.includes(w)) || (qd.length >= 4 && a._s.includes(qd)))) return false;
+    const as = (S.acct[a.c] || {}).assigned || '';
+    if (who === '__me' && as !== me) return false;
+    if (who === '__none' && as) return false;
+    if (who && who !== '__me' && who !== '__none' && as !== who) return false;
+    return true;
+  });
   window._jrL = L; ui.jrN = ui.jrN || 200;
   const X = jrIndex(), T = cur ? (cur.udf || '').toUpperCase() : '';
   $('#main').innerHTML = `<div class="row"><div><h2>📑 רופארטס</h2><p class="sub">ליסטעס פון JLS צו קאלן. קליקט אויף א רופארט, און עס ווייזט ווער עס פאסט.</p></div><div class="spacer"></div><button class="btn gold" onclick="jrForm()">+ נייער רופארט</button></div>
@@ -52,8 +62,11 @@ function vJrep() {
   ${cur ? `<div class="box" style="margin-bottom:12px"><div class="row" style="margin:0"><div><b style="font-size:17px;color:var(--navy)">${esc(cur.name)}</b><div class="sub" style="margin:2px 0 0">
     ${T ? `<b>${esc(T)}</b> = ${cur.vals && cur.vals.length ? cur.vals.map(esc).join(', ') : 'יעדער ווערט'}` : 'אלע אקאונטס'}
     ${cur.camp ? ` · <b>נישט</b> געגעבן און נישט צוגעזאגט צו: <b>${esc(JD.campaigns[cur.camp] || '')}</b> #${cur.camp}` : ''}${cur.tag ? ` · 🏷️ ${esc(cur.tag)}` : ''}${cur.active ? ' · נאר אקטיווע' : ''}</div></div>
-    <div class="spacer"></div><b style="font-size:22px;color:var(--navy)">${L.length.toLocaleString()}</b><span class="sub" style="margin:0">מענטשן</span>
+    <div class="spacer"></div><b style="font-size:22px;color:var(--navy)">${L.length.toLocaleString()}</b><span class="sub" style="margin:0">מענטשן${L.length !== all.length ? ' (פון ' + all.length.toLocaleString() + ')' : ''}</span>
     <button class="btn ghost sm" onclick="jrForm('${cur.id}')">✏️ טויש</button><button class="btn ghost sm" onclick="jrExcel()">⬇ Excel</button></div></div>
+  <div class="row"><input id="jrq" placeholder="🔍 זוך: נאמען, טעלעפאן, אדרעס, #נומער..." value="${esc(ui.jrQ || '')}" style="flex:1;min-width:240px;font-size:15px">
+   <div class="chips">${[['', 'אלע'], ['__me', '👤 נאר מיינע'], ['__none', 'נישט צוגעטיילט']].map(([k, l]) => `<button class="chip ${who === k ? 'on' : ''}" onclick="ui.jrWho='${k}';ui.jrN=200;vJrep()">${l}</button>`).join('')}</div>
+   <select class="mini" onchange="ui.jrWho=this.value;ui.jrN=200;vJrep()"><option value="">👤 ווער קאלט...</option>${USERS().map(u => `<option value="${esc(u)}" ${who === u ? 'selected' : ''}>👤 ${esc(u)}</option>`).join('')}</select></div>
   <table><thead><tr><th>#</th><th>נאמען</th><th>טעלעפאן</th><th>אדרעס</th><th>${esc(T || 'UDF')}</th><th>YG סך הכל</th><th>לעצטע</th><th>ווער קאלט / נאטיץ</th><th></th></tr></thead><tbody>
   ${L.slice(0, ui.jrN).map(a => { const g = IDX.yg.get(a.c), st = S.acct[a.c] || {}; return `<tr><td class="num" style="color:var(--muted)">${a.c}</td>
    <td><a class="name" onclick="openAcct(${a.c})">${esc(a.h || a.n)}</a> ${tagChips(a.c)}<div class="heb">${esc(a.h ? a.n : '')}</div></td>
@@ -63,6 +76,8 @@ function vJrep() {
    <td style="font-size:13px">${whoSel(`assign(${a.c},this.value)`, st.assigned || '')}${lastNoteHTML(a.c, true)}</td>
    <td><button class="btn ghost sm" onclick="noteForm(${a.c})">📝</button></td></tr>`; }).join('') || '<tr><td colspan="9" class="empty">קיינער פאסט נישט</td></tr>'}
   </tbody></table>${L.length > ui.jrN ? `<div class="more"><button class="btn ghost" onclick="ui.jrN+=300;vJrep()">ווייז נאך (${L.length - ui.jrN})</button></div>` : ''}` : '<div class="empty">נאך קיין רופארטס</div>'}`;
+  const qi = $('#jrq');
+  if (qi) { if (ui._jrFocus) { qi.focus(); qi.setSelectionRange(qi.value.length, qi.value.length); ui._jrFocus = false; } let tm; qi.oninput = () => { clearTimeout(tm); tm = setTimeout(() => { ui.jrQ = qi.value; ui.jrN = 200; ui._jrFocus = true; vJrep(); }, 300); }; }
 }
 function jrForm(id) {
   const X = jrIndex(), d = id ? S.jrep[id] : { name: '', udf: '', vals: [], camp: '', tag: '', active: true };
@@ -99,14 +114,23 @@ function jrExcel() {
 
 // ---------- 🏷️ tags (flags) on accounts: acct.tags = ['...'] ----------
 const tagsOf = c => ((S.acct[c] || {}).tags || []).filter(Boolean);
-function allTags() { const m = new Map(); Object.values(S.acct).forEach(st => (st.tags || []).forEach(t => t && m.set(t, (m.get(t) || 0) + 1))); return [...m.keys()].sort((a, b) => a.localeCompare(b, 'he')); }
+// Ready-made flags the owner asked for (shown as quick buttons on every donor); any other text can still be added
+const PRESET_TAGS = ['גרויסע נדבות - ווארים [משל יודא בירנבוים]', 'גרויסע נדבות - אלגעמיין [הערצקא אפיס]', 'היימיש-ווארים', 'היימיש-געבט', 'היימיש-איגנארירט', '5 גארפיעלד-ווארים', '5 גארפיעלד-נייס', 'בני יואל טאטע', 'מהרי"ט טאטע', 'היימישע רבנים', 'קאלטע רבנים', 'יוצאי ישיבתינו', 'אברכים'];
+function allTags() { const m = new Map(); Object.values(S.acct).forEach(st => (st.tags || []).forEach(t => t && m.set(t, (m.get(t) || 0) + 1))); return PRESET_TAGS.concat([...m.keys()].filter(t => !PRESET_TAGS.includes(t)).sort((a, b) => a.localeCompare(b, 'he'))); }
 const tagHue = t => { let h = 0; for (const ch of t) h = (h * 31 + ch.charCodeAt(0)) % 360; return h; };
 const tagChip = (t, x) => `<span class="tagc" style="background:hsl(${tagHue(t)},70%,92%);border-color:hsl(${tagHue(t)},45%,75%);color:hsl(${tagHue(t)},45%,28%)">🏷️ ${esc(t)}${x || ''}</span>`;
 const tagChips = c => tagsOf(c).map(t => tagChip(t)).join(' ');
 function tagEditor(code) {
-  return `<div id="tged" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">${tagsOf(code).map(t => tagChip(t, ` <a style="cursor:pointer" title="אראפנעמען" onclick="tagDel(${code},'${esc(t).replace(/'/g, '&#39;')}')">✕</a>`)).join('')}
-   <input id="tgin" list="tglist" placeholder="+ פלאג (למשל: בעל הבית, אינגערמאן, ...)" style="flex:1;min-width:170px" onkeydown="if(event.key==='Enter'){event.preventDefault();tagAdd(${code})}"><datalist id="tglist">${allTags().map(t => `<option value="${esc(t)}">`).join('')}</datalist>
-   <button class="btn ghost sm" onclick="tagAdd(${code})">צולייגן</button></div>`;
+  const T = tagsOf(code), jsq = t => esc(t).replace(/'/g, '&#39;');
+  return `<div id="tged"><div class="chips" style="margin-bottom:8px">${PRESET_TAGS.map(t => `<button type="button" class="chip ${T.includes(t) ? 'on' : ''}" style="font-size:12px;padding:3px 10px" onclick="tagToggle(${code},'${jsq(t)}')">${T.includes(t) ? '✓ ' : ''}${esc(t)}</button>`).join('')}</div>
+   <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">${T.filter(t => !PRESET_TAGS.includes(t)).map(t => tagChip(t, ` <a style="cursor:pointer" title="אראפנעמען" onclick="tagDel(${code},'${esc(t).replace(/'/g, '&#39;')}')">✕</a>`)).join('')}
+   <input id="tgin" list="tglist" placeholder="+ אן אנדער פלאג..." style="flex:1;min-width:170px" onkeydown="if(event.key==='Enter'){event.preventDefault();tagAdd(${code})}"><datalist id="tglist">${allTags().map(t => `<option value="${esc(t)}">`).join('')}</datalist>
+   <button class="btn ghost sm" onclick="tagAdd(${code})">צולייגן</button></div></div>`;
+}
+async function tagToggle(code, t) {
+  const T = tagsOf(code);
+  await emit('acct', code, { tags: T.includes(t) ? T.filter(x => x !== t) : T.concat(t) });
+  $('#tged').outerHTML = tagEditor(code); render();
 }
 async function tagAdd(code) {
   const v = $('#tgin').value.trim().replace(/\s+/g, ' '); if (!v) return;
