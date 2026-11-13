@@ -219,14 +219,25 @@ function setupUser() {
 }
 const USERS = () => TEAM.map(a => a.name);
 const isAdmin = () => !!(TEAM.find(a => a.email.toLowerCase() === myEmail.toLowerCase()) || {}).is_admin;
-async function logout() { try { await sb.auth.signOut(); } catch (e) { } location.hash = ''; location.reload(); }
+async function logout() { try { await sb.auth.signOut(); } catch (e) { } try { sessionStorage.removeItem('yg_area'); } catch (e) { } location.hash = ''; location.reload(); }
 function loginShell(inner) {
   document.body.classList.add('locked');
   $('#main').innerHTML = `<div class="welcome loginbg" style="max-width:460px"><div class="logo3d big"><div class="in"><img src="logo.png" alt=""><i class="shine"></i></div></div><div class="ltitle">ישיבה גדולה ומתיבתא תו"י מהרי"ט ד'סאטמאר<small>YG Fund</small></div>${inner}</div>`;
 }
+// Before logging in, choose which part of the program to open (tuition or fundraising)
+function preArea(a) { AREA = a; try { sessionStorage.setItem('yg_area', a); } catch (e) { } vLogin(); }
 function vLogin(mode) {
   const signup = mode === 'signup';
-  loginShell(`<div class="box" style="text-align:right;background:#fff"><h2>${signup ? 'ערשטע מאל: מאכט א פאסווארט' : 'Log in'}</h2>
+  if (!signup && (mode === 'choose' || !AREA)) {
+    AREA = ''; try { sessionStorage.removeItem('yg_area'); } catch (e) { }
+    loginShell(`<div class="box prechoose" style="background:#fff"><h2 style="text-align:center">וואס ווילט איר עפענען?</h2>
+     <div class="pre2"><div class="choice c1" onclick="preArea('tu')"><i>🎓</i><h3>שכר לימוד</h3></div>
+     <div class="choice c2" onclick="preArea('fund')"><i>💵</i><h3>פאנדרעיזינג</h3></div></div></div>`);
+    try { if (sessionStorage.getItem('yg_idle')) { sessionStorage.removeItem('yg_idle'); $('.prechoose').insertAdjacentHTML('beforeend', '<p class="sub" style="text-align:center;margin:10px 0 0">⏳ מ\'האט אייך ארויסגעלאגט נאך 10 מינוט אן ניצן.</p>'); } } catch (e) { }
+    return;
+  }
+  const areaName = AREA === 'tu' ? '🎓 שכר לימוד' : '💵 פאנדרעיזינג';
+  loginShell(`<div class="box" style="text-align:right;background:#fff"><div class="row" style="margin:0 0 4px"><span class="tag ${AREA === 'tu' ? 'blue' : 'gold'}" style="font-size:14px">${areaName}</span><div class="spacer"></div><a class="name" style="font-size:13px" onclick="vLogin('choose')">⇄ ענדערן</a></div><h2>${signup ? 'ערשטע מאל: מאכט א פאסווארט' : 'Log in'}</h2>
    ${signup ? '<p class="sub">שרייבט דעם אימעיל וואס דער אדמין האט צוגעלייגט, און קלייבט א פאסווארט.</p>' : ''}
    <label class="f" style="margin:10px 0">Email<input id="le" type="email" autocomplete="username" style="direction:ltr"></label>
    <label class="f" style="margin:10px 0">Password<input id="lp" type="password" autocomplete="${signup ? 'new-password' : 'current-password'}"></label>
@@ -406,7 +417,7 @@ function wire() {
 function setArea(a, keepView) {
   AREA = a; try { sessionStorage.setItem('yg_area', a); } catch (e) { }
   document.body.classList.toggle('area-tu', a === 'tu');
-  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.16</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.16</small>';
+  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.16.1</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.16.1</small>';
   $('#btnArea').style.display = canFund() && canView('tuition') ? '' : 'none';
   $('#btnArea').textContent = a === 'tu' ? '⇄ צו פאנדרעיזינג' : '⇄ צו שכר לימוד';
   if (!keepView || (a === 'tu') !== TU_VIEWS.includes(view)) view = a === 'tu' ? 'thome' : 'home';
