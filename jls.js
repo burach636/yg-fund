@@ -299,7 +299,8 @@
       for (const r of db.rows(db.table('MYearly'), ['YearlyID', 'Code', 'DateStart', 'DateEnd', 'ItemNum', 'Desc', 'Amount', 'Type', 'Period', 'CompanyStudents', 'Scholarship', 'ContractNotes', 'Payment'], { col: 'Company', test: isCo }))
         t.contracts.push([r.YearlyID || 0, r.Code, r.DateStart || '', r.DateEnd || '', clean(r.ItemNum), clean(r.Desc), r.Amount || 0, clean(r.Type), clean(r.Period), r.CompanyStudents || 0, r.Scholarship ? 1 : 0, clean(r.ContractNotes).slice(0, 200), r.Payment ? 1 : 0]);
     } catch (e) { /* optional */ }
-    // Only students who learn in THIS company: JLS keeps every student's company per year in StudentDate
+    // Only students this company ever BILLED (an MCharges row of this company with their CStudentNum) – the owner's rule.
+    // Class and years come from their StudentDate rows of this company, or else from the bill dates.
     step('שכר לימוד – תלמידים...');
     const en = new Map();   // studentNum -> [{start, end, cls, period}]
     try {
@@ -307,13 +308,16 @@
         if (r.StudentNum) (en.get(r.StudentNum) || en.set(r.StudentNum, []).get(r.StudentNum)).push({ start: r.DateStart || '', end: r.DateEnd || '', cls: clean(r.HebrewClass) || clean(r.Class), period: clean(r.Period) });
     } catch (e) { /* table missing: no students rather than students of other schools */ }
     t.enroll = [];
-    const today = new Date().toISOString().slice(0, 10);
+    const today = new Date().toISOString().slice(0, 10), yearAgo = new Date(Date.now() - 300 * 864e5).toISOString().slice(0, 10);
+    const billed = new Map();   // studentNum -> first/last bill date in this company
+    t.charges.forEach(c => { if (!c[10]) return; const b = billed.get(c[10]) || { first: c[2] || '', last: c[2] || '' }; if (c[2] && (!b.first || c[2] < b.first)) b.first = c[2]; if (c[2] > b.last) b.last = c[2]; billed.set(c[10], b); });
     try {
       for (const r of db.rows(db.table('Students'), ['StudentNum', 'FamilyNum', 'Code', 'FName', 'LName', 'FNameH', 'LNameH'])) {
-        const L = en.get(r.StudentNum); if (!L) continue;   // never learned in this company
+        const B = billed.get(r.StudentNum); if (!B) continue;   // owner's rule: only students this company ever billed
         const code = +clean(r.Code) || r.FamilyNum || 0; if (!code) continue;
-        L.sort((a, b) => (a.start || '').localeCompare(b.start || ''));
-        const last = L[L.length - 1], start = L[0].start, end = last.end && last.end < today ? last.end : '';
+        const L = (en.get(r.StudentNum) || []).sort((a, b) => (a.start || '').localeCompare(b.start || ''));
+        if (!L.length) L.push({ start: B.first, end: B.last < yearAgo ? B.last : '', cls: '', period: '' });   // no StudentDate row: use the bill dates
+        const last = L[L.length - 1], start = L[0].start || B.first, end = (last.end && last.end < today) || B.last < yearAgo ? (last.end && last.end < today ? last.end : B.last) : '';
         t.students.push([r.StudentNum, code, clean(r.FName), clean(r.LName), clean(r.FNameH), clean(r.LNameH), last.cls, start, end]);
         L.forEach(x => t.enroll.push([r.StudentNum, x.period, x.start, x.end, x.cls]));
       }
