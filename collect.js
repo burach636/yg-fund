@@ -20,7 +20,7 @@ function colAll() {
   const out = [];
   if (colArea() === 'tu') {
     if (!TU || TU.missing) return out;
-    tuCalc().L.forEach(f => { if (f.cur || f.bal > 0.5) out.push({ code: f.code, amt: f.due, bal: f.bal, f, last: f.last }); });
+    tuCalc().L.forEach(f => { if ((f.cur || f.bal > 0.5) && tuInScope(f)) out.push({ code: f.code, amt: f.due, bal: f.bal, f, last: f.last }); });   // this year's parents by default (ui.tuScope)
   } else {
     const seen = new Set();
     IDX.pl.forEach((g, c) => { if (g.open > 0.009 && IDX.by.has(c)) { seen.add(c); out.push({ code: c, amt: g.dueNow, bal: g.open, last: (IDX.yg.get(c) || {}).last || '' }); } });
@@ -88,7 +88,7 @@ function vCol() {
     <div class="tile t5" onclick="ui.colTab='cb';go('col')"><i>🔁</i><h3>${colArea() === 'tu' ? 'אפגעשטופט' : 'היינט צוריק קאלן'}</h3><b>${L.cb.filter(r => !r.done).length}</b><span>&nbsp;</span></div>
     <div class="tile t4" onclick="ui.colTab='hold';go('col')"><i>⏸</i><h3>ON HOLD</h3><b>${L.hold.length}</b><span>&nbsp;</span></div>
    </div>
-   <div class="row" style="margin:8px 0"><input id="colq" placeholder="🔍 נאמען, טעלעפאן, #קאוד" value="${esc(ui.colQ || '')}" style="max-width:280px" oninput="ui.colQ=this.value;clearTimeout(window._colT);window._colT=setTimeout(()=>{vCol();const e=$('#colq');e.focus();e.setSelectionRange(e.value.length,e.value.length)},300)"></div>
+   <div class="row" style="margin:8px 0;flex-wrap:wrap;gap:8px">${colArea() === 'tu' ? tuScopeChips('ui.cm=null;render()') : ''}<input id="colq" placeholder="🔍 נאמען, טעלעפאן, #קאוד" value="${esc(ui.colQ || '')}" style="max-width:280px" oninput="ui.colQ=this.value;clearTimeout(window._colT);window._colT=setTimeout(()=>{vCol();const e=$('#colq');e.focus();e.setSelectionRange(e.value.length,e.value.length)},300)"></div>
    ${(bulkList('col-' + tab, R.map(r => r.code)), bulkBar('col-' + tab))}
    <div class="collist">${R.slice(0, ui.colN).map((r, i) => colRow(r, i, tab)).join('') || '<div class="empty">🎉 גארנישט דא</div>'}</div>
    ${R.length > ui.colN ? `<div class="more"><button class="btn ghost" onclick="ui.colN+=300;vCol()">ווייז מער (${(R.length - ui.colN).toLocaleString()})</button></div>` : ''}`;
@@ -133,7 +133,7 @@ function vCalling() {
       <div><small>אפענע פלעדזשעס</small><b>${pl ? pl.list.filter(c => !c[9] && c[5] > 0.009).slice(0, 4).map(c => money(c[5]) + ' ' + esc(JD.campaigns[c[6]] || c[7] || '')).join(' · ') || '—' : '—'}</b></div></div>`;
   }
   const last = r.last || (r.f ? r.f.last : '');
-  $('#main').innerHTML = `<div class="cmbar"><b>📞 Calling mode</b> <span>${esc((colTabs().find(x => x[0] === cm.tab) || [])[1] || '')}</span><span><b>${doneN}</b> פון ${codes.length} געטון</span>
+  $('#main').innerHTML = `<div class="cmbar"><b>📞 Calling mode</b>${colArea() === 'tu' && cm.tab !== 'sel' ? tuScopeChips(`colStart('${cm.tab}')`) : ''} <span>${esc((colTabs().find(x => x[0] === cm.tab) || [])[1] || '')}</span><span><b>${doneN}</b> פון ${codes.length} געטון</span>
      <div class="cmprog"><i style="width:${doneN / codes.length * 100}%"></i></div>
      <button class="btn ghost sm" onclick="ui.cm.i--;vCalling()" ${cm.i ? '' : 'disabled'}>› פריער</button><span>${cm.i + 1} פון ${codes.length}</span><button class="btn ghost sm" onclick="ui.cm.i++;vCalling()" ${cm.i < codes.length - 1 ? '' : 'disabled'}>ווייטער ‹</button>
      <button class="btn ghost sm" onclick="${r.f ? `tuFamily(${code})` : `openAcct(${code})`}">גאנצע זייט</button></div>

@@ -326,3 +326,4 @@ nav.incol #navuser{display:block}
 .logo3d.sm:hover .in{transform:scale(.55);animation-play-state:paused}
 @keyframes swaySm{0%,100%{transform:scale(.5) rotateY(-16deg) rotateZ(-1.5deg)}50%{transform:scale(.5) rotateY(16deg) rotateZ(1.5deg)}}
 @media (prefers-reduced-motion:reduce){.logo3d.sm .in{animation:none}}
+.scope{display:inline-flex;gap:4px;padding:3px;background:#efe9dc;border-radius:20px}.scope .chip{margin:0}

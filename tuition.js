@@ -69,6 +69,14 @@ function tuStatus(f, today) {
   if (p6 < 1 || (mo !== null && mo >= 3 && r < 0.2)) return { k: 'ign', mo, b6, p6 };
   return { k: 'fix', mo, b6, p6 };
 }
+// Which parents (owner, 2026-11): by default only "this year" = a child learning now AND billed this Jewish year;
+// "old" = parents from earlier years only; "all". Used by the 3 payer kinds and by the collection / Calling mode.
+const tuThisYr = f => f.cur && f.yrBilled > 0.005;
+const tuScope = () => ui.tuScope || 'cur';
+const tuInScope = f => tuScope() === 'all' ? true : tuScope() === 'old' ? !tuThisYr(f) : tuThisYr(f);
+function tuScopeChips(after) {
+  return `<span class="scope">${[['cur', '🎓 די יאר'], ['old', '🕰️ אלטע עלטערן'], ['all', 'אלע']].map(([k, l]) => `<button class="chip ${tuScope() === k ? 'on' : ''}" onclick="ui.tuScope='${k}';${after}">${l}</button>`).join('')}</span>`;
+}
 const TU_ST = { ok: ["אחריות'דיג", 'st-ok'], fix: ['צריך תיקון', 'st-fix'], ign: ['איגנארירט', 'st-ign'] };
 function tuStChip(f, long) {
   const s = f.st || {}, d = TU_ST[s.k]; if (!d) return '';
@@ -87,7 +95,7 @@ function vTuition() {
   const { L, tot } = tuCalc();
   ui.tuF = ui.tuF || 'cur'; ui.tuN = ui.tuN || 100;
   const qs = (ui.tuQ || '').trim().toLowerCase();
-  let R = L.filter(f => ui.tuF === 'all' ? true : ui.tuF === 'cur' ? f.cur : ui.tuF === 'bal' ? f.bal > 0.5 : TU_ST[ui.tuF] ? f.st && f.st.k === ui.tuF : f.due > 0.5);
+  let R = L.filter(f => ui.tuF === 'all' ? true : ui.tuF === 'cur' ? f.cur : ui.tuF === 'bal' ? f.bal > 0.5 : TU_ST[ui.tuF] ? f.st && f.st.k === ui.tuF && tuInScope(f) : f.due > 0.5);
   if (ui.tuW) R = R.filter(f => { const w = (S.acct[f.code] || {}).tuWho || ''; return ui.tuW === '__none' ? !w : ui.tuW === '__me' ? w === me : w === ui.tuW; });
   if (qs) {
     const qd = qs.replace(/\D/g, '');
@@ -106,7 +114,7 @@ function vTuition() {
      <button class="btn ghost" onclick="tuXls()">⬇ Excel</button></div>
    <div class="row" style="margin:10px 0;flex-wrap:wrap;gap:6px">
     <input id="tuq" placeholder="🔍 נאמען, תלמיד, טעלעפאן, #קאוד" value="${esc(ui.tuQ || '')}" style="max-width:260px" oninput="ui.tuQ=this.value;clearTimeout(window._tuT);window._tuT=setTimeout(()=>{vTuition();const e=$('#tuq');e.focus();e.setSelectionRange(e.value.length,e.value.length)},300)">
-    ${chip('tuF', 'cur', '🎓 לערנען יעצט')}${chip('tuF', 'due', '⏰ שולדיג יעצט')}${chip('tuF', 'bal', '📒 מיט באלאנס')}${chip('tuF', 'all', 'אלע (אויך פריער)')}<span class="bsep"></span>${['ok', 'fix', 'ign'].map(k => chip('tuF', k, ({ ok: '🟢', fix: '🟡', ign: '🔴' })[k] + ' ' + TU_ST[k][0] + ' (' + L.filter(f => f.st && f.st.k === k).length + ')')).join('')}
+    ${chip('tuF', 'cur', '🎓 לערנען יעצט')}${chip('tuF', 'due', '⏰ שולדיג יעצט')}${chip('tuF', 'bal', '📒 מיט באלאנס')}${chip('tuF', 'all', 'אלע (אויך פריער)')}<span class="bsep"></span>${['ok', 'fix', 'ign'].map(k => chip('tuF', k, ({ ok: '🟢', fix: '🟡', ign: '🔴' })[k] + ' ' + TU_ST[k][0] + ' (' + L.filter(f => f.st && f.st.k === k && tuInScope(f)).length + ')')).join('')}${TU_ST[ui.tuF] ? tuScopeChips('vTuition()') : ''}
     <select class="mini" onchange="ui.tuW=this.value;vTuition()"><option value="">👤 אלע</option><option value="__me" ${ui.tuW === '__me' ? 'selected' : ''}>👤 מיינע</option><option value="__none" ${ui.tuW === '__none' ? 'selected' : ''}>👤 נישט צוגעטיילט</option>${USERS().map(u => `<option ${ui.tuW === u ? 'selected' : ''}>${esc(u)}</option>`).join('')}</select>
     <select class="mini" onchange="ui.tuSort=this.value;vTuition()"><option value="due">סארטיר: שולדיג יעצט</option><option value="bal" ${srt === 'bal' ? 'selected' : ''}>סארטיר: באלאנס</option><option value="abc" ${srt === 'abc' ? 'selected' : ''}>סארטיר: א-ב</option></select>
     <span class="dim">${R.length.toLocaleString()} פאמיליעס</span></div>
@@ -200,7 +208,8 @@ function vTuHome() {
     <div class="tile t7" onclick="ui.tuF='due';go('tuition')"><i>⏰</i><h3>שולדיג שוין יעצט</h3><b class="bal">${money(tot.due)}</b><span>${tot.dueFams} פאמיליעס</span></div>
     <div class="tile t3" onclick="go('tustmt')"><i>📄</i><h3>סטעיטמענטס</h3><b>${tot.dueFams}</b><span>פאמיליעס מיט אן אפענעם ביל</span></div>
    </div>
-   <div class="tiles st3">${['ok', 'fix', 'ign'].map(k => { const F = L.filter(f => f.st && f.st.k === k); return `<div class="tile ${TU_ST[k][1]}" onclick="ui.tuF='${k}';go('tuition')"><i>${({ ok: '🟢', fix: '🟡', ign: '🔴' })[k]}</i><h3>${TU_ST[k][0]}</h3><b>${F.length}</b><span>טאטעס · ${money(F.reduce((s, f) => s + f.due, 0))} שולדיג</span></div>`; }).join('')}</div>
+   <div class="row" style="margin:14px 0 0"><h3 style="margin:0">טאטעס לויט ווי זיי באצאלן</h3><div class="spacer"></div>${tuScopeChips('vTuHome()')}</div>
+   <div class="tiles st3">${['ok', 'fix', 'ign'].map(k => { const F = L.filter(f => f.st && f.st.k === k && tuInScope(f)); return `<div class="tile ${TU_ST[k][1]}" onclick="ui.tuF='${k}';go('tuition')"><i>${({ ok: '🟢', fix: '🟡', ign: '🔴' })[k]}</i><h3>${TU_ST[k][0]}</h3><b>${F.length}</b><span>טאטעס · ${money(F.reduce((s, f) => s + f.due, 0))} שולדיג</span></div>`; }).join('')}</div>
    <div class="cols">
     <div class="hcol t2"><h3>מיין אפיס ארבעט פאר היינט</h3>
      ${tasks.slice(0, 8).map(([id, x]) => todoRow(id, x)).join('') || '<div class="empty">🎉 גארנישט פאר היינט</div>'}
