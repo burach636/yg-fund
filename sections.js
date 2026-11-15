@@ -344,11 +344,32 @@ const callFill = (t, d) => t.split('{num1}').join(d.length === 10 ? '1' + d : d.
 const callIsPost = t => t.includes('POSTJLSPOST');
 function callBtn(num, code) {
   const d = callNum(num); if (d.length < 7) return '';
-  const t = callTpl(), href = callIsPost(t) ? 'tel:+' + d : callFill(t, d);
+  const t = callTpl(), href = callIsPost(t) || t.startsWith('tlqc:') ? 'tel:+' + d : callFill(t, d);
   return `<a class="callb" title="קאל ${esc(num)}" href="${esc(href)}" data-n="${d}" onclick="return dial(this,${+code || 0})">📞</a>`;
+}
+// TekLink quickcall (Kazoo): the admin pastes "account=<id>" and "101=<user id>" lines (setting tlCfg, kept in the
+// database, not in the repo); each computer picks its extension (localStorage yg_call = "tlqc:101"); the Supabase
+// function "call" holds the API key and places the call.
+function tlCfg() {
+  const o = { account: '', ext: {} };
+  String(SET().tlCfg || '').split(/[\n,;]+/).forEach(l => { const m = l.trim().match(/^([\w ]+?)\s*[=:]\s*([0-9a-f]{32})$/i); if (!m) return; if (/^account/i.test(m[1])) o.account = m[2].toLowerCase(); else o.ext[m[1].trim()] = m[2].toLowerCase(); });
+  return o;
+}
+async function tlDial(ext, d) {
+  const c = tlCfg(), user = c.ext[ext];
+  if (!c.account || !user) { toast('⚠️ TekLink is not set up – 📞 Phone'); return; }
+  const num = d.length === 11 && d[0] === '1' ? d.slice(1) : d;
+  toast('📞 קאלט... אייער טעלעפאן (' + ext + ') וועט קלינגען, הייבט אויף');
+  try {
+    const { data, error } = await sb.functions.invoke('call', { body: { account: c.account, user, number: num } });
+    let m = error ? (error.message || String(error)) : data && data.error;
+    if (error) try { const j = await error.context.json(); if (j && j.error) m = j.error; } catch (e) { }
+    if (m) throw new Error(m);
+  } catch (e) { toast('⚠️ קאלן: ' + (e.message || e)); }
 }
 function dial(el, code, tplOverride, keepOpen) {
   const t = tplOverride || callTpl(), d = el.dataset.n || '';
+  if (t.startsWith('tlqc:')) { tlDial(t.slice(5), d); return false; }
   if (callIsPost(t)) {   // JLS-style CALL URL: POST the form fields in a small window that closes itself
     const [url, body] = t.split('POSTJLSPOST');
     const w = window.open('', 'ygdial', 'width=380,height=200');
@@ -372,14 +393,20 @@ function dial(el, code, tplOverride, keepOpen) {
 function callSetup() {
   const t = callTpl(), yl = t.match(/^(https?:\/\/[^/]+)\/servlet\?key=number=\{digits\}$/);
   const ls = k => { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } };
-  const mode = callIsPost(t) || (ls('yg_call_src') && /%PhoneNum%|\{num1\}/.test(t)) ? 'jls' : t === 'tel:{num}' ? 'tel' : yl ? 'yealink' : 'custom';
+  const mode = t.startsWith('tlqc:') ? 'tl' : callIsPost(t) || (ls('yg_call_src') && /%PhoneNum%|\{num1\}/.test(t)) ? 'jls' : t === 'tel:{num}' ? 'tel' : yl ? 'yealink' : 'custom';
+  const tc = tlCfg(), exts = Object.keys(tc.ext);
   modal(`<div dir="ltr" style="text-align:left"><h2>📞 Calling from this computer</h2>
    <p class="sub">When you click 📞 next to a donor, it calls him through your office phone. This setting is for <b>this</b> computer only and is not uploaded.</p>
    <label class="f">Which phone<select id="cs" onchange="callMode(this.value)">
-    <option value="jls" ${mode === 'jls' ? 'selected' : ''}>CALL URL from JLS (TekLink etc.)</option>
+    <option value="tl" ${mode === 'tl' ? 'selected' : ''}>TekLink office phone (quickcall)</option>
+    <option value="jls" ${mode === 'jls' ? 'selected' : ''}>CALL URL from JLS (old way)</option>
     <option value="yealink" ${mode === 'yealink' ? 'selected' : ''}>Yealink desk phone (IP)</option>
     <option value="tel" ${mode === 'tel' ? 'selected' : ''}>Phone program on this computer (tel:)</option>
     <option value="custom" ${mode === 'custom' ? 'selected' : ''}>Other (link)</option></select></label>
+   <div id="c_tl" style="margin-top:10px"><label class="f">This computer's extension<select id="ctx">${exts.map(x => `<option ${t === 'tlqc:' + x ? 'selected' : ''}>${esc(x)}</option>`).join('') || '<option value="">– the admin sets up TekLink below –</option>'}</select></label>
+    ${isAdmin() ? `<label class="f" style="margin-top:8px">TekLink setup (admin, for all computers): one line "account=…" and one line per extension "101=…" (the IDs from TekLink's e-mail)<textarea id="ctc" rows="4" style="direction:ltr;font-size:12px" placeholder="account=...&#10;101=...&#10;103=...">${esc(SET().tlCfg || '')}</textarea></label>` : ''}
+    <div class="grid2" style="margin-top:8px"><label class="f">🧪 Test – a number to call<input id="ctt" type="tel" style="direction:ltr" placeholder="845-555-1234"></label><div style="align-self:end"><button class="btn ghost sm" onclick="tlTest()">🧪 Test</button></div></div>
+    <p class="sub" style="margin-top:6px">Your desk phone rings first; when you pick it up, it dials the number. The API key is kept only in Supabase (secret TEKLINK_API_KEY).</p></div>
    <div id="c_jl" style="margin-top:10px"><label class="f">CALL URL – paste the whole line exactly as in JLS<textarea id="cjl" rows="3" style="direction:ltr;font-size:12px">${esc(mode === 'jls' ? (ls('yg_call_src') || t) : '')}</textarea></label>
     <div class="grid2" style="margin-top:8px"><label class="f">Send as<select id="cjm">${[['post', 'POST (like JLS)'], ['get', 'GET (in the link)'], ['post1', 'POST, with a leading 1'], ['get1', 'GET, with a leading 1']].map(([k, l]) => `<option value="${k}" ${(ls('yg_call_m') || 'post') === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
     <label class="f">🧪 Test – your own number<input id="cjt" type="tel" style="direction:ltr" placeholder="845-555-1234"></label></div>
@@ -407,9 +434,24 @@ function callTest() {
   const el = document.createElement('a'); el.dataset.n = d;
   dial(el, 0, r.tpl, true);
 }
-function callMode(m) { $('#c_jl').style.display = m === 'jls' ? '' : 'none'; $('#c_yl').style.display = m === 'yealink' ? '' : 'none'; $('#c_cu').style.display = m === 'custom' ? '' : 'none'; }
-function callSave() {
+function callMode(m) { $('#c_tl').style.display = m === 'tl' ? '' : 'none'; $('#c_jl').style.display = m === 'jls' ? '' : 'none'; $('#c_yl').style.display = m === 'yealink' ? '' : 'none'; $('#c_cu').style.display = m === 'custom' ? '' : 'none'; }
+async function tlSaveCfg() { if (isAdmin() && $('#ctc') && $('#ctc').value.trim() !== (SET().tlCfg || '')) await emit('settings', 's', { tlCfg: $('#ctc').value.trim() }); }
+async function tlTest() {
+  await tlSaveCfg();
+  const d = callNum($('#ctt').value), x = $('#ctx').value || Object.keys(tlCfg().ext)[0];
+  if (d.length < 10) { toast('⚠️ Enter a number'); return; }
+  if (!x) { toast('⚠️ Fill in the TekLink setup first'); return; }
+  tlDial(x, d);
+}
+async function callSave() {
   const m = $('#cs').value; let v = 'tel:{num}';
+  if (m === 'tl') {
+    await tlSaveCfg();
+    const x = $('#ctx').value || Object.keys(tlCfg().ext)[0];
+    if (!x) { toast('⚠️ Fill in the TekLink setup first'); return; }
+    try { localStorage.setItem('yg_call', 'tlqc:' + x); } catch (e) { }
+    closeM(); render(); toast('✓ 📞 TekLink ' + x); return;
+  }
   if (m === 'jls') {
     const r = callJlsTpl(); if (!r) return;
     v = r.tpl;
