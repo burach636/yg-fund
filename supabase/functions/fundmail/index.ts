@@ -20,7 +20,7 @@ const todayS = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_Y
 const addDays = (s: string, n: number) => { const d = parse(s); d.setDate(d.getDate() + n); return iso(d); };
 const daysBetween = (a: string, b: string) => Math.round((parse(b).getTime() - parse(a).getTime()) / 864e5);
 const validD = (s: string) => !!s && s >= '1990-01-01' && s <= '2100-01-01';
-const money = (n: number) => { const v = Math.round(n || 0); return (v < 0 ? '-$' : '$') + Math.abs(v).toLocaleString('en-US'); };
+const money = (n: number) => { const v = Math.round(Number(n || 0) * 100) / 100, c = Math.round(Math.abs(v) * 100) % 100 !== 0; return (v < 0 ? '-$' : '$') + Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: c ? 2 : 0, maximumFractionDigits: 2 }); };   // cents shown when there are any
 const r2 = (n: number) => Math.round((+n || 0) * 100) / 100;
 const HM: Record<string, string> = { Tishri: 'תשרי', Heshvan: 'חשון', Kislev: 'כסלו', Tevet: 'טבת', Shevat: 'שבט', 'Adar I': "אדר א'", 'Adar II': "אדר ב'", Adar: 'אדר', Nisan: 'ניסן', Iyar: 'אייר', Sivan: 'סיון', Tamuz: 'תמוז', Av: 'אב', Elul: 'אלול' };
 const hfmt = new Intl.DateTimeFormat('en-u-ca-hebrew', { year: 'numeric', month: 'long', day: 'numeric' });

@@ -21,7 +21,7 @@ const todayS = () => new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'num
 const addDays = (s: string, n: number) => { const d = parse(s); d.setDate(d.getDate() + n); return iso(d); };
 const addMonths = (s: string, n: number) => { const d = parse(s); const day = d.getDate(); d.setDate(1); d.setMonth(d.getMonth() + n); const last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate(); d.setDate(Math.min(day, last)); return iso(d); };
 const validD = (s: string) => !!s && s >= '1990-01-01' && s <= '2100-01-01';
-const money = (n: number) => '$' + Math.round(n || 0).toLocaleString('en-US');
+const money = (n: number) => { const v = Math.round(Number(n || 0) * 100) / 100, c = Math.round(Math.abs(v) * 100) % 100 !== 0; return (v < 0 ? '-$' : '$') + Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: c ? 2 : 0, maximumFractionDigits: 2 }); };   // cents shown when there are any
 const shortD = (s: string) => { if (!s) return '—'; const [y, m, d] = s.split('-'); return +m + '/' + +d + '/' + y.slice(2); };
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const digits10 = (p: string) => String(p || '').replace(/\D/g, '').slice(-10);

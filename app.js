@@ -2,7 +2,7 @@
 'use strict';
 const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const money = n => { const v = Math.round(Number(n || 0)); return (v < 0 ? '-$' : '$') + Math.abs(v).toLocaleString('en-US'); };
+const money = n => { const v = Math.round(Number(n || 0) * 100) / 100, c = Math.round(Math.abs(v) * 100) % 100 !== 0; return (v < 0 ? '-$' : '$') + Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: c ? 2 : 0, maximumFractionDigits: 2 }); };   // cents shown when there are any
 const pad = n => String(n).padStart(2, '0');
 const iso = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
 const parse = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
@@ -47,7 +47,7 @@ async function gunzip(blob) { const s = blob.stream().pipeThrough(new Decompress
 // ---------- state ----------
 let JD = null;            // imported JLS data
 let IDX = null;           // derived indexes
-let S = { acct: {}, task: {}, call: {}, hist: {}, fr: {}, frin: {}, frex: {}, frexp: {}, shul: {}, rcpt: {}, stmt: {}, tust: {}, frmail: {}, jrep: {}, settings: { s: { users: ['באניצער 1', 'באניצער 2', 'באניצער 3'], defFreq: 'm12', maxYears: 5 } } };
+let S = { acct: {}, task: {}, call: {}, hist: {}, fr: {}, frin: {}, frex: {}, frexp: {}, shul: {}, rcpt: {}, stmt: {}, tust: {}, col: {}, frmail: {}, jrep: {}, settings: { s: { users: ['באניצער 1', 'באניצער 2', 'באניצער 3'], defFreq: 'm12', maxYears: 5 } } };
 let status = {}, me = '', view = 'home';
 // Two areas after login: 'fund' (fundraising) and 'tu' (tuition, tuition.js); kept per tab
 let AREA = (() => { try { return sessionStorage.getItem('yg_area') || ''; } catch (e) { return ''; } })();
@@ -151,7 +151,7 @@ async function boot() {
   const { data } = await sb.auth.getSession();
   if (recovering) { if (data.session) { vNewPw(); } else { vLogin(); $('#lerr').textContent = 'דער לינק האט נישט געארבעט. פרובירט נאכאמאל "פארגעסן דעם פאסווארט?"'; } return; }
   // Idle longer than 10 minutes (also while the browser was closed) -> log out
-  if (data.session && lastActive() && Date.now() - lastActive() > IDLE_MS) { try { sessionStorage.setItem('yg_idle', '1'); } catch (e) { } await sb.auth.signOut().catch(() => { }); vLogin(); return; }
+  if (IDLE_MS && data.session && lastActive() && Date.now() - lastActive() > IDLE_MS) { try { sessionStorage.setItem('yg_idle', '1'); } catch (e) { } await sb.auth.signOut().catch(() => { }); vLogin(); return; }
   if (data.session) await afterLogin(data.session); else vLogin();
 }
 async function afterLogin(session) {
@@ -200,10 +200,11 @@ async function start() {
   idleWatch();
 }
 // ---------- automatic log out after 10 minutes without use ----------
-const IDLE_MS = 10 * 60 * 1000;
+const IDLE_MS = 0;   // 0 = never log out by itself (owner asked to turn it off, 2026-11-15); was 10 minutes
 function markActive() { try { localStorage.setItem('yg_act', String(Date.now())); } catch (e) { } }
 function lastActive() { try { return +localStorage.getItem('yg_act') || 0; } catch (e) { return 0; } }
 function idleWatch() {
+  if (!IDLE_MS) return;
   let t = 0, warned = false;
   ['mousemove', 'mousedown', 'keydown', 'scroll', 'wheel', 'touchstart'].forEach(ev => window.addEventListener(ev, () => {
     const n = Date.now(); if (n - t > 15000) { t = n; markActive(); warned = false; }
@@ -335,6 +336,7 @@ async function poll() {
     const jlsCh = m.version && m.version !== jlsVersion;
     if (jlsCh) { await loadJLS(); toast('⟳ נייע JLS דאטא געלאדן'); }
     if ((logCh || jlsCh) && !$('#ov').classList.contains('on')) render();
+    else if (logCh) notifyCheck();
   } catch (e) { }
 }
 // ---------- import ----------
@@ -406,7 +408,7 @@ function importDialog() {
 
 // ---------- nav / render ----------
 function wire() {
-  $('#nav').onclick = e => { const b = e.target.closest('button'); if (!b) return; view = b.dataset.v; document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x === b)); render(); window.scrollTo(0, 0); };
+  $('#nav').onclick = e => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.t) ui.colTab = b.dataset.t; if (b.dataset.v === 'calling' && view !== 'calling') ui.cm = null; view = b.dataset.v; document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x === b)); render(); window.scrollTo(0, 0); };
   $('#btnImport').onclick = importDialog;
   $('#ov').onclick = e => { if (e.target.id === 'ov') closeM(); };
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeM(); });
@@ -419,7 +421,7 @@ function wire() {
 function setArea(a, keepView) {
   AREA = a; try { sessionStorage.setItem('yg_area', a); } catch (e) { }
   document.body.classList.toggle('area-tu', a === 'tu');
-  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.18</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.18</small>';
+  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.19</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.19</small>';
   $('#btnArea').style.display = canFund() && canView('tuition') ? '' : 'none';
   $('#btnArea').textContent = a === 'tu' ? '⇄ צו פאנדרעיזינג' : '⇄ צו שכר לימוד';
   if (!keepView || (a === 'tu') !== TU_VIEWS.includes(view)) view = a === 'tu' ? 'thome' : 'home';
@@ -437,19 +439,21 @@ function render() {
   impInfo();
   const sb = document.querySelector('nav [data-v=settings]'); if (sb) sb.style.display = isAdmin() ? '' : 'none';
   if (view === 'settings' && !isAdmin()) view = 'home';
-  if (AREA === 'tu' && (view === 'home' || (!TU_VIEWS.includes(view) && view !== 'todo' && view !== 'settings'))) view = 'thome';
+  if (AREA === 'tu' && (view === 'home' || (!TU_VIEWS.includes(view) && !['todo', 'settings', 'col', 'calling'].includes(view)))) view = 'thome';
   if (AREA === 'fund' && TU_VIEWS.includes(view)) view = 'home';
   if (!canView(view)) view = AREA === 'tu' ? 'thome' : 'home';
   document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x.dataset.v === view && (!x.dataset.a || x.dataset.a === AREA)));
   if (!JD) { vWelcome(); return; }
   counts();
-  ({ home: vHome, thome: vTuHome, tubill: vTuBill, tustmt: vTuStmt, tuition: vTuition, rcpt: vRcpt, jrep: vJrep, todo: vTodo, fund: vFund, shuls: vShuls, today: vToday, pledges: vPledges, accounts: vAccounts, reports: vReports, settings: vSettings }[view] || vHome)();
+  ({ home: vHome, col: vCol, calling: vCalling, thome: vTuHome, tubill: vTuBill, tustmt: vTuStmt, tuition: vTuition, rcpt: vRcpt, jrep: vJrep, todo: vTodo, fund: vFund, shuls: vShuls, today: vToday, pledges: vPledges, accounts: vAccounts, reports: vReports, settings: vSettings }[view] || vHome)();
   applyPerms();
+  colNav();
+  notifyCheck();
 }
 // ---------- which main sections each user may open (team.perms; null = everything; admins always everything) ----------
-const SECTIONS = [['accounts', '👥 נדבות'], ['rcpt', '🧾 רעסיטס/סטעיטמענטס'], ['todo', '✅ To-Do'], ['fund', '💵 פאנדרעיזינג חשבונות'], ['shuls', '🕍 שולן'], ['today', '📋 היינט צו בעטן'], ['pledges', '📞 פלעדזשעס'], ['reports', '📊 באריכטן'], ['jrep', '📑 רופארטס'], ['tuition', '🎓 שכר לימוד (גאנצער טייל)']];
+const SECTIONS = [['accounts', '👥 נדבות'], ['rcpt', '🧾 רעסיטס/סטעיטמענטס'], ['todo', '🗂️ אפיס ארבעט'], ['fund', '💵 פאנדרעיזינג חשבונות'], ['shuls', '🕍 שולן'], ['today', '📋 היינט צו בעטן'], ['pledges', '📞 פלעדזשעס'], ['reports', '📊 באריכטן'], ['jrep', '📑 רופארטס'], ['col', '📞 פאנדרעיזינג קאלעקשען'], ['tuition', '🎓 שכר לימוד (גאנצער טייל)']];
 const myPerms = () => { const t = TEAM.find(a => a.email.toLowerCase() === myEmail.toLowerCase()); return t && !t.is_admin && Array.isArray(t.perms) ? t.perms : null; };
-const canView = v => { if (TU_VIEWS.includes(v)) v = 'tuition'; return v === 'home' || v === 'settings' || !myPerms() || myPerms().includes(v); };
+const canView = v => { if (v === 'calling') v = 'col'; if (TU_VIEWS.includes(v) || (AREA === 'tu' && v === 'col')) v = 'tuition'; return v === 'home' || v === 'settings' || !myPerms() || myPerms().includes(v); };
 const canFund = () => !myPerms() || myPerms().some(v => v !== 'tuition');
 function applyPerms() {
   document.querySelectorAll('nav [data-v]').forEach(b => { if (b.dataset.v !== 'settings') b.style.display = canView(b.dataset.v) && (!b.dataset.a || b.dataset.a === AREA) ? '' : 'none'; });
@@ -505,7 +509,7 @@ function vToday() {
     <div class="stat"><b>${money(ytd)}</b><span>${esc(JD.companyName)} באצאלט ${yr}</span></div>
     <div class="stat"><b>${IDX.yg.size.toLocaleString()}</b><span>נדבנים וואס האבן אמאל געגעבן</span></div>
   </div>
-  <div class="row"><div><h2>To-Do פאר היינט</h2><p class="sub">ווער מ'דארף בעטן (לויט ווען לעצטנס געגעבן/געבעטן) + אייערע ארבעטן. דרינגענד און VIP ערשט, דערנאך די גרעסטע נדבנים.</p></div><div class="spacer"></div>
+  <div class="row"><div><h2>היינט צו טון</h2><p class="sub">ווער מ'דארף בעטן (לויט ווען לעצטנס געגעבן/געבעטן) + אייערע ארבעטן. דרינגענד און VIP ערשט, דערנאך די גרעסטע נדבנים.</p></div><div class="spacer"></div>
     <div class="chips">${[['mine', 'מיינע (' + mine + ')'], ['none', 'נישט צוגעטיילט (' + un + ')'], ['all', 'אלע (' + all + ')']].map(([k, l]) => `<button class="chip ${ui.todayF === k ? 'on' : ''}" onclick="ui.todayF='${k}';ui.todayN=50;render()">${l}</button>`).join('')}</div>
     <button class="btn gold" onclick="taskForm()">+ נייע ארבעט</button></div>
   ${items.length ? items.slice(0, ui.todayN).map(taskRow).join('') + (items.length > ui.todayN ? `<div class="more"><button class="btn ghost" onclick="ui.todayN+=50;render()">ווייז נאך (${items.length - ui.todayN} פארבליבן)</button></div>` : '') : '<div class="empty">🎉 גארנישט פאר היינט!</div>'}
@@ -565,13 +569,14 @@ async function saveAsk(code) {
 function taskForm(id, code) {
   const x = id ? S.task[id] : { title: '', due: todayS(), who: me, who2: '', code: code || '', pri: 'norm', note: '', repeat: '', priv: false };
   const canPriv = !id || !x.priv || (x.owner || '').toLowerCase() === myKey();
-  modal(`<h2>${id ? 'ענדער ארבעט' : 'נייע ארבעט'}</h2><div class="grid2">
+  modal(`<h2>${id ? 'ענדער אפיס ארבעט' : 'נייע אפיס ארבעט'}</h2><div class="grid2">
   <label class="f" style="grid-column:1/-1">וואס דארף מען טון?<input id="tt" value="${esc(x.title)}"></label>
   <label class="f">ביז ווען${dateField('td', x.due)}</label>
   <label class="f">פאר וועמען<select id="tw"><option value="">נישט צוגעטיילט</option>${USERS().map(u => `<option ${u === x.who ? 'selected' : ''}>${esc(u)}</option>`).join('')}</select></label>
   <label class="f">👥 און אויך (צווייטער באניצער)<select id="tw2"><option value="">—</option>${USERS().map(u => `<option ${u === x.who2 ? 'selected' : ''}>${esc(u)}</option>`).join('')}</select></label>
   ${canPriv ? `<label style="display:flex;gap:8px;align-items:center;font-size:14px;grid-column:1/-1"><input type="checkbox" id="tpv" ${x.priv ? 'checked' : ''}> 🔒 פריוואט – נאר איך זע דאס (פאר מיר אליין)</label>` : ''}
   <label class="f">אקאונט (נומער, אפציאנאל)<input id="tc" type="number" value="${x.code || ''}" placeholder="למשל 12345"></label>
+  <label class="f">סארט<select id="tcat"><option value="call" ${taskCat(x) === 'call' ? 'selected' : ''}>📞 קאלן</option><option value="proj" ${taskCat(x) === 'proj' ? 'selected' : ''}>📋 פראיעקט</option></select></label>
   <label class="f">וויכטיגקייט<select id="tp"><option value="norm">נארמאל</option><option value="hi" ${x.pri === 'hi' ? 'selected' : ''}>דרינגענד</option></select></label>
   <label class="f">איבערחזרן<select id="tr"><option value="">נישט</option>${['m1', 'm3', 'm6', 'm12', 'yt'].map(k => `<option value="${k}" ${x.repeat === k ? 'selected' : ''}>${FREQ[k][0]}</option>`).join('')}</select></label>
   <label class="f" style="grid-column:1/-1">נאטיץ<input id="tn" value="${esc(x.note || '')}"></label></div>
@@ -586,7 +591,7 @@ async function saveTask(id) {
   let who = $('#tw').value, who2 = $('#tw2').value;
   if (priv) { who = me; who2 = ''; }
   if (who2 === who) who2 = '';
-  const p = { title, due: $('#td').value || todayS(), who, who2, code, pri: $('#tp').value, note: $('#tn').value.trim(), repeat: $('#tr').value, done: false, priv };
+  const p = { title, due: $('#td').value || todayS(), who, who2, code, pri: $('#tp').value, note: $('#tn').value.trim(), repeat: $('#tr').value, done: false, priv, cat: $('#tcat').value };
   if (!id && AREA === 'tu') p.area = 'tu';
   if (priv) p.owner = myEmail.toLowerCase();
   await emitTask(id || uid(), p);
@@ -1021,4 +1026,14 @@ function closeM() { $('#ov').classList.remove('on'); }
 
 const setHH = () => document.documentElement.style.setProperty('--hh', document.querySelector('header').offsetHeight + 'px');
 window.addEventListener('resize', setHH); window.addEventListener('load', setHH); setHH();
+// Install as an app (pin to the taskbar): service worker + the browser's install prompt
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => { });
+let _instEv = null;
+if (window.matchMedia && matchMedia('(display-mode: standalone)').matches) document.addEventListener('DOMContentLoaded', () => { const b = $('#btnInstall'); if (b) b.style.display = 'none'; });
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); _instEv = e; const b = $('#btnInstall'); if (b) b.style.display = ''; });
+window.addEventListener('appinstalled', () => { const b = $('#btnInstall'); if (b) b.style.display = 'none'; toast('✓ אינסטאלירט – איר קענט עס יעצט "Pin to taskbar"'); });
+function installApp() {
+  if (_instEv) { _instEv.prompt(); _instEv = null; return; }
+  modal(`<h2>📌 צום Taskbar</h2><ol style="line-height:1.9"><li>אין Chrome אדער Edge, דריקט אויבן רעכטס אויף <b>⋮</b> (אדער <b>…</b>).</li><li>קלייבט <b>Cast, save and share › Install page as app</b> (Chrome) אדער <b>Apps › Install this site as an app</b> (Edge).</li><li>דריקט <b>Install</b>.</li><li>דערנאך: רעכטע מויז אויפן אייקאן אונטן אין Taskbar › <b>Pin to taskbar</b>.</li></ol><div class="row" style="justify-content:flex-end"><button class="btn" onclick="closeM()">OK</button></div>`, 'narrow');
+}
 boot();

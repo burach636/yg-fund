@@ -56,58 +56,79 @@ function fmtDual(iso) {
   return calPref() === 'heb' ? `${heb} <small class="dim">${eng}</small>` : `${eng} <small class="dim">${heb}</small>`;
 }
 
-// ---- dual date picker ----
-// dateField('td', '2026-11-11', {clear:true}) -> HTML. The value lives in <input type=hidden id=td>.
+// ---- date picker: one box with the whole month, Jewish and English dates together (v1.19) ----
+// dateField('td', '2026-11-11', {clear:true}) -> HTML. The value lives in <input type=hidden id=td> (yyyy-mm-dd).
 function dateField(id, value, opt) {
   opt = opt || {};
-  return `<div class="dfield" data-id="${id}" data-clear="${opt.clear ? 1 : 0}"><input type="hidden" id="${id}" value="${value || ''}"><div class="dtabs"><button type="button" data-c="heb">אידיש</button><button type="button" data-c="eng">ענגליש</button></div><div class="dbody"></div><div class="dnote"></div></div>`;
+  return `<div class="dfield" data-clear="${opt.clear ? 1 : 0}"><input type="hidden" id="${id}" value="${value || ''}"><button type="button" class="dbtn">📅 <span class="dtxt"></span></button>${opt.clear ? '<button type="button" class="dclr" title="מעק אויס">✕</button>' : ''}</div>`;
+}
+const CAL_WD = [['א\'', 'Sun'], ['ב\'', 'Mon'], ['ג\'', 'Tue'], ['ד\'', 'Wed'], ['ה\'', 'Thu'], ['ו\'', 'Fri'], ['ש"ק', 'Sat']];
+const CAL_EN = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const calIso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+const calToday = () => calIso(new Date());
+function calText(v, clearable) {
+  if (!v) return clearable ? '<span class="dim">ליידיג – דריקט צו קלייבן</span>' : '—';
+  const [y, m, d] = v.split('-'), dt = new Date(+y, +m - 1, +d);
+  return `<b>${CAL_WD[dt.getDay()][0]} ${HEB.fmtHeb(v)}</b> <small class="dim">${CAL_WD[dt.getDay()][1]} ${+m}/${+d}/${y}</small>`;
 }
 function initDateFields(root) {
   (root || document).querySelectorAll('.dfield').forEach(w => {
     if (w._init) return; w._init = true;
-    const hid = w.querySelector('input[type=hidden]'), body = w.querySelector('.dbody'), note = w.querySelector('.dnote');
-    const clearable = w.dataset.clear === '1';
-    let mode = calPref();
-    const todayIso = () => { const t = new Date(); return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0'); };
-    const showNote = () => {
-      const v = hid.value;
-      if (!v) { note.textContent = clearable ? 'ליידיג = אויטאמאטיש' : ''; return; }
-      const [y, m, d] = v.split('-');
-      note.textContent = '= ' + (mode === 'heb' ? (+d + '/' + +m + '/' + y) : HEB.fmtHeb(v));
-    };
-    const draw = () => {
-      w.querySelectorAll('.dtabs button').forEach(b => b.classList.toggle('on', b.dataset.c === mode));
-      const v = hid.value;
-      const x = clearable ? '<button type="button" class="dclr" title="מעק אויס">✕</button>' : '';
-      if (mode === 'eng') {
-        body.innerHTML = `<input type="date" value="${v}">${x}`;
-        body.querySelector('input').onchange = e => { hid.value = e.target.value; showNote(); };
-      } else {
-        const p = HEB.parts(v || todayIso());
-        const curY = HEB.parts(todayIso()).y;
-        const years = []; for (let y = curY - 2; y <= curY + 6; y++) years.push(y);
-        if (!years.includes(p.y)) years.unshift(p.y);
-        const ms = HEB.monthsOf(p.y);
-        const m = ms.includes(p.m) ? p.m : (p.m.indexOf('Adar') === 0 ? (ms.includes('Adar') ? 'Adar' : 'Adar II') : ms[0]);
-        body.innerHTML = `<select class="hd">${v ? '' : '<option value="">—</option>'}${Array.from({ length: 30 }, (_, i) => `<option value="${i + 1}" ${v && p.d === i + 1 ? 'selected' : ''}>${HEB.gem(i + 1)}</option>`).join('')}</select>
-          <select class="hm">${ms.map(k => `<option value="${k}" ${k === m ? 'selected' : ''}>${HEB.MONTHS[k]}</option>`).join('')}</select>
-          <select class="hy">${years.map(y => `<option value="${y}" ${y === p.y ? 'selected' : ''}>${HEB.gem(y)}</option>`).join('')}</select>${x}`;
-        const upd = () => {
-          const d = +body.querySelector('.hd').value; if (!d) return;
-          const y = +body.querySelector('.hy').value;
-          let mm = body.querySelector('.hm').value;
-          const list = HEB.monthsOf(y);
-          if (!list.includes(mm)) mm = mm.indexOf('Adar') === 0 ? (list.includes('Adar') ? 'Adar' : 'Adar II') : list[0];
-          hid.value = HEB.toGreg(y, mm, d) || hid.value;
-          if (body.querySelector('.hy').value !== String(HEB.parts(hid.value).y) || !list.includes(body.querySelector('.hm').value)) draw();
-          showNote();
-        };
-        body.querySelectorAll('select').forEach(s => s.onchange = upd);
-      }
-      const c = body.querySelector('.dclr'); if (c) c.onclick = () => { hid.value = ''; draw(); };
-      showNote();
-    };
-    w.querySelectorAll('.dtabs button').forEach(b => b.onclick = () => { mode = b.dataset.c; setCalPref(mode); draw(); });
-    draw();
+    const hid = w.querySelector('input[type=hidden]'), txt = w.querySelector('.dtxt'), clearable = w.dataset.clear === '1';
+    const show = () => { txt.innerHTML = calText(hid.value, clearable); };
+    const set = v => { hid.value = v; show(); hid.dispatchEvent(new Event('change', { bubbles: true })); };
+    w.querySelector('.dbtn').onclick = () => calOpen(w, hid.value, set, clearable);
+    const c = w.querySelector('.dclr'); if (c) c.onclick = () => set('');
+    show();
   });
+}
+function calClose() { const p = document.getElementById('calpop'); if (p) p.remove(); document.removeEventListener('mousedown', calOutside, true); }
+function calOutside(e) { const p = document.getElementById('calpop'); if (p && !p.contains(e.target) && !e.target.closest('.dbtn')) calClose(); }
+function calOpen(w, value, set, clearable) {
+  calClose();
+  const pop = document.createElement('div'); pop.id = 'calpop'; document.body.appendChild(pop);
+  const base = value || calToday(), hp = HEB.parts(base), [gy, gm] = base.split('-').map(Number);
+  const st = { mode: calPref(), hy: hp.y, hm: hp.m, gy, gm: gm - 1 };
+  const place = () => {
+    const r = w.getBoundingClientRect(), pw = pop.offsetWidth, ph = pop.offsetHeight;
+    let top = r.bottom + 4; if (top + ph > innerHeight - 8) top = Math.max(8, r.top - ph - 4);
+    let left = r.right - pw; if (left < 8) left = 8; if (left + pw > innerWidth - 8) left = innerWidth - pw - 8;
+    pop.style.top = top + 'px'; pop.style.left = left + 'px';
+  };
+  const days = () => {   // the dates (yyyy-mm-dd) of the month shown
+    const out = [];
+    if (st.mode === 'heb') { let d = HEB.toGreg(st.hy, st.hm, 1); while (d) { const p = HEB.parts(d); if (p.m !== st.hm || p.y !== st.hy) break; out.push(d); const x = new Date(...d.split('-').map((n, i) => i === 1 ? n - 1 : +n)); x.setDate(x.getDate() + 1); d = calIso(x); } }
+    else { const n = new Date(st.gy, st.gm + 1, 0).getDate(); for (let i = 1; i <= n; i++) out.push(calIso(new Date(st.gy, st.gm, i))); }
+    return out;
+  };
+  const move = k => {
+    if (st.mode === 'heb') { const ms = HEB.monthsOf(st.hy); let i = ms.indexOf(st.hm) + k; if (i < 0) { st.hy--; const m2 = HEB.monthsOf(st.hy); st.hm = m2[m2.length - 1]; } else if (i >= ms.length) { st.hy++; st.hm = 'Tishri'; } else st.hm = ms[i]; }
+    else { st.gm += k; if (st.gm < 0) { st.gm = 11; st.gy--; } if (st.gm > 11) { st.gm = 0; st.gy++; } }
+    draw();
+  };
+  const draw = () => {
+    const D = days(), t = calToday(), first = new Date(...D[0].split('-').map((n, i) => i === 1 ? n - 1 : +n)).getDay();
+    const a = D[0], z = D[D.length - 1];
+    const title = st.mode === 'heb' ? `${HEB.MONTHS[st.hm]} ${HEB.gem(st.hy)}` : `${CAL_EN[st.gm]} ${st.gy}`;
+    const [ay, am] = a.split('-').map(Number), [zy, zm] = z.split('-').map(Number), pa = HEB.parts(a), pz = HEB.parts(z);
+    const sub = st.mode === 'heb' ? (am === zm ? CAL_EN[am - 1] + ' ' + ay : CAL_EN[am - 1].slice(0, 3) + (ay !== zy ? ' ' + ay : '') + ' – ' + CAL_EN[zm - 1].slice(0, 3) + ' ' + zy)
+      : (pa.m === pz.m ? HEB.MONTHS[pa.m] + ' ' + HEB.gem(pa.y) : HEB.MONTHS[pa.m] + ' – ' + HEB.MONTHS[pz.m] + ' ' + HEB.gem(pz.y));
+    pop.innerHTML = `<div class="cph"><button type="button" class="cpn" data-k="-1" title="פריער">›</button><div class="cpt"><b>${title}</b><small>${sub}</small></div><button type="button" class="cpn" data-k="1" title="ווייטער">‹</button></div>
+     <div class="cpm"><button type="button" data-m="heb" class="${st.mode === 'heb' ? 'on' : ''}">אידישער חודש</button><button type="button" data-m="eng" class="${st.mode === 'eng' ? 'on' : ''}">English month</button></div>
+     <div class="cpg">${CAL_WD.map(([h, e]) => `<div class="cpw">${h}<small>${e}</small></div>`).join('')}${'<div></div>'.repeat(first)}${D.map(d => { const p = HEB.parts(d), [y, m, dd] = d.split('-').map(Number);
+      const big = st.mode === 'heb' ? HEB.gem(p.d) : dd, small = st.mode === 'heb' ? (dd === 1 || d === a ? CAL_EN[m - 1].slice(0, 3) + ' ' : '') + dd : (p.d === 1 || d === a ? HEB.MONTHS[p.m] + ' ' : '') + HEB.gem(p.d);
+      return `<button type="button" class="cpd${d === value ? ' sel' : ''}${d === t ? ' today' : ''}${new Date(y, m - 1, dd).getDay() === 6 ? ' sh' : ''}" data-d="${d}"><b>${big}</b><small>${small}</small></button>`; }).join('')}</div>
+     <div class="cpf"><button type="button" class="btn ghost sm" data-d="${t}">היינט</button>${clearable ? '<button type="button" class="btn ghost sm" data-d="">✕ ליידיג</button>' : ''}<div class="spacer"></div><button type="button" class="btn ghost sm" data-x="1">Close</button></div>`;
+    pop.querySelectorAll('.cpn').forEach(b => b.onclick = () => move(+b.dataset.k));
+    pop.querySelectorAll('[data-m]').forEach(b => b.onclick = () => {
+      const ref = D[Math.min(14, D.length - 1)];
+      st.mode = b.dataset.m; setCalPref(st.mode);
+      const p = HEB.parts(ref), [y, m] = ref.split('-').map(Number); st.hy = p.y; st.hm = p.m; st.gy = y; st.gm = m - 1; draw();
+    });
+    pop.querySelectorAll('[data-d]').forEach(b => b.onclick = () => { set(b.dataset.d); calClose(); });
+    pop.querySelector('[data-x]').onclick = calClose;
+    place();
+  };
+  draw();
+  setTimeout(() => document.addEventListener('mousedown', calOutside, true), 0);
 }

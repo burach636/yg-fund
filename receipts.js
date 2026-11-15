@@ -14,7 +14,7 @@ const rcKey = p => String(p[0] != null ? p[0] : p[1] + '|' + p[2] + '|' + p[3]);
 const rcPrinted = p => (S.rcpt[rcKey(p)] || {}).printed;
 const MON3 = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const rcDate = s => { const [y, m, d] = s.split('-'); return MON3[+m - 1] + './' + d + '/' + y; };
-const rcMoney = n => { const v = Math.round(n * 100) / 100; return v.toLocaleString('en-US', { minimumFractionDigits: v % 1 ? 2 : 0, maximumFractionDigits: 2 }); };
+const rcMoney = n => { const v = Math.round((+n || 0) * 100) / 100; return v.toLocaleString('en-US', { minimumFractionDigits: Math.round(Math.abs(v) * 100) % 100 ? 2 : 0, maximumFractionDigits: 2 }); };
 function rcAddr(a) {   // "12 Sears Rd, Monroe, NY 10950" -> ["12 Sears Rd", "Monroe NY 10950"]
   const parts = (a.a || '').split(', ').filter(Boolean);
   if (parts.length < 3) return [parts.join(', '), ''];

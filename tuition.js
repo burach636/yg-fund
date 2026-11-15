@@ -27,7 +27,9 @@ const tuHY = d => (d && d >= '1900' && (HEB.parts(d) || {}).y) || 0;
 const tuNowY = () => tuHY(todayS());
 const tuYearStart = () => HEB.toGreg(tuNowY(), 'Tishri', 1);
 
+let _tuMemo = null;   // tuCalc depends only on the tuition file and the date
 function tuCalc() {
+  if (_tuMemo && _tuMemo.tu === TU && _tuMemo.d === todayS()) return _tuMemo.r;
   const today = todayS(), ys = tuYearStart(), fam = new Map();
   const F = c => fam.get(c) || (fam.set(c, { code: c, kids: [], ch: [], pay: [], ct: [], billed: 0, paid: 0, bal: 0, due: 0, yrBilled: 0, yrPaid: 0, last: '', cur: false }), fam.get(c));
   TU.students.forEach(s => { const f = F(s[1]); f.kids.push(s); if (!s[8] || s[8] >= today) f.cur = true; });
@@ -47,8 +49,31 @@ function tuCalc() {
   });
   const L = [...fam.values()];
   const tot = { fams: L.length, curFams: L.filter(f => f.cur).length, kids: TU.students.filter(s => !s[8] || s[8] >= today).length, yrBilled: 0, yrPaid: 0, bal: 0, due: 0, dueFams: 0 };
-  L.forEach(f => { tot.yrBilled += f.yrBilled; tot.yrPaid += f.yrPaid; if (f.bal > 0) tot.bal += f.bal; tot.due += f.due; if (f.due > 0.5) tot.dueFams++; });
-  return { L, tot, ys };
+  L.forEach(f => { tot.yrBilled += f.yrBilled; tot.yrPaid += f.yrPaid; if (f.bal > 0) tot.bal += f.bal; tot.due += f.due; if (f.due > 0.5) tot.dueFams++; f.st = tuStatus(f, today); });
+  const r = { L, tot, ys }; _tuMemo = { tu: TU, d: today, r };
+  return r;
+}
+// Automatic payer status (owner, 2026-11): green "אחריות'דיג" = pays every month; yellow "צריך תיקון" = keeps paying
+// a little; red "איגנארירט" = pays nothing. Looks at the last 6 months: bills (not on hold) vs payments, and how many
+// months since the last payment.
+function tuStatus(f, today) {
+  const from = addMonths(today, -6);
+  let b6 = 0, p6 = 0;
+  f.ch.forEach(c => { if (!c[7] && c[2] > from && c[2] <= today) b6 += c[3]; });
+  f.pay.forEach(p => { if (!p[7] && p[2] > from && p[2] <= today) p6 += p[3]; });
+  const mo = f.last ? Math.max(0, Math.floor(daysBetween(f.last, today) / 30.4)) : null;
+  if (f.due <= 0.5 && f.bal <= 0.5) return { k: 'ok', mo, b6, p6 };
+  if (!b6 && !p6 && f.due <= 0.5) return { k: '', mo, b6, p6 };
+  const r = b6 ? p6 / b6 : (p6 ? 1 : 0);
+  if (r >= 0.85 && (mo === null || mo <= 2)) return { k: 'ok', mo, b6, p6 };
+  if (p6 < 1 || (mo !== null && mo >= 3 && r < 0.2)) return { k: 'ign', mo, b6, p6 };
+  return { k: 'fix', mo, b6, p6 };
+}
+const TU_ST = { ok: ["אחריות'דיג", 'st-ok'], fix: ['צריך תיקון', 'st-fix'], ign: ['איגנארירט', 'st-ign'] };
+function tuStChip(f, long) {
+  const s = f.st || {}, d = TU_ST[s.k]; if (!d) return '';
+  const mo = s.mo === null ? 'קיינמאל נישט באצאלט' : s.mo === 0 ? 'באצאלט דעם חודש' : s.mo + ' ' + (s.mo === 1 ? 'חודש' : 'חדשים') + ' אן א באצאלונג';
+  return `<span class="tag ${d[1]}">${d[0]}</span>${long !== false ? ` <small class="dim">${mo}</small>` : ''}`;
 }
 
 const tuKidName = s => s[4] || s[5] ? (s[4] + ' ' + s[5]).trim() : (s[2] + ' ' + s[3]).trim();
@@ -89,7 +114,7 @@ function vTuition() {
    ${R.slice(0, ui.tuN).map(f => {
     const a = IDX.by.get(f.code) || { ph: [] }, st = S.acct[f.code] || {};
     const kids = f.kids.slice().sort((x, y) => (!!x[8] - !!y[8]) || (y[7] || '').localeCompare(x[7] || ''));   // learning now first, then those who learned before
-    return `<tr><td><a class="name" onclick="tuFamily(${f.code})">${tuFamName(f.code)}</a> <small class="dim">#${f.code}</small>${lastNoteHTML(f.code, true)}</td>
+    return `<tr><td><a class="name" onclick="tuFamily(${f.code})">${tuFamName(f.code)}</a> <small class="dim">#${f.code}</small><br>${tuStChip(f)}${lastNoteHTML(f.code, true)}</td>
      <td style="font-size:13px">${kids.slice(0, 6).map(k => `<span style="${k[8] ? 'opacity:.55' : ''}">${esc(k[4] || k[2])}${k[6] ? ` <small class="dim">${esc(k[6])}</small>` : ''}${k[8] ? ` <small class="dim">(געלערנט ביז ${HEB.gem(tuHY(k[8]))})</small>` : ''}</span>`).join('<br>') + (kids.length > 6 ? '<br>…' : '') || '—'}</td>
      <td style="font-size:13px" class="ltr">${a.ph.slice(0, 2).map(p => callBtn(p[1], f.code) + ' ' + esc(p[1])).join('<br>')}</td>
      <td class="num ${f.due > 0.5 ? 'bal' : ''}"><b>${money(f.due)}</b></td><td class="num">${money(f.bal)}</td>
@@ -108,8 +133,8 @@ function tuFamily(code) {
   const ch = f.ch.slice().sort((x, y) => (y[2] || '').localeCompare(x[2] || '')), pay = f.pay.slice().sort((x, y) => (y[2] || '').localeCompare(x[2] || ''));
   const hist = Object.values(S.hist).filter(h => +h.code === +code).sort((x, y) => (y.at || '').localeCompare(x.at || '')).slice(0, 10);
   modal(`<div class="row"><h2 style="margin:0">🎓 ${tuFamName(code)} <small class="dim">#${code}</small></h2><div class="spacer"></div>
-     <button class="btn ghost sm" onclick="tuStOpen([${+code}],false)">📄 סטעיטמענט</button><button class="btn ghost sm" onclick="tuMailForm(${+code})">✉️ אימעיל</button><button class="btn ghost sm" onclick="taskForm(null,${+code})">+ To-Do</button><button class="btn ghost sm" onclick="tuFamXls(${+code})">⬇ Excel</button><button class="btn ghost sm" onclick="openAcct(${+code})">👤 אקאונט</button><button class="btn ghost sm" onclick="closeM()">Back</button></div>
-   <p class="sub">${esc(a.a || '')}<br>${a.ph.slice(0, 3).map(p => callBtn(p[1], code) + ' ' + esc(p[0] + ' ' + p[1])).join(' · ')}</p>
+     <button class="btn ghost sm" onclick="tuStOpen([${+code}],false)">📄 סטעיטמענט</button><button class="btn ghost sm" onclick="tuMailForm(${+code})">✉️ אימעיל</button><button class="btn ghost sm" onclick="taskForm(null,${+code})">+ אפיס ארבעט</button><button class="btn ghost sm" onclick="tuFamXls(${+code})">⬇ Excel</button><button class="btn ghost sm" onclick="openAcct(${+code})">👤 אקאונט</button><button class="btn ghost sm" onclick="closeM()">Back</button></div>
+   <p class="sub">${tuStChip(f)}<br>${esc(a.a || '')}<br>${a.ph.slice(0, 3).map(p => callBtn(p[1], code) + ' ' + esc(p[0] + ' ' + p[1])).join(' · ')}</p>
    <div class="tiles" style="margin:8px 0;grid-template-columns:repeat(4,1fr)"><div class="tile t7"><h3>שולדיג יעצט</h3><b class="bal">${money(f.due)}</b></div><div class="tile t3"><h3>באלאנס</h3><b>${money(f.bal)}</b></div>
     <div class="tile t6"><h3>געטשארדזשט דאס יאר</h3><b>${money(f.yrBilled)}</b></div><div class="tile t5"><h3>באצאלט דאס יאר</h3><b class="zero">${money(f.yrPaid)}</b></div></div>
    <h3>👦 תלמידים</h3><table><thead><tr><th>נאמען</th><th>קלאס</th><th>אנגעהויבן</th><th>געלערנט ביז</th></tr></thead><tbody>
@@ -170,11 +195,12 @@ function vTuHome() {
     <div class="tile t1" onclick="ui.tuF='cur';go('tuition')"><i>👨‍👦</i><h3>עלטערן</h3><b>${tot.curFams.toLocaleString()}</b><span>${tot.kids.toLocaleString()} תלמידים לערנען יעצט</span></div>
     <div class="tile t6" onclick="go('tubill')"><i>🧾</i><h3>Billing ${HEB.gem(y)}</h3><b>${money(tot.yrBilled)}</b><span>${tot.yrBilled ? Math.round(tot.yrPaid / tot.yrBilled * 100) + '% באצאלט' : ''}</span></div>
     <div class="tile t5" onclick="go('tubill')"><i>💵</i><h3>באצאלט ${HEB.gem(y)}</h3><b class="zero">${money(tot.yrPaid)}</b><span>${esc(thisM.m)}: ${money(thisM.p)} פון ${money(thisM.b)}</span></div>
+    <div class="tile t8" onclick="ui.colTab='today';go('col')"><i>📞</i><h3>שכר לימוד קאלעקשען</h3><b>${colLists().today.filter(r => !r.done).length}</b><span>צו קאלן היינט</span></div>
     <div class="tile t7" onclick="ui.tuF='due';go('tuition')"><i>⏰</i><h3>שולדיג שוין יעצט</h3><b class="bal">${money(tot.due)}</b><span>${tot.dueFams} פאמיליעס</span></div>
     <div class="tile t3" onclick="go('tustmt')"><i>📄</i><h3>סטעיטמענטס</h3><b>${tot.dueFams}</b><span>פאמיליעס מיט אן אפענעם ביל</span></div>
    </div>
    <div class="cols">
-    <div class="hcol t2"><h3>מיינע To-Do פאר היינט</h3>
+    <div class="hcol t2"><h3>מיין אפיס ארבעט פאר היינט</h3>
      ${tasks.slice(0, 8).map(([id, x]) => todoRow(id, x)).join('') || '<div class="empty">🎉 גארנישט פאר היינט</div>'}
      <div class="row" style="margin-top:8px"><button class="btn gold sm" onclick="taskForm()">+ נייע זאך</button><button class="btn ghost sm" onclick="go('todo')">די גאנצע ליסטע</button></div></div>
     <div class="hcol t7"><h3>⏰ שולדיג מערסטע</h3><table><tbody>
@@ -317,9 +343,20 @@ function tuStPage(r) {
     <div class="tubox"><div class="tubh">חוב פער תלמיד</div>${st.perKid.map(([k, v]) => `<div><span class="r">${esc(k)}</span><span>${tuM$(v)}</span></div>`).join('') || '<div>—</div>'}<div class="tubt"><span>ס"ה חוב</span><span>${tuM$(st.perKid.reduce((s2, x) => s2 + x[1], 0))}</span></div></div>
     <div class="tubox tunote">${esc(s.tuStText || TU_ST_DEF).replace(/\n/g, '<br>')}</div>
    </div>
+   ${tuYrBox(r.f)}
    <div class="tutot">Total Balance · סך הכל חוב: <b>${tuM$(st.bal)}</b></div>
    <div class="tunote2">${esc(s.tuStNote2 != null ? s.tuStNote2 : TU_ST_NOTE2).replace(/\n/g, '<br>')}</div>
    <div class="ft">Please make checks payable to <b>Yeshivas Maharit Satmar</b> · P.O. Box 1367 · Monroe NY 10949</div></div>`;
+}
+// Small box on the statement: every Jewish year this family was billed, and what % of that year's bills is paid
+function tuYrBox(f) {
+  const Y = {};
+  f.ch.forEach(c => { if (c[7]) return; const y = tuHY(c[2]); if (!y) return; const o = Y[y] || (Y[y] = { b: 0, p: 0 }); o.b += c[3]; o.p += c[4]; });
+  const L = Object.keys(Y).map(Number).sort((a, b) => a - b).filter(y => Y[y].b > 0.005).slice(-8);
+  if (!L.length) return '';
+  return `<table class="tuyr"><thead><tr><th>יאר</th>${L.map(y => `<th>${HEB.gem(y)}</th>`).join('')}</tr></thead><tbody>
+   <tr><td>געבילט</td>${L.map(y => `<td>${tuM$(Y[y].b)}</td>`).join('')}</tr>
+   <tr><td>באצאלט</td>${L.map(y => { const pc = Math.round(Y[y].p / Y[y].b * 100); return `<td><b style="color:${pc >= 90 ? '#1f7a45' : pc >= 50 ? '#8a6200' : '#b3261e'}">${pc}%</b></td>`; }).join('')}</tr></tbody></table>`;
 }
 const TU_ST_CSS = `<style>.pg.tu{padding:.45in .6in}.tutop{display:flex;justify-content:space-between;font-size:10pt;margin-top:6px;direction:rtl}
 .tuttl{text-align:center;font-family:'Frank Ruhl Libre',serif;font-weight:900;font-size:22pt;color:#660033;margin-top:.12in}.tumon{text-align:center;font-family:'Frank Ruhl Libre',serif;font-weight:700;font-size:15pt}
@@ -329,6 +366,7 @@ const TU_ST_CSS = `<style>.pg.tu{padding:.45in .6in}.tutop{display:flex;justify-
 .tubox>div{display:flex;justify-content:space-between;gap:6px}.tubh{font-weight:700;color:#660033;border-bottom:1px solid #e6d9df;margin-bottom:3px}.tubt{border-top:1px solid #660033;font-weight:700;margin-top:3px}
 .tunote{display:block!important;font-family:'Frank Ruhl Libre',serif;font-size:10.5pt;line-height:1.45}.tunote2{margin-top:.12in;font-family:'Frank Ruhl Libre',serif;font-size:10.5pt;line-height:1.5;text-align:center;direction:rtl}
 .pg.tu.lh{padding:2.6in .8in .75in}.pg.tu.lh .tuttl{margin-top:.05in;font-size:19pt}.pg.tu.lh .tutop{margin-top:0}.pg.tu.lh .row2{margin-top:.05in!important}.pg.tu.lh table{font-size:9.5pt}.pg.tu.lh td{padding:3px 6px}.pg.tu.lh .ft{bottom:.6in}
+.pg.tu table.tuyr{width:auto;margin:.1in auto 0;font-size:8.5pt}.pg.tu table.tuyr th{background:#f3e9ee;color:#660033;padding:2px 8px;text-align:center}.pg.tu table.tuyr td{padding:2px 8px;text-align:center;border-bottom:1px solid #eee}
 .tutot{margin-top:.12in;text-align:center;font-size:13pt;border-top:2px solid #660033;border-bottom:2px solid #660033;padding:5px}</style>`;
 const tuStDoc = (R, autoPrint) => stDoc(R, autoPrint, tuStPage).replace('</head>', TU_ST_CSS + '</head>').replace('<title>סטעיטמענטס</title>', '<title>שכר לימוד</title>');
 function tuStRow(code) { const f = tuCalc().L.find(x => x.code === +code); if (!f) return null; const M = tuStMonth(), st = tuStCalc(f, M); return { c: f.code, f, M, st, bal: st.bal, a: IDX.by.get(f.code) || { h: '', n: '#' + f.code, a: '' } }; }

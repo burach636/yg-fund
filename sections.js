@@ -9,8 +9,14 @@ const taskVisible = x => x && x.title && !x.del && (!x.priv || (x.owner || '').t
 const taskMine = x => x.who === me || x.who2 === me;
 const taskWho = x => [x.who, x.who2].filter(Boolean).join(' + ') || 'נישט צוגעטיילט';
 // Every event on a private task carries priv+owner, so the database never shows it to others.
+// Each team member has a colour (order of the team list); a task shows the colour of the one who asked for it.
+const UCOL = ['#2f6fd6', '#d2452f', '#2e9d5b', '#a35bd1', '#e08a00', '#1aa3a3', '#c2378f', '#6b7a1f', '#8a5a2b', '#4a4fbf'];
+const userColor = n => { const i = USERS().indexOf(n); return i < 0 ? '#9aa0ab' : UCOL[i % UCOL.length]; };
+const userChip = n => n ? `<span class="uchip" style="--uc:${userColor(n)}">${esc(n)}</span>` : '';
+const taskCat = x => x.cat || (x.code || x.rc || x.fm ? 'call' : 'proj');   // 📞 calls / 📋 projects
 async function emitTask(id, p) {
   const cur = S.task[id];
+  if (!cur) p = Object.assign({ from: me, created: new Date().toISOString() }, p);   // who asked, and when (for the 🔔)
   if (cur && cur.priv && p.priv === undefined) p = Object.assign({ priv: true, owner: cur.owner }, p);
   await emit('task', id, p);
 }
@@ -34,15 +40,16 @@ function vHome() {
   ${next ? `<div class="banner" onclick="go('shuls')">🕍 <div><b>${next.date === t ? 'היינט' : 'מיטוואך ' + fmtDual(next.date)}</b> גייט מען נאך געלט אין: <b class="big">${esc(next.s.name)}</b><br><span class="ltr">${esc(next.s.addr || '')}</span></div></div>` : ''}
   <div class="tiles">
     <div class="tile t1" onclick="go('accounts')"><i>👥</i><h3>נדבות</h3><b>${IDX.yg.size.toLocaleString()}</b><span>נדבנים · ${money(sinceRH)} זינט ראש השנה</span><span>${askToday} צו בעטן היינט</span></div>
-    <div class="tile t2" onclick="go('todo')"><i>✅</i><h3>To-Do ליסטע</h3><b>${mineOpen.length}</b><span>מיינע אפענע זאכן</span>${late ? `<span class="bal">${late} שפעט!</span>` : '<span>&nbsp;</span>'}</div>
+    <div class="tile t2" onclick="go('todo')"><i>✅</i><h3>אפיס ארבעט</h3><b>${mineOpen.length}</b><span>מיינע אפענע זאכן</span>${late ? `<span class="bal">${late} שפעט!</span>` : '<span>&nbsp;</span>'}</div>
     <div class="tile t3" onclick="go('fund')"><i>💵</i><h3>פאנדרעיזינג חשבונות</h3><b class="${F.balance > 0.009 ? 'bal' : 'zero'}">${money(F.balance)}</b><span>${F.balance >= 0 ? 'מ\'איז שולדיג די פאנדרעיזערס' : 'איבערבאצאלט'}</span><span>די 2 וואכן: ${money(F.cur ? F.cur.owed : 0)}</span></div>
     <div class="tile t4" onclick="go('shuls')"><i>🕍</i><h3>שולן</h3><b>${shuls.length}</b><span>שולן אויף דער ליסטע</span><span>${next ? 'קומענדיג: ' + esc(next.s.name) : 'לייגט צו שולן'}</span></div>
     <div class="tile t5" onclick="go('rcpt')"><i>🧾</i><h3>רעסיטס/סטעיטמענטס</h3><b>${rcNew}</b><span>נאך נישט געדרוקט</span><span>זינט ${fmtD(F.start)}</span></div>
     <div class="tile t6" onclick="go('reports')"><i>📊</i><h3>באריכטן</h3><b>${money(thisYr)}</b><span>אריינגעקומען ${HEB.gem((HEB.parts(t) || {}).y || 0)}</span><span>לויט חדשים און יארן</span></div>
+    <div class="tile t8" onclick="ui.colTab='today';go('col')"><i>📞</i><h3>פאנדרעיזינג קאלעקשען</h3><b>${(() => { try { return colLists().today.filter(r => !r.done).length; } catch (e) { return ''; } })()}</b><span>צו קאלן היינט</span><span>פלעדזשעס און בעטן</span></div>
     <div class="tile t7" onclick="go('jrep')"><i>📑</i><h3>רופארטס</h3><b>${jrDefs().length || 1}</b><span>ליסטעס פון JLS צו קאלן</span><span>${esc((jrDefs()[0] || { name: 'דינער מהרי"ט 2026' }).name)}</span></div>
   </div>
   <div class="cols">
-   <div class="hcol t2"><h3>מיינע To-Do פאר היינט</h3>
+   <div class="hcol t2"><h3>מיין אפיס ארבעט פאר היינט</h3>
     ${dueToday.slice(0, 8).map(([id, x]) => todoRow(id, x)).join('') || '<div class="empty">🎉 גארנישט פאר היינט</div>'}
     <div class="row" style="margin-top:8px"><button class="btn gold sm" onclick="taskForm()">+ נייע זאך</button><button class="btn ghost sm" onclick="go('todo')">די גאנצע ליסטע</button></div></div>
    <div class="hcol t4"><h3>שולן – קומענדיגע מיטוואכן</h3>
@@ -54,14 +61,16 @@ function vHome() {
 function todoRow(id, x) {
   const t = todayS(), late = x.due && x.due < t ? daysBetween(x.due, t) : 0;
   const a = x.code ? IDX.by.get(+x.code) : null;
-  return `<div class="task" style="${x.done ? 'opacity:.5' : ''}"><div class="chk" title="געטון" onclick="${x.done ? `taskUndo('${id}')` : `taskDone('${id}')`}">${x.done ? '✓' : ''}</div>
+  const fr = x.from && x.from !== x.who ? x.from : '';
+  return `<div class="task" style="${x.done ? 'opacity:.5;' : ''}${x.from ? 'border-left:6px solid ' + userColor(x.from) + ';' : ''}"><div class="chk" title="געטון" onclick="${x.done ? `taskUndo('${id}')` : `taskDone('${id}')`}">${x.done ? '✓' : ''}</div>
    <div><div class="t">${x.priv ? '<span class="tag gray">🔒 פריוואט</span> ' : ''}${x.who && x.who2 ? '<span class="tag custom">👥 צוויי</span> ' : ''}${esc(x.title)}
     ${a ? `· <a class="name" onclick="openAcct(${x.code})">${esc(a.h || a.n)}</a>` : ''} ${x.pri === 'hi' ? '<span class="tag hi">דרינגענד</span>' : ''}
     ${late ? `<span class="tag late">שפעט ${late} טעג</span>` : (x.due === t && !x.done ? '<span class="tag ask">היינט</span>' : '')}</div>
-   <div class="m"><span>📅 ${x.due ? fmtDual(x.due) : 'אן א דאטום'}</span><span>👤 ${esc(taskWho(x))}</span>${x.note ? `<span>📝 ${esc(x.note)}</span>` : ''}${x.repeat && FREQ[x.repeat] ? `<span>🔁 ${FREQ[x.repeat][0]}</span>` : ''}${x.done ? `<span>✓ ${fmtD(x.doneAt)}</span>` : ''}</div></div>
+   <div class="m"><span>📅 ${x.due ? fmtDual(x.due) : 'אן א דאטום'}</span><span>${taskCat(x) === 'call' ? '📞' : '📋'}</span><span>👤 ${[x.who, x.who2].filter(Boolean).map(userChip).join(' + ') || 'נישט צוגעטיילט'}</span>${fr ? `<span>פון ${userChip(fr)}</span>` : ''}${x.note ? `<span>📝 ${esc(x.note)}</span>` : ''}${x.repeat && FREQ[x.repeat] ? `<span>🔁 ${FREQ[x.repeat][0]}</span>` : ''}${x.done ? `<span>✓ ${fmtD(x.doneAt)}</span>` : ''}</div></div>
    <div class="acts">${x.rc ? `<button class="btn gold sm" onclick="rcOpenTask('${id}')">🖨️ עפן רעסיטס</button>` : ''}${x.fm ? `<button class="btn gold sm" onclick="frMailTask('${id}')">✉️ שיק צום אפיס</button>` : ''}${x.done ? '' : `<button class="btn sm" onclick="taskDone('${id}')">✓ געטון</button>`}<button class="btn ghost sm" onclick="taskForm('${id}')">ענדער</button></div></div>`;
 }
 function vTodo() {
+  markSeen();
   const all = Object.entries(S.task).filter(([, x]) => taskVisible(x));
   const open = all.filter(([, x]) => !x.done);
   const F = {
@@ -73,10 +82,13 @@ function vTodo() {
     all: ['אלע', () => true]
   };
   const f = F[ui.todoF] ? ui.todoF : 'mine';
-  let L = ui.todoDone ? all.filter(([, x]) => x.done && F[f][1](x)).sort((a, b) => (b[1].doneAt || '').localeCompare(a[1].doneAt || ''))
-    : open.filter(([, x]) => F[f][1](x)).sort((a, b) => (a[1].due || '9999').localeCompare(b[1].due || '9999') || (b[1].pri === 'hi') - (a[1].pri === 'hi'));
-  $('#main').innerHTML = `<div class="row"><div><h2>To-Do ליסטע</h2><p class="sub">אלע זאכן וואס מ'דארף טון. 🔒 פריוואט = נאר דער וואס האט עס געמאכט זעט עס. 👥 = פאר צוויי באניצער צוזאמען.</p></div><div class="spacer"></div>
+  const C = ui.todoC || '', inC = x => !C || taskCat(x) === C;
+  let L = ui.todoDone ? all.filter(([, x]) => x.done && F[f][1](x) && inC(x)).sort((a, b) => (b[1].doneAt || '').localeCompare(a[1].doneAt || ''))
+    : open.filter(([, x]) => F[f][1](x) && inC(x)).sort((a, b) => (a[1].due || '9999').localeCompare(b[1].due || '9999') || (b[1].pri === 'hi') - (a[1].pri === 'hi'));
+  $('#main').innerHTML = `<div class="row"><div><h2>🗂️ אפיס ארבעט</h2><p class="sub">אלע זאכן וואס מ'דארף טון. 🔒 פריוואט = נאר דער וואס האט עס געמאכט זעט עס. 👥 = פאר צוויי באניצער צוזאמען.</p></div><div class="spacer"></div>
    <button class="btn gold" onclick="taskForm()">+ נייע זאך</button></div>
+  <div class="chips" style="margin-bottom:8px">${[['', '🗂️ אלעס'], ['call', '📞 קאלן'], ['proj', '📋 פראיעקטן']].map(([k, l]) => `<button class="chip big ${C === k ? 'on' : ''}" onclick="ui.todoC='${k}';vTodo()">${l} (${open.filter(([, x]) => F[f][1](x) && (!k || taskCat(x) === k)).length})</button>`).join('')}
+   <span class="dim" style="font-size:12px;margin-inline-start:10px">${USERS().map(userChip).join(' ')}</span></div>
   <div class="row"><div class="chips">${Object.entries(F).map(([k, [l, fn]]) => `<button class="chip ${f === k ? 'on' : ''}" onclick="ui.todoF='${k}';vTodo()">${l} (${open.filter(([, x]) => fn(x)).length})</button>`).join('')}</div>
    <div class="spacer"></div><label style="font-size:13px;display:flex;gap:6px;align-items:center"><input type="checkbox" ${ui.todoDone ? 'checked' : ''} onchange="ui.todoDone=this.checked;vTodo()"> ווייז וואס איז שוין געטון</label></div>
   ${L.slice(0, 300).map(([id, x]) => todoRow(id, x)).join('') || `<div class="empty">${ui.todoDone ? 'גארנישט' : '🎉 אלעס געטון!'}</div>`}`;
@@ -599,4 +611,31 @@ async function expOpen(id) {
     const url = URL.createObjectURL(new Blob([data], { type: x.file.type || 'application/octet-stream' }));
     if (w) w.location = url; else { const a = document.createElement('a'); a.href = url; a.download = x.file.name; document.body.appendChild(a); a.click(); a.remove(); }
   } catch (e) { if (w) w.close(); toast('⚠️ ' + (e.message || e)); }
+}
+
+// ---------- 🔔 new office work for me: a popup (with a ding) until I open the list ----------
+const seenKey = () => 'yg_seen_' + myKey();
+const seenAt = () => { try { return localStorage.getItem(seenKey()) || ''; } catch (e) { return ''; } };
+function markSeen() { try { localStorage.setItem(seenKey(), new Date().toISOString()); } catch (e) { } _lastNew = 0; notifyCheck(); }
+const newForMe = () => { const s = seenAt(); return Object.entries(S.task).filter(([, x]) => taskVisible(x) && !x.done && taskMine(x) && x.from && x.from !== me && x.created && x.created > s); };
+let _lastNew = -1;
+function ding() {
+  try {
+    const A = new (window.AudioContext || window.webkitAudioContext)(), t = A.currentTime;
+    [[880, 0], [1320, 0.16]].forEach(([f, d]) => { const o = A.createOscillator(), g = A.createGain(); o.type = 'sine'; o.frequency.value = f; g.gain.setValueAtTime(0.0001, t + d); g.gain.exponentialRampToValueAtTime(0.35, t + d + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + d + 0.45); o.connect(g); g.connect(A.destination); o.start(t + d); o.stop(t + d + 0.5); });
+  } catch (e) { }
+}
+function notifyCheck() {
+  if (!me || !S.task) return;
+  if (!seenAt()) { try { localStorage.setItem(seenKey(), new Date().toISOString()); } catch (e) { } }
+  let box = document.getElementById('bell');
+  if (!box) { box = document.createElement('div'); box.id = 'bell'; document.body.appendChild(box); }
+  const L = view === 'todo' ? [] : newForMe();
+  if (_lastNew >= 0 && L.length > _lastNew) ding();
+  _lastNew = L.length;
+  if (!L.length) { box.className = ''; box.innerHTML = ''; return; }
+  box.className = 'on';
+  box.innerHTML = `<div class="bh">🔔 <b>${L.length}</b> ${L.length === 1 ? 'נייע זאך' : 'נייע זאכן'} פאר אייך</div>
+   ${L.slice(0, 3).map(([, x]) => `<div class="bi" style="border-left:5px solid ${userColor(x.from)}">${esc(x.title)} <small>פון ${userChip(x.from)}</small></div>`).join('')}${L.length > 3 ? '<div class="bi">…</div>' : ''}
+   <div class="row" style="margin-top:8px"><button class="btn gold sm" onclick="go('todo')">עפן</button><div class="spacer"></div><button class="btn ghost sm" onclick="markSeen()">שפעטער</button></div>`;
 }
