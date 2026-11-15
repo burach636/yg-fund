@@ -217,8 +217,10 @@ function idleWatch() {
     else if (idle > IDLE_MS - 60000 && !warned) { warned = true; toast('⏳ אין א מינוט ווערט איר ארויסגעלאגט – רירט די מויז צו בלייבן'); }
   }, 10000);
 }
-// The user box at the bottom of the sidebar (v1.21): yeshiva logo + initials + name; it opens a menu with
+// The user box at the bottom of the sidebar (v1.21.1): yeshiva logo + first name(s); it opens a menu with
 // Phone, Password, update from JLS, switch area, Taskbar and Log out (these used to sit in the header).
+// first names only: "ברוך דוד טענענבוים" -> "ברוך דוד"; with 3+ words the last one is the family name, 1–2 words stay as they are
+const firstNames = n => { const w = String(n || '').trim().split(/\s+/).filter(Boolean); return w.length >= 3 ? w.slice(0, -1).join(' ') : w.join(' '); };
 const initials = n => { const w = String(n || '').replace(/["'״׳]/g, '').trim().split(/\s+/).filter(Boolean); return (w.length > 1 ? w[0][0] + w[1][0] : (w[0] || '?').slice(0, 2)).toUpperCase(); };
 function setupUser() {
   $('#whoBox').innerHTML = '';
@@ -231,8 +233,8 @@ function setupUser() {
      ${both ? `<button onclick="numenu(0);chooseArea()">⇄ ${AREA === 'tu' ? 'צו פאנדרעיזינג' : 'צו שכר לימוד'}</button>` : ''}
      <button onclick="numenu(0);installApp()">📌 Taskbar</button>
      <button class="nuout" onclick="logout()">🚪 Log out</button></div>
-   <button class="nucard" onclick="numenu()"><img src="logo.png" alt=""><span class="nuav" style="background:${userColor(me)}">${esc(initials(me))}</span>
-     <span class="nunm"><b>${esc(me)}</b><small>${isAdmin() ? 'Admin' : esc(myEmail)}</small></span><span class="nuar">⌃</span></button>`;
+   <button class="nucard" onclick="numenu()"><img src="logo.png" alt="">
+     <span class="nunm"><b>${esc(firstNames(me))}</b><small>${isAdmin() ? 'Admin' : esc(myEmail)}</small></span><span class="nuar">⌃</span></button>`;
 }
 function numenu(on) { const m = $('#numenu'); if (!m) return; m.classList.toggle('on', on === undefined ? !m.classList.contains('on') : !!on); }
 document.addEventListener('mousedown', e => { if (!e.target.closest('#navuser')) numenu(0); });
@@ -437,7 +439,7 @@ function wire() {
 function setArea(a, keepView) {
   AREA = a; try { sessionStorage.setItem('yg_area', a); } catch (e) { }
   document.body.classList.toggle('area-tu', a === 'tu');
-  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.21</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.21</small>';
+  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.21.1</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.21.1</small>';
   $('#btnArea').style.display = canFund() && canView('tuition') ? '' : 'none';
   $('#btnArea').textContent = a === 'tu' ? '⇄ צו פאנדרעיזינג' : '⇄ צו שכר לימוד';
   setupUser();
