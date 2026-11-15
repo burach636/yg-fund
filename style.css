@@ -304,3 +304,25 @@ nav .colback{color:var(--gold2)!important;font-weight:700}
 .nbtn{border:1px solid var(--line);background:#fffaf0;border-radius:7px;padding:0 5px;font-size:13px;cursor:pointer;line-height:20px;vertical-align:middle}.nbtn:hover{border-color:var(--gold)}
 select.whoc{border-right:6px solid var(--uc)}
 .tiles.st3 .tile.st-ok{background:#e9f7ef;border-top-color:#2e9d5b}.tiles.st3 .tile.st-fix{background:#fff7e0;border-top-color:#e0a400}.tiles.st3 .tile.st-ign{background:#fdecea;border-top-color:#d2452f}
+/* header: the user's buttons moved to the sidebar (v1.21) */
+#btnImport,#btnArea,#btnInstall,#whoBox{display:none!important}
+#navuser{margin-top:auto;position:relative;padding-top:10px}
+.nucard{width:100%;display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.07);border:1px solid rgba(233,216,173,.3);border-radius:14px;padding:8px 10px;cursor:pointer;color:#fff;font-family:inherit;text-align:right}
+.nucard:hover{background:rgba(255,255,255,.13)}
+.nucard img{height:30px;width:auto;filter:drop-shadow(0 1px 1px rgba(0,0,0,.5))}
+.nuav{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;color:#fff;flex:none;border:2px solid rgba(255,255,255,.7)}
+.nunm{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.2}.nunm b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.nunm small{font-size:11px;color:var(--gold2)}
+.nuar{color:var(--gold2);font-size:14px}
+.numenu{display:none;position:absolute;bottom:calc(100% + 4px);left:0;right:0;background:#fff;border-radius:12px;box-shadow:0 -8px 28px rgba(0,0,0,.35);padding:6px;z-index:10}
+.numenu.on{display:block}
+.numenu button{display:block;width:100%;text-align:right;background:none;border:none;font-family:inherit;font-size:14px;color:var(--ink);padding:9px 12px;border-radius:8px;cursor:pointer}
+.numenu button:hover{background:#f2eee5}.numenu .nuout{color:var(--red);border-top:1px solid var(--line);border-radius:0 0 8px 8px;margin-top:4px}
+nav.incol #navuser{display:block}
+@media (max-width:900px){#navuser{margin-top:0;padding-top:0;min-width:200px}.numenu{bottom:auto;top:calc(100% + 4px)}}
+/* header logo: crisp (drawn at double size, scaled down) and gently swinging right and left */
+.logo3d.sm{height:70px;width:81px}
+.logo3d.sm .in{position:absolute;top:0;left:0;height:140px;width:162px;transform-origin:0 0;transform:scale(.5);animation:swaySm 7s ease-in-out infinite;backface-visibility:hidden}
+.logo3d.sm img{height:140px;filter:drop-shadow(0 2px 0 #9a7424) drop-shadow(0 2px 0 #7a5c1b) drop-shadow(0 2px 0 #5a4312) drop-shadow(0 10px 10px rgba(0,0,0,.5))}
+.logo3d.sm:hover .in{transform:scale(.55);animation-play-state:paused}
+@keyframes swaySm{0%,100%{transform:scale(.5) rotateY(-16deg) rotateZ(-1.5deg)}50%{transform:scale(.5) rotateY(16deg) rotateZ(1.5deg)}}
+@media (prefers-reduced-motion:reduce){.logo3d.sm .in{animation:none}}

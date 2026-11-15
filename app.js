@@ -217,9 +217,25 @@ function idleWatch() {
     else if (idle > IDLE_MS - 60000 && !warned) { warned = true; toast('⏳ אין א מינוט ווערט איר ארויסגעלאגט – רירט די מויז צו בלייבן'); }
   }, 10000);
 }
+// The user box at the bottom of the sidebar (v1.21): yeshiva logo + initials + name; it opens a menu with
+// Phone, Password, update from JLS, switch area, Taskbar and Log out (these used to sit in the header).
+const initials = n => { const w = String(n || '').replace(/["'״׳]/g, '').trim().split(/\s+/).filter(Boolean); return (w.length > 1 ? w[0][0] + w[1][0] : (w[0] || '?').slice(0, 2)).toUpperCase(); };
 function setupUser() {
-  $('#whoBox').innerHTML = `👤 <b>${esc(me)}</b>${isAdmin() ? ' <span class="tag ask">Admin</span>' : ''} <button class="btn ghost sm" onclick="callSetup()">📞 Phone</button> <button class="btn ghost sm" onclick="pwForm()">🔑 Password</button> <button class="btn ghost sm" onclick="logout()">Log out</button>`;
+  $('#whoBox').innerHTML = '';
+  let u = $('#navuser'); if (!u) { u = document.createElement('div'); u.id = 'navuser'; $('#nav').appendChild(u); }
+  const both = typeof canFund === 'function' && canFund() && canView('tuition');
+  u.innerHTML = `<div class="numenu" id="numenu">
+     <button onclick="numenu(0);callSetup()">📞 Phone</button>
+     <button onclick="numenu(0);pwForm()">🔑 Password</button>
+     <button onclick="numenu(0);importDialog()">⟳ דערהיינטיג פון JLS</button>
+     ${both ? `<button onclick="numenu(0);chooseArea()">⇄ ${AREA === 'tu' ? 'צו פאנדרעיזינג' : 'צו שכר לימוד'}</button>` : ''}
+     <button onclick="numenu(0);installApp()">📌 Taskbar</button>
+     <button class="nuout" onclick="logout()">🚪 Log out</button></div>
+   <button class="nucard" onclick="numenu()"><img src="logo.png" alt=""><span class="nuav" style="background:${userColor(me)}">${esc(initials(me))}</span>
+     <span class="nunm"><b>${esc(me)}</b><small>${isAdmin() ? 'Admin' : esc(myEmail)}</small></span><span class="nuar">⌃</span></button>`;
 }
+function numenu(on) { const m = $('#numenu'); if (!m) return; m.classList.toggle('on', on === undefined ? !m.classList.contains('on') : !!on); }
+document.addEventListener('mousedown', e => { if (!e.target.closest('#navuser')) numenu(0); });
 const USERS = () => TEAM.map(a => a.name);
 const isAdmin = () => !!(TEAM.find(a => a.email.toLowerCase() === myEmail.toLowerCase()) || {}).is_admin;
 async function logout() { try { await sb.auth.signOut(); } catch (e) { } try { sessionStorage.removeItem('yg_area'); } catch (e) { } location.hash = ''; location.reload(); }
@@ -408,7 +424,7 @@ function importDialog() {
 
 // ---------- nav / render ----------
 function wire() {
-  $('#nav').onclick = e => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.t) ui.colTab = b.dataset.t; if (b.dataset.v === 'calling' && view !== 'calling') ui.cm = null; view = b.dataset.v; document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x === b)); render(); window.scrollTo(0, 0); };
+  $('#nav').onclick = e => { const b = e.target.closest('button'); if (!b || !b.dataset.v) return; if (b.dataset.t) ui.colTab = b.dataset.t; if (b.dataset.v === 'calling' && view !== 'calling') ui.cm = null; view = b.dataset.v; document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x === b)); render(); window.scrollTo(0, 0); };
   $('#btnImport').onclick = importDialog;
   $('#ov').onclick = e => { if (e.target.id === 'ov') closeM(); };
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeM(); });
@@ -421,9 +437,10 @@ function wire() {
 function setArea(a, keepView) {
   AREA = a; try { sessionStorage.setItem('yg_area', a); } catch (e) { }
   document.body.classList.toggle('area-tu', a === 'tu');
-  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.20</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.20</small>';
+  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.21</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.21</small>';
   $('#btnArea').style.display = canFund() && canView('tuition') ? '' : 'none';
   $('#btnArea').textContent = a === 'tu' ? '⇄ צו פאנדרעיזינג' : '⇄ צו שכר לימוד';
+  setupUser();
   if (!keepView || (a === 'tu') !== TU_VIEWS.includes(view)) view = a === 'tu' ? 'thome' : 'home';
   render(); window.scrollTo(0, 0);
 }
