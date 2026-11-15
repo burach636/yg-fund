@@ -306,7 +306,7 @@ select.whoc{border-right:6px solid var(--uc)}
 .tiles.st3 .tile.st-ok{background:#e9f7ef;border-top-color:#2e9d5b}.tiles.st3 .tile.st-fix{background:#fff7e0;border-top-color:#e0a400}.tiles.st3 .tile.st-ign{background:#fdecea;border-top-color:#d2452f}
 /* header: the user's buttons moved to the sidebar (v1.21) */
 #btnImport,#btnArea,#btnInstall,#whoBox{display:none!important}
-#navuser{margin-top:auto;position:relative;padding-top:10px}
+#navuser{margin-top:auto;position:relative;padding-top:10px;order:99}   /* always last, also in the collection sub-menu */
 .nucard{width:100%;display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.07);border:1px solid rgba(233,216,173,.3);border-radius:14px;padding:8px 10px;cursor:pointer;color:#fff;font-family:inherit;text-align:right}
 .nucard:hover{background:rgba(255,255,255,.13)}
 .nucard img{height:30px;width:auto;filter:drop-shadow(0 1px 1px rgba(0,0,0,.5))}
