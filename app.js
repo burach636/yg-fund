@@ -303,7 +303,7 @@ function pwForm() {
 }
 // ---------- who calls / notes ----------
 function whoSel(onch, cur) {
-  return `<select class="mini" title="ווער קאלט" onchange="${onch}"><option value="">👤 נישט צוגעטיילט</option>${USERS().map(u => `<option value="${esc(u)}" ${u === cur ? 'selected' : ''}>👤 ${esc(u)}</option>`).join('')}</select>`;
+  return `<select class="mini whoc" title="ווער קאלט" style="--uc:${cur ? userColor(cur) : 'transparent'}" onchange="this.style.setProperty('--uc',this.value?userColor(this.value):'transparent');${onch}"><option value="">👤 נישט צוגעטיילט</option>${USERS().map(u => `<option value="${esc(u)}" ${u === cur ? 'selected' : ''}>👤 ${esc(u)}</option>`).join('')}</select>`;
 }
 async function assign(code, v) { await emit('acct', code, { assigned: v }); counts(); toast(v ? '✓ ' + v + ' וועט קאלן ' + acctName(+code) : 'נישט צוגעטיילט'); }
 async function assignTask(id, v) { await emitTask(id, { who: v }); counts(); toast('✓'); }
@@ -421,7 +421,7 @@ function wire() {
 function setArea(a, keepView) {
   AREA = a; try { sessionStorage.setItem('yg_area', a); } catch (e) { }
   document.body.classList.toggle('area-tu', a === 'tu');
-  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.19</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.19</small>';
+  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.20</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.20</small>';
   $('#btnArea').style.display = canFund() && canView('tuition') ? '' : 'none';
   $('#btnArea').textContent = a === 'tu' ? '⇄ צו פאנדרעיזינג' : '⇄ צו שכר לימוד';
   if (!keepView || (a === 'tu') !== TU_VIEWS.includes(view)) view = a === 'tu' ? 'thome' : 'home';
@@ -612,8 +612,9 @@ function vPledges() {
   <div class="stats"><div class="stat"><b>${done} / ${rows.length}</b><span>געקאלט דעם חודש</span><div class="bar"><i style="width:${rows.length ? done / rows.length * 100 : 0}%"></i></div></div>
   <div class="stat"><b>${money(rows.reduce((s, r) => s + r.g.dueNow, 0))}</b><span>פעליג ביז סוף חודש</span></div>
   <div class="stat"><b>${money(rows.reduce((s, r) => s + r.g.open, 0))}</b><span>סך הכל אפען (אויך שפעטערדיגע)</span></div></div>
-  <table><thead><tr><th></th><th>נאמען</th><th>טעלעפאנען</th><th>פעליג יעצט</th><th>סך הכל אפען</th><th>לעצטע באצאלונג</th><th>ווער קאלט / לעצטע נאטיץ</th><th></th></tr></thead><tbody>
-  ${rows.map(r => `<tr style="${r.called ? 'opacity:.45' : ''}"><td>${r.called ? '✅' : '⬜'}</td>
+  ${(bulkList('pl', rows.map(r => r.c)), bulkBar('pl'))}
+  <table><thead><tr><th>${selAllBox('pl')}</th><th></th><th>נאמען</th><th>טעלעפאנען</th><th>פעליג יעצט</th><th>סך הכל אפען</th><th>לעצטע באצאלונג</th><th>ווער קאלט / לעצטע נאטיץ</th><th></th></tr></thead><tbody>
+  ${rows.map(r => `<tr style="${r.called ? 'opacity:.45' : ''}"><td>${selBox('pl', r.c)}</td><td>${r.called ? '✅' : '⬜'}</td>
    <td><a class="name" onclick="openAcct(${r.c})">${esc(r.a.h || r.a.n)}</a> ${r.st.vip ? '⭐' : ''}<div class="heb">${esc(r.a.h ? r.a.n : '')}</div></td>
    <td class="num" style="font-size:13px">${r.a.ph.slice(0, 2).map(p => callBtn(p[1], r.c) + ' ' + esc(p[1])).join('<br>')}</td>
    <td class="num bal">${money(r.g.dueNow)}</td><td class="num">${money(r.g.open)}</td>
@@ -671,13 +672,14 @@ function vAccounts() {
   ${allTags().length ? `<select class="mini" onchange="ui.accTag=this.value;ui.accN=100;vAccounts()"><option value="">🏷️ אלע פלאגס</option>${allTags().map(t => `<option value="${esc(t)}" ${t === ui.accTag ? 'selected' : ''}>🏷️ ${esc(t)}</option>`).join('')}</select>` : ''}
   ${shulList().length ? `<select class="mini" onchange="ui.accShul=this.value;ui.accN=100;vAccounts()"><option value="">🕍 אלע שולן</option>${shulList().map(x => `<option value="${x.id}" ${x.id === ui.accShul ? 'selected' : ''}>🕍 ${esc(x.name)}</option>`).join('')}</select>` : ''}</div>
   <div class="row" style="margin-bottom:6px"><span class="sub" style="margin:0">${L.length.toLocaleString()} געפונען · ריי:</span><div class="chips">${[['abc', 'א-ב (לעצטער נאמען)'], ['total', 'גרעסטע נדבנים']].map(([k, l]) => `<button class="chip ${ui.accSort === k ? 'on' : ''}" onclick="ui.accSort='${k}';vAccounts()">${l}</button>`).join('')}</div></div>
-  <table class="acclist"><thead><tr><th>#</th><th>נאמען</th><th>טעלעפאן</th><th>אדרעס</th><th>YG סך הכל</th><th>לעצטע</th><th>באלאנס</th><th>ווייטער בעטן</th><th>שול</th></tr></thead><tbody>
-  ${L.slice(0, ui.accN).map(a => { const g = IDX.yg.get(a.c), p = IDX.pl.get(a.c), k = ask(a.c), st = S.acct[a.c] || {}; return `<tr>
-   <td class="num" style="color:var(--muted)">${a.c}</td><td><a class="name" onclick="openAcct(${a.c})">${esc(a.h || a.n)}</a> ${tagChips(a.c)} ${st.vip ? '⭐' : ''} ${a.x ? '<span class="tag gray">נישט אקטיוו</span>' : ''}<div class="heb">${esc(a.h ? a.n : '')}</div></td>
+  ${(bulkList('acc', L.map(a => a.c)), bulkBar('acc'))}
+  <table class="acclist"><thead><tr><th>${selAllBox('acc')}</th><th>#</th><th>נאמען</th><th>טעלעפאן</th><th>אדרעס</th><th>YG סך הכל</th><th>לעצטע</th><th>באלאנס</th><th>ווייטער בעטן</th><th>שול</th></tr></thead><tbody>
+  ${L.slice(0, ui.accN).map(a => { const g = IDX.yg.get(a.c), p = IDX.pl.get(a.c), k = ask(a.c), st = S.acct[a.c] || {}; return `<tr><td>${selBox('acc', a.c)}</td>
+   <td class="num" style="color:var(--muted)">${a.c}</td><td><a class="name" onclick="openAcct(${a.c})">${esc(a.h || a.n)}</a> <button class="nbtn" title="📝 נאטיץ" onclick="noteForm(${a.c})">📝</button> ${tagChips(a.c)} ${st.vip ? '⭐' : ''} ${a.x ? '<span class="tag gray">נישט אקטיוו</span>' : ''}<div class="heb">${esc(a.h ? a.n : '')}</div></td>
    <td class="num" style="font-size:13px">${a.ph[0] ? callBtn(a.ph[0][1], a.c) + ' ' + esc(a.ph[0][1]) : ''}</td><td style="font-size:13px"><span class="ltr">${esc(a.a)}</span></td>
    <td class="num">${g ? money(g.total) : ''}</td><td class="num" style="font-size:13px">${g && g.last ? fmtD(g.last) : ''}</td>
    <td class="num ${p && p.open > 0.009 ? 'bal' : ''}">${p && p.open > 0.009 ? money(p.open) : ''}</td>
-   <td style="font-size:13px">${k.next ? (k.next <= todayS() ? '<span class="tag late">היינט</span>' : fmtDual(k.next)) : ''}</td><td style="font-size:13px">${esc(shulName(st.shul))}</td></tr>`; }).join('') || '<tr><td colspan="9" class="empty">נישט געפונען</td></tr>'}
+   <td style="font-size:13px">${k.next ? (k.next <= todayS() ? '<span class="tag late">היינט</span>' : fmtDual(k.next)) : ''}</td><td style="font-size:13px">${esc(shulName(st.shul))}</td></tr>`; }).join('') || '<tr><td colspan="10" class="empty">נישט געפונען</td></tr>'}
   </tbody></table>${L.length > ui.accN ? `<div class="more"><button class="btn ghost" onclick="ui.accN+=200;vAccounts()">ווייז נאך</button></div>` : ''}`;
   const qi = $('#q'); qi.focus(); qi.setSelectionRange(qi.value.length, qi.value.length);
   let tm; qi.oninput = () => { clearTimeout(tm); tm = setTimeout(() => { ui.accQ = qi.value; ui.accN = 100; vAccounts(); }, 250); };
@@ -889,7 +891,7 @@ function vSettings() {
   $('#main').innerHTML = `<div dir="ltr" style="text-align:left"><h2>Settings</h2><p class="sub">Only the admin sees this page.</p>
   <div class="cols"><div class="box"><h3 style="margin-top:0">Users</h3>
    <p class="sub">Only the e-mails on this list can log in. To add a user: add the e-mail here; the user opens the website, clicks <b>"ערשטע מאל דא?"</b> and makes a password.</p>
-   <table><thead><tr><th style="text-align:left">Name</th><th style="text-align:left">E-mail</th><th style="text-align:left">📱 Cell phone (SMS)</th><th>Admin</th><th style="text-align:left">🔒 Access</th><th></th></tr></thead><tbody id="ulist">
+   <table><thead><tr><th style="text-align:left">Name</th><th style="text-align:left">E-mail</th><th style="text-align:left">📱 Cell phone (SMS)</th><th>Admin</th><th>Colour</th><th style="text-align:left">🔒 Access</th><th></th></tr></thead><tbody id="ulist">
    ${TEAM.map(t => urow(t)).join('')}</tbody></table>
    <div class="row" style="margin-top:10px"><button class="btn ghost sm" onclick="addURow()">+ New user</button><div class="spacer"></div><button class="btn" onclick="saveUsers()">Save users</button></div>
    <div id="uerr" class="bal" style="font-size:13px"></div>
@@ -916,7 +918,7 @@ function vSettings() {
 function urow(t) {
   t = t || { email: '', name: '', is_admin: false };
   const pv = Array.isArray(t.perms) ? t.perms : null;
-  return `<tr data-old="${esc(t.email)}" data-perms="${esc(pv ? JSON.stringify(pv) : '')}"><td><input class="un" value="${esc(t.name)}" style="width:100%"></td><td><input class="ue" type="email" value="${esc(t.email)}" style="width:100%;direction:ltr"></td><td><input class="up" type="tel" value="${esc(t.phone || '')}" placeholder="845-555-1234" style="width:100%;direction:ltr"></td><td style="text-align:center"><input class="ua" type="checkbox" ${t.is_admin ? 'checked' : ''}></td><td><button class="btn ghost sm upb" onclick="permForm(this.closest('tr'))">${permLabel(pv)}</button></td><td><button class="btn red sm" onclick="this.closest('tr').remove()">✕</button></td></tr>`;
+  return `<tr data-old="${esc(t.email)}" data-perms="${esc(pv ? JSON.stringify(pv) : '')}"><td><input class="un" value="${esc(t.name)}" style="width:100%"></td><td><input class="ue" type="email" value="${esc(t.email)}" style="width:100%;direction:ltr"></td><td><input class="up" type="tel" value="${esc(t.phone || '')}" placeholder="845-555-1234" style="width:100%;direction:ltr"></td><td style="text-align:center"><input class="ua" type="checkbox" ${t.is_admin ? 'checked' : ''}></td><td style="text-align:center"><input class="ucl" type="color" value="${t.name ? userColor(t.name) : '#2f6fd6'}" style="width:38px;height:28px;padding:0;border:none;background:none"></td><td><button class="btn ghost sm upb" onclick="permForm(this.closest('tr'))">${permLabel(pv)}</button></td><td><button class="btn red sm" onclick="this.closest('tr').remove()">✕</button></td></tr>`;
 }
 const FUND_SECTIONS = () => SECTIONS.filter(([v]) => v !== 'tuition');
 const permLabel = pv => {
@@ -983,6 +985,8 @@ async function saveUsers() {
       for (const [c, st] of Object.entries(S.acct)) if (st.assigned === o) await emit('acct', c, { assigned: n });
       for (const [id, t] of Object.entries(S.task)) { if (t.who === o) await emitTask(id, { who: n }); if (t.who2 === o) await emitTask(id, { who2: n }); }
     }
+    const uc = {}; rows.forEach(r => { const n = r.querySelector('.un').value.trim(), c = r.querySelector('.ucl'); if (n && c) uc[n] = c.value; });
+    await emit('settings', 's', { ucol: uc });
     await loadTeam(); setupUser(); render(); toast('✓ באניצער אפגעהיטן');
   } catch (e) { err(e.message || String(e)); }
 }

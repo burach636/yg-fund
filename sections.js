@@ -10,8 +10,9 @@ const taskMine = x => x.who === me || x.who2 === me;
 const taskWho = x => [x.who, x.who2].filter(Boolean).join(' + ') || 'נישט צוגעטיילט';
 // Every event on a private task carries priv+owner, so the database never shows it to others.
 // Each team member has a colour (order of the team list); a task shows the colour of the one who asked for it.
-const UCOL = ['#2f6fd6', '#d2452f', '#2e9d5b', '#a35bd1', '#e08a00', '#1aa3a3', '#c2378f', '#6b7a1f', '#8a5a2b', '#4a4fbf'];
-const userColor = n => { const i = USERS().indexOf(n); return i < 0 ? '#9aa0ab' : UCOL[i % UCOL.length]; };
+// No red in the palette (red means "owes"); the admin can pick each user's colour in Settings (setting ucol {name: colour}).
+const UCOL = ['#2f6fd6', '#7b3fc4', '#2e9d5b', '#e08a00', '#1aa3a3', '#c2378f', '#6b7a1f', '#8a5a2b', '#4a4fbf', '#0f7c4c'];
+const userColor = n => { const o = (SET().ucol || {})[n]; if (o) return o; const i = USERS().indexOf(n); return i < 0 ? '#9aa0ab' : UCOL[i % UCOL.length]; };
 const userChip = n => n ? `<span class="uchip" style="--uc:${userColor(n)}">${esc(n)}</span>` : '';
 const taskCat = x => x.cat || (x.code || x.rc || x.fm ? 'call' : 'proj');   // 📞 calls / 📋 projects
 async function emitTask(id, p) {

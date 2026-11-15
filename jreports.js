@@ -67,14 +67,15 @@ function vJrep() {
   <div class="row"><input id="jrq" placeholder="🔍 זוך: נאמען, טעלעפאן, אדרעס, #נומער..." value="${esc(ui.jrQ || '')}" style="flex:1;min-width:240px;font-size:15px">
    <div class="chips">${[['', 'אלע'], ['__me', '👤 נאר מיינע'], ['__none', 'נישט צוגעטיילט']].map(([k, l]) => `<button class="chip ${who === k ? 'on' : ''}" onclick="ui.jrWho='${k}';ui.jrN=200;vJrep()">${l}</button>`).join('')}</div>
    <select class="mini" onchange="ui.jrWho=this.value;ui.jrN=200;vJrep()"><option value="">👤 ווער קאלט...</option>${USERS().map(u => `<option value="${esc(u)}" ${who === u ? 'selected' : ''}>👤 ${esc(u)}</option>`).join('')}</select></div>
-  <table><thead><tr><th>#</th><th>נאמען</th><th>טעלעפאן</th><th>אדרעס</th><th>${esc(T || 'UDF')}</th><th>YG סך הכל</th><th>לעצטע</th><th>ווער קאלט / נאטיץ</th><th></th></tr></thead><tbody>
-  ${L.slice(0, ui.jrN).map(a => { const g = IDX.yg.get(a.c), st = S.acct[a.c] || {}; return `<tr><td class="num" style="color:var(--muted)">${a.c}</td>
+  ${(bulkList('jr', L.map(a => a.c)), bulkBar('jr'))}
+  <table><thead><tr><th>${selAllBox('jr')}</th><th>#</th><th>נאמען</th><th>טעלעפאן</th><th>אדרעס</th><th>${esc(T || 'UDF')}</th><th>YG סך הכל</th><th>לעצטע</th><th>ווער קאלט / נאטיץ</th><th></th></tr></thead><tbody>
+  ${L.slice(0, ui.jrN).map(a => { const g = IDX.yg.get(a.c), st = S.acct[a.c] || {}; return `<tr><td>${selBox('jr', a.c)}</td><td class="num" style="color:var(--muted)">${a.c}</td>
    <td><a class="name" onclick="openAcct(${a.c})">${esc(a.h || a.n)}</a> ${tagChips(a.c)}<div class="heb">${esc(a.h ? a.n : '')}</div></td>
    <td class="num" style="font-size:13px">${a.ph.slice(0, 2).map(p => callBtn(p[1], a.c) + ' ' + esc(p[1])).join('<br>')}</td>
    <td style="font-size:12.5px"><span class="ltr">${esc(a.a)}</span></td><td style="font-size:13px">${esc(((X.udf.get(a.c) || {})[T] || []).join(', '))}</td>
    <td class="num">${g ? money(g.total) : ''}</td><td class="num" style="font-size:13px">${g && g.last ? fmtD(g.last) : ''}</td>
    <td style="font-size:13px">${whoSel(`assign(${a.c},this.value)`, st.assigned || '')}${lastNoteHTML(a.c, true)}</td>
-   <td><button class="btn ghost sm" onclick="noteForm(${a.c})">📝</button></td></tr>`; }).join('') || '<tr><td colspan="9" class="empty">קיינער פאסט נישט</td></tr>'}
+   <td><button class="btn ghost sm" onclick="noteForm(${a.c})">📝</button></td></tr>`; }).join('') || '<tr><td colspan="10" class="empty">קיינער פאסט נישט</td></tr>'}
   </tbody></table>${L.length > ui.jrN ? `<div class="more"><button class="btn ghost" onclick="ui.jrN+=300;vJrep()">ווייז נאך (${L.length - ui.jrN})</button></div>` : ''}` : '<div class="empty">נאך קיין רופארטס</div>'}`;
   const qi = $('#jrq');
   if (qi) { if (ui._jrFocus) { qi.focus(); qi.setSelectionRange(qi.value.length, qi.value.length); ui._jrFocus = false; } let tm; qi.oninput = () => { clearTimeout(tm); tm = setTimeout(() => { ui.jrQ = qi.value; ui.jrN = 200; ui._jrFocus = true; vJrep(); }, 300); }; }

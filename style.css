@@ -294,3 +294,13 @@ nav .colback{color:var(--gold2)!important;font-weight:700}
 .cpd:hover{border-color:var(--gold);background:#fffaf0}.cpd.sh{background:#f6f3ec}
 .cpd.today{border:2px solid var(--gold)}.cpd.sel{background:var(--navy);color:#fff;border-color:var(--navy)}.cpd.sel small{color:#c9d3e6}
 .cpf{display:flex;gap:6px;margin-top:8px;align-items:center}
+/* bulk select, note icon, who-calls colour, status tiles (v1.20) */
+.bulkbar{position:sticky;top:calc(var(--hh,78px) + 4px);z-index:3;display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:#1e3a6b;color:#fff;border-radius:12px;padding:8px 12px;margin:8px 0;box-shadow:0 6px 18px rgba(20,40,75,.25)}
+.bulkbar.off{position:static;background:none;color:inherit;box-shadow:none;padding:2px 0}
+.bulkbar .btn.ghost{background:rgba(255,255,255,.1);color:#fff;border-color:rgba(255,255,255,.35)}.bulkbar.off .btn.ghost{background:#fff;color:var(--navy);border-color:var(--line)}
+.bsep{width:1px;height:22px;background:rgba(127,127,127,.35);margin:0 4px;display:inline-block}
+.selcb{width:17px;height:17px;cursor:pointer;accent-color:#2f6fd6}
+.colrow .selcb{flex:none}
+.nbtn{border:1px solid var(--line);background:#fffaf0;border-radius:7px;padding:0 5px;font-size:13px;cursor:pointer;line-height:20px;vertical-align:middle}.nbtn:hover{border-color:var(--gold)}
+select.whoc{border-right:6px solid var(--uc)}
+.tiles.st3 .tile.st-ok{background:#e9f7ef;border-top-color:#2e9d5b}.tiles.st3 .tile.st-fix{background:#fff7e0;border-top-color:#e0a400}.tiles.st3 .tile.st-ign{background:#fdecea;border-top-color:#d2452f}

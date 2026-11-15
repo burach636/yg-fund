@@ -87,7 +87,7 @@ function vTuition() {
   const { L, tot } = tuCalc();
   ui.tuF = ui.tuF || 'cur'; ui.tuN = ui.tuN || 100;
   const qs = (ui.tuQ || '').trim().toLowerCase();
-  let R = L.filter(f => ui.tuF === 'all' ? true : ui.tuF === 'cur' ? f.cur : ui.tuF === 'bal' ? f.bal > 0.5 : f.due > 0.5);
+  let R = L.filter(f => ui.tuF === 'all' ? true : ui.tuF === 'cur' ? f.cur : ui.tuF === 'bal' ? f.bal > 0.5 : TU_ST[ui.tuF] ? f.st && f.st.k === ui.tuF : f.due > 0.5);
   if (ui.tuW) R = R.filter(f => { const w = (S.acct[f.code] || {}).tuWho || ''; return ui.tuW === '__none' ? !w : ui.tuW === '__me' ? w === me : w === ui.tuW; });
   if (qs) {
     const qd = qs.replace(/\D/g, '');
@@ -106,21 +106,22 @@ function vTuition() {
      <button class="btn ghost" onclick="tuXls()">⬇ Excel</button></div>
    <div class="row" style="margin:10px 0;flex-wrap:wrap;gap:6px">
     <input id="tuq" placeholder="🔍 נאמען, תלמיד, טעלעפאן, #קאוד" value="${esc(ui.tuQ || '')}" style="max-width:260px" oninput="ui.tuQ=this.value;clearTimeout(window._tuT);window._tuT=setTimeout(()=>{vTuition();const e=$('#tuq');e.focus();e.setSelectionRange(e.value.length,e.value.length)},300)">
-    ${chip('tuF', 'cur', '🎓 לערנען יעצט')}${chip('tuF', 'due', '⏰ שולדיג יעצט')}${chip('tuF', 'bal', '📒 מיט באלאנס')}${chip('tuF', 'all', 'אלע (אויך פריער)')}
+    ${chip('tuF', 'cur', '🎓 לערנען יעצט')}${chip('tuF', 'due', '⏰ שולדיג יעצט')}${chip('tuF', 'bal', '📒 מיט באלאנס')}${chip('tuF', 'all', 'אלע (אויך פריער)')}<span class="bsep"></span>${['ok', 'fix', 'ign'].map(k => chip('tuF', k, ({ ok: '🟢', fix: '🟡', ign: '🔴' })[k] + ' ' + TU_ST[k][0] + ' (' + L.filter(f => f.st && f.st.k === k).length + ')')).join('')}
     <select class="mini" onchange="ui.tuW=this.value;vTuition()"><option value="">👤 אלע</option><option value="__me" ${ui.tuW === '__me' ? 'selected' : ''}>👤 מיינע</option><option value="__none" ${ui.tuW === '__none' ? 'selected' : ''}>👤 נישט צוגעטיילט</option>${USERS().map(u => `<option ${ui.tuW === u ? 'selected' : ''}>${esc(u)}</option>`).join('')}</select>
     <select class="mini" onchange="ui.tuSort=this.value;vTuition()"><option value="due">סארטיר: שולדיג יעצט</option><option value="bal" ${srt === 'bal' ? 'selected' : ''}>סארטיר: באלאנס</option><option value="abc" ${srt === 'abc' ? 'selected' : ''}>סארטיר: א-ב</option></select>
     <span class="dim">${R.length.toLocaleString()} פאמיליעס</span></div>
-   <table><thead><tr><th>פאמיליע</th><th>תלמידים</th><th>טעלעפאן</th><th class="num">שולדיג יעצט</th><th class="num">באלאנס</th><th>לעצטע באצאלונג</th><th></th></tr></thead><tbody>
+   ${(bulkList('tu', R.map(f => f.code)), bulkBar('tu'))}
+   <table><thead><tr><th>${selAllBox('tu')}</th><th>פאמיליע</th><th>תלמידים</th><th>טעלעפאן</th><th class="num">שולדיג יעצט</th><th class="num">באלאנס</th><th>לעצטע באצאלונג</th><th></th></tr></thead><tbody>
    ${R.slice(0, ui.tuN).map(f => {
     const a = IDX.by.get(f.code) || { ph: [] }, st = S.acct[f.code] || {};
     const kids = f.kids.slice().sort((x, y) => (!!x[8] - !!y[8]) || (y[7] || '').localeCompare(x[7] || ''));   // learning now first, then those who learned before
-    return `<tr><td><a class="name" onclick="tuFamily(${f.code})">${tuFamName(f.code)}</a> <small class="dim">#${f.code}</small><br>${tuStChip(f)}${lastNoteHTML(f.code, true)}</td>
+    return `<tr><td>${selBox('tu', f.code)}</td><td><a class="name" onclick="tuFamily(${f.code})">${tuFamName(f.code)}</a> <small class="dim">#${f.code}</small><br>${tuStChip(f)}${lastNoteHTML(f.code, true)}</td>
      <td style="font-size:13px">${kids.slice(0, 6).map(k => `<span style="${k[8] ? 'opacity:.55' : ''}">${esc(k[4] || k[2])}${k[6] ? ` <small class="dim">${esc(k[6])}</small>` : ''}${k[8] ? ` <small class="dim">(געלערנט ביז ${HEB.gem(tuHY(k[8]))})</small>` : ''}</span>`).join('<br>') + (kids.length > 6 ? '<br>…' : '') || '—'}</td>
      <td style="font-size:13px" class="ltr">${a.ph.slice(0, 2).map(p => callBtn(p[1], f.code) + ' ' + esc(p[1])).join('<br>')}</td>
      <td class="num ${f.due > 0.5 ? 'bal' : ''}"><b>${money(f.due)}</b></td><td class="num">${money(f.bal)}</td>
      <td style="font-size:13px">${f.last ? fmtD(f.last) : '—'}</td>
      <td><div class="acts">${whoSel(`tuAssign(${f.code},this.value)`, st.tuWho || '')}<button class="btn ghost sm" onclick="noteForm(${f.code})">📝 נאטיץ</button></div></td></tr>`;
-  }).join('') || '<tr><td colspan="7" class="empty">—</td></tr>'}
+  }).join('') || '<tr><td colspan="8" class="empty">—</td></tr>'}
    </tbody></table>
    ${R.length > ui.tuN ? `<div style="text-align:center;margin:12px"><button class="btn ghost" onclick="ui.tuN+=200;vTuition()">ווייז מער (${(R.length - ui.tuN).toLocaleString()})</button></div>` : ''}`;
 }
@@ -199,6 +200,7 @@ function vTuHome() {
     <div class="tile t7" onclick="ui.tuF='due';go('tuition')"><i>⏰</i><h3>שולדיג שוין יעצט</h3><b class="bal">${money(tot.due)}</b><span>${tot.dueFams} פאמיליעס</span></div>
     <div class="tile t3" onclick="go('tustmt')"><i>📄</i><h3>סטעיטמענטס</h3><b>${tot.dueFams}</b><span>פאמיליעס מיט אן אפענעם ביל</span></div>
    </div>
+   <div class="tiles st3">${['ok', 'fix', 'ign'].map(k => { const F = L.filter(f => f.st && f.st.k === k); return `<div class="tile ${TU_ST[k][1]}" onclick="ui.tuF='${k}';go('tuition')"><i>${({ ok: '🟢', fix: '🟡', ign: '🔴' })[k]}</i><h3>${TU_ST[k][0]}</h3><b>${F.length}</b><span>טאטעס · ${money(F.reduce((s, f) => s + f.due, 0))} שולדיג</span></div>`; }).join('')}</div>
    <div class="cols">
     <div class="hcol t2"><h3>מיין אפיס ארבעט פאר היינט</h3>
      ${tasks.slice(0, 8).map(([id, x]) => todoRow(id, x)).join('') || '<div class="empty">🎉 גארנישט פאר היינט</div>'}
@@ -351,10 +353,11 @@ function tuStPage(r) {
 // Small box on the statement: every Jewish year this family was billed, and what % of that year's bills is paid
 function tuYrBox(f) {
   const Y = {};
-  f.ch.forEach(c => { if (c[7]) return; const y = tuHY(c[2]); if (!y) return; const o = Y[y] || (Y[y] = { b: 0, p: 0 }); o.b += c[3]; o.p += c[4]; });
+  const t = todayS();   // only bills already due (up to today): a future month does not lower this year's %
+  f.ch.forEach(c => { if (c[7] || !c[2] || c[2] > t) return; const y = tuHY(c[2]); if (!y) return; const o = Y[y] || (Y[y] = { b: 0, p: 0 }); o.b += c[3]; o.p += c[4]; });
   const L = Object.keys(Y).map(Number).sort((a, b) => a - b).filter(y => Y[y].b > 0.005).slice(-8);
   if (!L.length) return '';
-  return `<table class="tuyr"><thead><tr><th>יאר</th>${L.map(y => `<th>${HEB.gem(y)}</th>`).join('')}</tr></thead><tbody>
+  return `<table class="tuyr"><thead><tr><th>יאר (ביז היינט)</th>${L.map(y => `<th>${HEB.gem(y)}</th>`).join('')}</tr></thead><tbody>
    <tr><td>געבילט</td>${L.map(y => `<td>${tuM$(Y[y].b)}</td>`).join('')}</tr>
    <tr><td>באצאלט</td>${L.map(y => { const pc = Math.round(Y[y].p / Y[y].b * 100); return `<td><b style="color:${pc >= 90 ? '#1f7a45' : pc >= 50 ? '#8a6200' : '#b3261e'}">${pc}%</b></td>`; }).join('')}</tr></tbody></table>`;
 }

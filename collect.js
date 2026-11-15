@@ -7,6 +7,8 @@
 const COL_OUT = [['noans', '📵 קיין ענטפער'], ['msg', '💬 מעסעדזש געלאזט'], ['prom', '🤝 צוגעזאגט'], ['paid', '✅ באצאלט'], ['check', '🗓️ שעק דעיטעד'],
   ['plan', '📋 וויל א פלאן'], ['ref', '⛔ אפגעזאגט'], ['wrong', '☎️ פאלשער נאמבער'], ['note', '📝 נאר א נאטיץ']];
 const COL_TABS = [['today', '📞 קאלן היינט'], ['cb', '🔁 היינט צוריק קאלן'], ['hold', '⏸ ON HOLD'], ['all', '📚 אלע אקאונטס']];
+// in tuition "call back" is called "אפגעשטופט" (owner)
+const colTabs = () => COL_TABS.map(([k, l]) => [k, k === 'cb' && colArea() === 'tu' ? '🔁 אפגעשטופט' : l]);
 const COL_GAP = 7;   // a family/donor reached in the last 7 days does not come back on "today" (unless a call-back is set)
 const colArea = () => AREA === 'tu' ? 'tu' : 'fund';
 const colKey = c => colArea() + '|' + c;
@@ -62,7 +64,7 @@ function colNav() {
   const tab = ui.colTab || 'today';
   box.innerHTML = `<button data-v="${colArea() === 'tu' ? 'thome' : 'home'}" class="colback">← ${colArea() === 'tu' ? 'שכר לימוד' : 'פאנדרעיזינג'}</button>
    <div class="navsec">${esc(colTitle())}</div>
-   ${COL_TABS.map(([k, l]) => `<button data-v="col" data-t="${k}" class="${view === 'col' && tab === k ? 'on' : ''}">${l} <span class="cnt ${k === 'cb' ? 'orange' : k === 'hold' ? 'purple' : 'blue'}">${n[k] != null ? n[k] : ''}</span></button>`).join('')}
+   ${colTabs().map(([k, l]) => `<button data-v="col" data-t="${k}" class="${view === 'col' && tab === k ? 'on' : ''}">${l} <span class="cnt ${k === 'cb' ? 'orange' : k === 'hold' ? 'purple' : 'blue'}">${n[k] != null ? n[k] : ''}</span></button>`).join('')}
    <button data-v="calling" class="${view === 'calling' ? 'on' : ''}" style="margin-top:10px">▶ Calling mode</button>`;
 }
 
@@ -78,24 +80,27 @@ function vCol() {
   window._colR = R;
   const out = L.all.reduce((s, r) => s + (r.amt > 0 ? r.amt : 0), 0), done = L.today.filter(r => r.done).length;
   ui.colN = ui.colN || 150;
-  $('#main').innerHTML = `<div class="row"><div><h2>📞 ${esc(colTitle())}</h2><p class="sub">${esc((COL_TABS.find(x => x[0] === tab) || [])[1] || '')} · ${R.length.toLocaleString()} אקאונטס</p></div><div class="spacer"></div>
+  $('#main').innerHTML = `<div class="row"><div><h2>📞 ${esc(colTitle())}</h2><p class="sub">${esc((colTabs().find(x => x[0] === tab) || [])[1] || '')} · ${R.length.toLocaleString()} אקאונטס</p></div><div class="spacer"></div>
      ${tab !== 'all' ? `<button class="btn gold" onclick="colStart('${tab}')">▶ Calling mode</button>` : ''}</div>
    <div class="tiles">
     <div class="tile t7"><i>💰</i><h3>${colArea() === 'tu' ? 'שולדיג יעצט' : 'פלעדזשעס פעליג'}</h3><b class="bal">${money(out)}</b><span>${L.all.filter(r => r.amt > 0.5).length} אקאונטס</span></div>
     <div class="tile t1" onclick="ui.colTab='today';go('col')"><i>📞</i><h3>קאלן היינט</h3><b>${L.today.length - done}</b><span>${done} פון ${L.today.length} געטון</span></div>
-    <div class="tile t5" onclick="ui.colTab='cb';go('col')"><i>🔁</i><h3>היינט צוריק קאלן</h3><b>${L.cb.filter(r => !r.done).length}</b><span>&nbsp;</span></div>
+    <div class="tile t5" onclick="ui.colTab='cb';go('col')"><i>🔁</i><h3>${colArea() === 'tu' ? 'אפגעשטופט' : 'היינט צוריק קאלן'}</h3><b>${L.cb.filter(r => !r.done).length}</b><span>&nbsp;</span></div>
     <div class="tile t4" onclick="ui.colTab='hold';go('col')"><i>⏸</i><h3>ON HOLD</h3><b>${L.hold.length}</b><span>&nbsp;</span></div>
    </div>
    <div class="row" style="margin:8px 0"><input id="colq" placeholder="🔍 נאמען, טעלעפאן, #קאוד" value="${esc(ui.colQ || '')}" style="max-width:280px" oninput="ui.colQ=this.value;clearTimeout(window._colT);window._colT=setTimeout(()=>{vCol();const e=$('#colq');e.focus();e.setSelectionRange(e.value.length,e.value.length)},300)"></div>
+   ${(bulkList('col-' + tab, R.map(r => r.code)), bulkBar('col-' + tab))}
    <div class="collist">${R.slice(0, ui.colN).map((r, i) => colRow(r, i, tab)).join('') || '<div class="empty">🎉 גארנישט דא</div>'}</div>
    ${R.length > ui.colN ? `<div class="more"><button class="btn ghost" onclick="ui.colN+=300;vCol()">ווייז מער (${(R.length - ui.colN).toLocaleString()})</button></div>` : ''}`;
 }
+const colWho = c => { const w = (S.acct[c] || {})[colArea() === 'tu' ? 'tuWho' : 'assigned']; return w ? ' ' + userChip(w) : ''; };
 function colRow(r, i, tab) {
   const s = r.s || colSt(r.code), h = colLastNote(r.code), o = COL_OUT.find(x => x[0] === s.out);
   const col = r.f && r.f.st ? ({ ok: '#2e9d5b', fix: '#e0a400', ign: '#d2452f' })[r.f.st.k] || '#c9c2b2' : (r.amt > 0.5 ? '#d2452f' : '#c9c2b2');
   return `<div class="colrow${r.done ? ' done' : ''}" style="border-right:6px solid ${col}">
-   <div class="cr1"><a class="name" onclick="colStart('${tab}',${i})">${colName(r.code)}</a> <small class="dim">#${r.code}</small>
-    ${r.f ? tuStChip(r.f) : ''}${s.hold ? ' <span class="tag purple">⏸ On hold</span>' : ''}${s.cb ? ` <span class="tag orange">🔁 ${fmtD(s.cb)}</span>` : ''}${r.done ? ' <span class="tag ok">✓ היינט</span>' : ''}
+   ${selBox('col-' + tab, r.code)}
+   <div class="cr1"><a class="name" onclick="colStart('${tab}',${i})">${colName(r.code)}</a> <small class="dim">#${r.code}</small> <button class="nbtn" title="📝 נאטיץ" onclick="noteForm(${r.code})">📝</button>
+    ${r.f ? tuStChip(r.f) : ''}${s.hold ? ' <span class="tag purple">⏸ On hold</span>' : ''}${s.cb ? ` <span class="tag orange">🔁 ${fmtD(s.cb)}</span>` : ''}${colWho(r.code)}${r.done ? ' <span class="tag ok">✓ היינט</span>' : ''}
     <div class="cr2">${h ? `💬 "${esc(h.text.length > 80 ? h.text.slice(0, 80) + '…' : h.text)}" · ${fmtD((h.at || '').slice(0, 10))} · ${userChip(h.by || '')}` : '<span class="dim">נאך קיין נאטיץ</span>'}${o ? ` · <b>${o[1]}</b>` : ''}</div></div>
    <div class="cr3"><b class="${r.amt > 0.5 ? 'bal' : ''}">${money(r.amt)}</b>${r.bal > r.amt + 0.5 ? `<small class="dim">${money(r.bal)} באלאנס</small>` : ''}</div></div>`;
 }
@@ -128,7 +133,7 @@ function vCalling() {
       <div><small>אפענע פלעדזשעס</small><b>${pl ? pl.list.filter(c => !c[9] && c[5] > 0.009).slice(0, 4).map(c => money(c[5]) + ' ' + esc(JD.campaigns[c[6]] || c[7] || '')).join(' · ') || '—' : '—'}</b></div></div>`;
   }
   const last = r.last || (r.f ? r.f.last : '');
-  $('#main').innerHTML = `<div class="cmbar"><b>📞 Calling mode</b> <span>${esc((COL_TABS.find(x => x[0] === cm.tab) || [])[1] || '')}</span><span><b>${doneN}</b> פון ${codes.length} געטון</span>
+  $('#main').innerHTML = `<div class="cmbar"><b>📞 Calling mode</b> <span>${esc((colTabs().find(x => x[0] === cm.tab) || [])[1] || '')}</span><span><b>${doneN}</b> פון ${codes.length} געטון</span>
      <div class="cmprog"><i style="width:${doneN / codes.length * 100}%"></i></div>
      <button class="btn ghost sm" onclick="ui.cm.i--;vCalling()" ${cm.i ? '' : 'disabled'}>› פריער</button><span>${cm.i + 1} פון ${codes.length}</span><button class="btn ghost sm" onclick="ui.cm.i++;vCalling()" ${cm.i < codes.length - 1 ? '' : 'disabled'}>ווייטער ‹</button>
      <button class="btn ghost sm" onclick="${r.f ? `tuFamily(${code})` : `openAcct(${code})`}">גאנצע זייט</button></div>
@@ -170,4 +175,62 @@ async function colPin(code) {
   const s = colSt(code), v = prompt('📌 א נאטיץ וואס אלע זען ביי דעם אקאונט:', s.pin || '');
   if (v === null) return;
   await emit('col', colKey(code), { pin: v.trim() }); vCalling();
+}
+
+// ---------- ☑ bulk select on every list (v1.20) ----------
+// Every list keeps its own selection (ui.sel[key] = Set of account codes) and shows a bar with actions for all of them
+// at once: call back tomorrow / on a date (col.cb), on hold, who calls, a note, and Calling mode with only them.
+const selSet = k => { ui.sel = ui.sel || {}; return (ui.sel[k] = ui.sel[k] || new Set()); };
+function bulkList(k, codes) { window._bulk = window._bulk || {}; window._bulk[k] = codes; }
+function selBox(k, code) { return `<input type="checkbox" class="selcb" ${selSet(k).has(+code) ? 'checked' : ''} onclick="event.stopPropagation();selToggle('${k}',${+code},this.checked)" title="אויסקלייבן">`; }
+function selAllBox(k) { const L = (window._bulk || {})[k] || [], s = selSet(k), all = L.length && L.every(c => s.has(c)); return `<input type="checkbox" class="selcb" ${all ? 'checked' : ''} onclick="selAll('${k}',this.checked)" title="אלע">`; }
+function selToggle(k, code, on) { const s = selSet(k); if (on) s.add(code); else s.delete(code); bulkRefresh(k); }
+function selAll(k, on) { const s = selSet(k); ((window._bulk || {})[k] || []).forEach(c => on ? s.add(c) : s.delete(c)); render(); }
+function bulkRefresh(k) { const e = document.getElementById('bulk-' + k); if (e) e.outerHTML = bulkBar(k); }
+const cbWord = () => colArea() === 'tu' ? 'אפגעשטופט' : 'צוריק קאלן';
+function bulkBar(k) {
+  const n = selSet(k).size, tot = ((window._bulk || {})[k] || []).length;
+  if (!n) return `<div id="bulk-${k}" class="bulkbar off"><span class="dim">☑ קלייבט אויס כדי צו טון עפעס פאר אסאך אויף איינמאל</span>${tot ? `<button class="btn ghost sm" onclick="selAll('${k}',true)">☑ אלע ${tot.toLocaleString()}</button>` : ''}</div>`;
+  return `<div id="bulk-${k}" class="bulkbar"><b>☑ ${n.toLocaleString()} אויסגעקליבן</b>
+   <button class="btn ghost sm" onclick="selAll('${k}',true)">אלע ${tot.toLocaleString()}</button><button class="btn ghost sm" onclick="ui.sel['${k}']=new Set();render()">✕ אויסמעקן</button><span class="bsep"></span>
+   <button class="btn sm" onclick="bulkCb('${k}',1)">🔁 ${cbWord()}: מארגן</button><button class="btn ghost sm" onclick="bulkCbForm('${k}')">🔁 אום א טאג…</button>
+   <button class="btn ghost sm" onclick="bulkHold('${k}',true)">⏸ On hold</button><button class="btn ghost sm" onclick="bulkHold('${k}',false)">▶ נישט On hold</button>
+   <select class="mini" onchange="if(this.value!=='-')bulkWho('${k}',this.value)"><option value="-">👤 ווער קאלט…</option><option value="">נישט צוגעטיילט</option>${USERS().map(u => `<option>${esc(u)}</option>`).join('')}</select>
+   <button class="btn ghost sm" onclick="bulkNoteForm('${k}')">📝 נאטיץ פאר אלע</button><button class="btn gold sm" onclick="bulkCall('${k}')">▶ Calling mode</button></div>`;
+}
+async function bulkEmit(rows, msg) {   // [{k, eid, p}] in batches of 500
+  try {
+    const R = rows.map(r => ({ k: r.k, eid: r.eid, p: r.p, by: me }));
+    for (let i = 0; i < R.length; i += 500) await q(sb.from('events').insert(R.slice(i, i + 500)));
+    R.forEach(r => applyEvent({ k: r.k, id: r.eid, p: r.p, by: me, at: new Date().toISOString() }));
+  } catch (e) { toast('⚠️ ' + (e.message || e)); return false; }
+  closeM(); render(); toast('✓ ' + msg); return true;
+}
+const selCodes = k => [...selSet(k)];
+function bulkCb(k, days, date) {
+  const d = date || addDays(todayS(), days), C = selCodes(k);
+  return bulkEmit(C.map(c => ({ k: 'col', eid: colKey(c), p: { cb: d } })), C.length + ' – ' + cbWord() + ' ' + fmtD(d));
+}
+function bulkCbForm(k) {
+  modal(`<h2>🔁 ${cbWord()} – ${selSet(k).size} אקאונטס</h2><label class="f">אום וועלכן טאג${dateField('bkd', addDays(todayS(), 1))}</label>
+   <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn ghost" onclick="closeM()">Back</button><button class="btn" onclick="bulkCb('${k}',0,$('#bkd').value)">OK</button></div>`, 'narrow');
+}
+function bulkHold(k, on) { const C = selCodes(k); return bulkEmit(C.map(c => ({ k: 'col', eid: colKey(c), p: { hold: on } })), C.length + (on ? ' – On hold' : ' – נישט מער On hold')); }
+function bulkWho(k, who) {
+  const C = selCodes(k), f = colArea() === 'tu' ? 'tuWho' : 'assigned';
+  return bulkEmit(C.map(c => ({ k: 'acct', eid: String(c), p: { [f]: who } })), C.length + ' – ' + (who || 'נישט צוגעטיילט'));
+}
+function bulkNoteForm(k) {
+  modal(`<h2>📝 נאטיץ פאר ${selSet(k).size} אקאונטס</h2><label class="f">די נאטיץ<textarea id="bkn" rows="3"></textarea></label>
+   <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn ghost" onclick="closeM()">Back</button><button class="btn" onclick="bulkNote('${k}')">Save</button></div>`, 'narrow');
+  setTimeout(() => $('#bkn').focus(), 50);
+}
+function bulkNote(k) {
+  const t = $('#bkn').value.trim(); if (!t) { $('#bkn').focus(); return; }
+  const C = selCodes(k), at = new Date().toISOString();
+  return bulkEmit(C.map(c => ({ k: 'hist', eid: uid(), p: { code: c, text: t, area: colArea() } })), C.length + ' נאטיצן');
+}
+function bulkCall(k) {
+  const C = selCodes(k).filter(c => IDX.by.has(c)); if (!C.length) return;
+  ui.cm = { tab: 'sel', codes: C, i: 0 }; view = 'calling'; render();
 }
