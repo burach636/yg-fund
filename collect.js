@@ -81,7 +81,7 @@ function vCol() {
   const out = L.all.reduce((s, r) => s + (r.amt > 0 ? r.amt : 0), 0), done = L.today.filter(r => r.done).length;
   ui.colN = ui.colN || 150;
   $('#main').innerHTML = `<div class="row"><div><h2>📞 ${esc(colTitle())}</h2><p class="sub">${esc((colTabs().find(x => x[0] === tab) || [])[1] || '')} · ${R.length.toLocaleString()} אקאונטס</p></div><div class="spacer"></div>
-     ${tab !== 'all' ? `<button class="btn gold" onclick="colStart('${tab}')">▶ Calling mode</button>` : ''}</div>
+     ${tab !== 'all' ? `<button class="btn gold" onclick="colStart('${tab}')">▶ Calling mode</button>` : ''}${colArea() === 'fund' ? `<span class="dim" style="font-size:13px">אדער:</span><select class="mini" onchange="if(this.value)colStart(this.value)"><option value="">▶ Calling mode פון א רופארט…</option>${colSources().filter(([k]) => k.startsWith('jr:')).map(([k, l]) => `<option value="${esc(k)}">${esc(l)}</option>`).join('')}</select>` : ''}</div>
    <div class="tiles">
     <div class="tile t7"><i>💰</i><h3>${colArea() === 'tu' ? 'שולדיג יעצט' : 'פלעדזשעס פעליג'}</h3><b class="bal">${money(out)}</b><span>${L.all.filter(r => r.amt > 0.5).length} אקאונטס</span></div>
     <div class="tile t1" onclick="ui.colTab='today';go('col')"><i>📞</i><h3>קאלן היינט</h3><b>${L.today.length - done}</b><span>${done} פון ${L.today.length} געטון</span></div>
@@ -106,7 +106,25 @@ function colRow(r, i, tab) {
 }
 
 // ---------- ▶ Calling mode ----------
+// Which list to call (v1.23): the collection lists, and in fundraising also every report ("רופארטס", e.g.
+// "דינער מהרי"ט 2026 נאך נישט געגעבן"): src 'jr:<report id>'.
+function colSources() {
+  const L = colTabs().filter(([k]) => k !== 'all');
+  if (colArea() === 'fund' && JD && JD.udf && JD.camphits && typeof jrDefs === 'function') jrDefs().forEach(d => L.push(['jr:' + d.id, '📑 ' + d.name]));
+  return L;
+}
+const colSrcName = k => k === 'sel' ? '☑ אויסגעקליבענע' : ((colSources().find(x => x[0] === k) || colTabs().find(x => x[0] === k) || [])[1] || '');
+function colSrcSel(cur) {
+  return `<select class="mini srcsel" onchange="colStart(this.value)" title="וועמען קאלן">${cur === 'sel' ? '<option value="sel" selected>☑ אויסגעקליבענע</option>' : ''}${colSources().map(([k, l]) => `<option value="${esc(k)}" ${k === cur ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
+}
 function colStart(tab, i) {
+  if (String(tab).startsWith('jr:')) {   // a report: everybody on it, those reached today at the end
+    const d = jrDefs().find(x => 'jr:' + x.id === tab); if (!d) return;
+    const t = todayS(), C = jrRun(d).map(a => a.c), done = c => (colSt(c).outAt || '').slice(0, 10) === t;
+    const codes = C.filter(c => !done(c)).concat(C.filter(done));
+    if (!codes.length) { toast('גארנישט צו קאלן'); return; }
+    ui.cm = { tab, codes, i: i || 0 }; go('calling'); return;
+  }
   const L = colLists()[tab] || [];
   if (!L.length) { toast('גארנישט צו קאלן'); return; }
   ui.cm = { tab, codes: L.map(r => r.code), i: i || Math.max(0, L.findIndex(r => !r.done)) };
@@ -133,7 +151,8 @@ function vCalling() {
       <div><small>אפענע פלעדזשעס</small><b>${pl ? pl.list.filter(c => !c[9] && c[5] > 0.009).slice(0, 4).map(c => money(c[5]) + ' ' + esc(JD.campaigns[c[6]] || c[7] || '')).join(' · ') || '—' : '—'}</b></div></div>`;
   }
   const last = r.last || (r.f ? r.f.last : '');
-  $('#main').innerHTML = `<div class="cmbar"><b>📞 Calling mode</b>${colArea() === 'tu' && cm.tab !== 'sel' ? tuScopeChips(`colStart('${cm.tab}')`) : ''} <span>${esc((colTabs().find(x => x[0] === cm.tab) || [])[1] || '')}</span><span><b>${doneN}</b> פון ${codes.length} געטון</span>
+  const isJr = String(cm.tab).startsWith('jr:');
+  $('#main').innerHTML = `<div class="cmbar"><b>📞 Calling mode</b>${colArea() === 'tu' && cm.tab !== 'sel' ? tuScopeChips(`colStart('${cm.tab}')`) : ''} ${colSrcSel(cm.tab)}<span><b>${doneN}</b> פון ${codes.length} געטון</span>
      <div class="cmprog"><i style="width:${doneN / codes.length * 100}%"></i></div>
      <button class="btn ghost sm" onclick="ui.cm.i--;vCalling()" ${cm.i ? '' : 'disabled'}>› פריער</button><span>${cm.i + 1} פון ${codes.length}</span><button class="btn ghost sm" onclick="ui.cm.i++;vCalling()" ${cm.i < codes.length - 1 ? '' : 'disabled'}>ווייטער ‹</button>
      <button class="btn ghost sm" onclick="${r.f ? `tuFamily(${code})` : `openAcct(${code})`}">גאנצע זייט</button></div>
@@ -143,7 +162,7 @@ function vCalling() {
       <div class="cmtags">${r.f ? tuStChip(r.f, false) : ''}<span class="tag gray">JLS #${code}</span>${s.hold ? '<span class="tag purple">⏸ On hold</span>' : ''}${s.cb ? `<span class="tag orange">🔁 ${fmtD(s.cb)}</span>` : ''}${typeof tagsOf === 'function' ? tagsOf(code).map(x => `<span class="tag custom">${esc(x)}</span>`).join('') : ''}</div>
       <div class="cmtop"><div><div class="cmname">${esc(a.h || a.n)}</div><div class="cmeng">${esc(a.h ? a.n : '')}</div><div class="cmaddr">📍 ${esc(a.a || '—')}</div>
         <div class="cmaddr">לעצטע באצאלונג: ${last ? fmtD(last) : '—'}${r.f && r.f.st && r.f.st.mo != null ? ` (לפני ${r.f.st.mo} חדשים)` : ''}</div></div>
-       <div class="cmbal"><small>${r.f ? 'שולדיג יעצט' : 'פעליג'}</small><b>${money(r.amt)}</b>${r.bal > r.amt + 0.5 ? `<small>${money(r.bal)} באלאנס</small>` : ''}</div></div>
+       <div class="cmbal">${isJr && !(r.amt > 0.009) ? `<small>לעצטע נדבה</small><b style="color:#9fe0b4">${money((IDX.yg.get(code) || {}).lastAmt || 0)}</b><small>YG ס"ה ${money((IDX.yg.get(code) || {}).total || 0)}</small>` : `<small>${r.f ? 'שולדיג יעצט' : 'פעליג'}</small><b>${money(r.amt)}</b>`}${r.bal > r.amt + 0.5 ? `<small>${money(r.bal)} באלאנס</small>` : ''}</div></div>
       <div class="cmphones">${a.ph.slice(0, 4).map(p => { const d = callNum(p[1]); return `<a class="cmcall" href="tel:+${d}" data-n="${d}" onclick="return dial(this,${code})">📞 ${esc(p[0] || 'Phone')}<br><b>${esc(p[1])}</b></a>`; }).join('') || '<span class="dim">קיין טעלעפאן</span>'}</div>
      </div>
      <div class="cmpin" onclick="colPin(${code})">📌 ${s.pin ? `<b>${esc(s.pin)}</b>` : '<span class="dim">Pin א נאטיץ וואס אלע זען, למשל "באצאלט צוויי מאל א יאר: אדר און תשרי"</span>'}</div>
@@ -156,7 +175,7 @@ function vCalling() {
      <h3 style="margin-top:16px">📝 נאטיצן</h3>${hist.map(h => `<div class="cmh">💬 ${esc(h.text)} <small class="dim">– ${userChip(h.by || '')} · ${fmtD((h.at || '').slice(0, 10))}</small></div>`).join('') || '<p class="dim">—</p>'}
     </div>
     <div class="cmside"><div class="cmsh">UP NEXT <span class="cnt blue">${codes.length}</span></div>
-     ${codes.map((c, j) => { const rr = map.get(c) || { amt: 0 }, aa = IDX.by.get(c) || {}, dn = (colSt(c).outAt || '').slice(0, 10) === t; return `<div class="cmli${j === cm.i ? ' on' : ''}${dn ? ' done' : ''}" onclick="ui.cm.i=${j};vCalling()"><span>${j + 1}</span><b>${esc(aa.h || aa.n || '#' + c)}</b><i>${money(rr.amt)}</i></div>`; }).join('')}
+     ${codes.map((c, j) => { const rr = map.get(c) || { amt: 0 }, aa = IDX.by.get(c) || {}, dn = (colSt(c).outAt || '').slice(0, 10) === t; return `<div class="cmli${j === cm.i ? ' on' : ''}${dn ? ' done' : ''}" onclick="ui.cm.i=${j};vCalling()"><span>${j + 1}</span><b>${esc(aa.h || aa.n || '#' + c)}</b><i>${money(isJr && !(rr.amt > 0.009) ? (IDX.yg.get(c) || {}).total || 0 : rr.amt)}</i></div>`; }).join('')}
     </div></div>`;
   ui.cmOut = '';
   setTimeout(() => { const e = $('.cmli.on'); if (e) e.scrollIntoView({ block: 'nearest' }); }, 30);
