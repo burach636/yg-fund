@@ -38,6 +38,9 @@ function addFreq(s, f) { if (f === 'yt') return nextYomTov(s); const m = (FREQ[f
 
 // ---------- cloud (Supabase) ----------
 const CFG = window.YG_CONFIG || {};
+// The site's own address with its folder (Netlify: https://…/ , GitHub Pages: https://…/yg-fund/) – used instead of
+// location.origin so pictures in printed pages and the e-mail links also work when the site lives in a sub-folder.
+const SITE = new URL('.', location.href.split('#')[0].split('?')[0]).href;
 const sb = (window.supabase && /^https:\/\//.test(CFG.url || '') && CFG.key && CFG.key.length > 20) ? window.supabase.createClient(CFG.url, CFG.key, { auth: { persistSession: true, autoRefreshToken: true } }) : null;
 let TEAM = [], myEmail = '', lastId = 0, jlsVersion = -1;
 async function q(promise) { const { data, error } = await promise; if (error) throw error; return data; }
@@ -77,7 +80,7 @@ async function pullLog() {
   }
   return changed;
 }
-// Download a JLS data file always fresh (v1.28.3.1): the files used to be saved with Supabase's default 1-hour cache, so
+// Download a JLS data file always fresh (v1.28.4.1): the files used to be saved with Supabase's default 1-hour cache, so
 // another user's browser could show the old numbers for up to an hour after an import.
 async function jlsFile(path) {
   try {
@@ -289,7 +292,7 @@ function vLogin(mode) {
     try {
       try { localStorage.setItem('yg_last', email); } catch (e) { }
       if (signup) {
-        const r = await sb.auth.signUp({ email, password, options: { emailRedirectTo: location.origin } });
+        const r = await sb.auth.signUp({ email, password, options: { emailRedirectTo: SITE } });
         if (r.error) throw r.error;
         if (!r.data.session) { $('#lerr').innerHTML = '<span style="color:var(--green)">✓ קוקט אין אייער אימעיל און דריקט אויפן לינק, דערנאך לאגט אריין.</span>'; $('#lbtn').disabled = false; return; }
         await afterLogin(r.data.session);
@@ -306,7 +309,7 @@ function vLogin(mode) {
 async function forgotPw() {
   const email = $('#le').value.trim();
   if (!email) { $('#lerr').textContent = 'שרייבט ערשט אייער אימעיל'; return; }
-  const r = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin });
+  const r = await sb.auth.resetPasswordForEmail(email, { redirectTo: SITE });
   $('#lerr').innerHTML = r.error ? (/rate|limit|seconds/i.test(r.error.message) ? 'צופיל אימעילס אין א קורצער צייט. ווארט א שעה און פרובירט נאכאמאל.' : esc(r.error.message)) : '<span style="color:var(--green)">✓ מ\'האט אייך געשיקט אן אימעיל מיט א לינק צו מאכן א נייעם פאסווארט. עפנט דעם לינק אויף <b>דעם זעלבן קאמפיוטער</b>.</span>';
 }
 function vNewPw() {
@@ -451,7 +454,7 @@ function wire() {
 function setArea(a, keepView) {
   AREA = a; try { sessionStorage.setItem('yg_area', a); } catch (e) { }
   document.body.classList.toggle('area-tu', a === 'tu');
-  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.28.3</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.28.3</small>';
+  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.28.4</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.28.4</small>';
   $('#btnArea').style.display = canFund() && canView('tuition') ? '' : 'none';
   $('#btnArea').textContent = a === 'tu' ? '⇄ צו פאנדרעיזינג' : '⇄ צו שכר לימוד';
   setupUser();
@@ -1062,7 +1065,7 @@ function closeM() { $('#ov').classList.remove('on'); }
 
 const setHH = () => document.documentElement.style.setProperty('--hh', document.querySelector('header').offsetHeight + 'px');
 window.addEventListener('resize', setHH); window.addEventListener('load', setHH); setHH();
-// ---------- 🔄 new version on the website: update by itself (v1.28.3) ----------
+// ---------- 🔄 new version on the website: update by itself (v1.28.4) ----------
 // Every minute the page asks the server for index.html and compares <meta name="app-version">. When it changed:
 // if nobody is in the middle of something (no window open, not typing, no mouse/keys for 20 s) the page reloads by
 // itself and comes back to the same page; otherwise a small "🔄 נייע ווערסיע" button waits for a click.

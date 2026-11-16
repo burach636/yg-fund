@@ -97,7 +97,7 @@ function rcAll(v) { rcList().forEach(p => { ui.rc.sel[rcKey(p)] = v; }); vRcpt()
 // ---------- print ----------
 function rcPage(d, bg) {
   const box = (b, cls, html) => `<div class="b ${cls}" style="left:${b.l}in;top:${b.t}in;width:${b.w}in;height:${b.h}in">${html}</div>`;
-  return `<div class="pg">${bg ? '<img class="bg" src="' + location.origin + '/receipt-bg.jpg">' : ''}
+  return `<div class="pg">${bg ? '<img class="bg" src="' + SITE + 'receipt-bg.jpg">' : ''}
    ${box(RC_BOX.name, 'hb c', esc(d.top))}
    ${box(RC_BOX.amt, 'en c', '$' + rcMoney(d.amt))}
    ${box(RC_BOX.date, 'en dt', rcDate(d.date))}
@@ -275,8 +275,8 @@ function stAll(v) { stRows().forEach(r => { ui.st.sel[r.c] = v; }); vStmt(); }
 // Placed like in the .dotx: 8.773in x 11.418in, 0.157in left / 0.154in above the page edge. Setting stmtLH (default on).
 const stLH = () => SET().stmtLH !== false;
 function stHead() {
-  return stLH() ? `<img class="lhbg" src="${location.origin}/letterhead.jpg" alt="">`
-    : `<div class="hd"><img src="${location.origin}/logo.png"><div><div class="yn">ישיבה גדולה ומתיבתא תו"י מהרי"ט דסאטמאר</div><div class="ya">Yeshivas Maharit Satmar · P.O. Box 1367 · Monroe NY 10949 · Tel 845.782.1380</div></div></div>`;
+  return stLH() ? `<img class="lhbg" src="${SITE}letterhead.jpg" alt="">`
+    : `<div class="hd"><img src="${SITE}logo.png"><div><div class="yn">ישיבה גדולה ומתיבתא תו"י מהרי"ט דסאטמאר</div><div class="ya">Yeshivas Maharit Satmar · P.O. Box 1367 · Monroe NY 10949 · Tel 845.782.1380</div></div></div>`;
 }
 function stPage(r) {
   const a = r.a, s = SET(), suf = s.rcptSuffix != null ? s.rcptSuffix : 'הי"ו', ad = rcAddr(a), t = todayS();

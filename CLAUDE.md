@@ -5,6 +5,7 @@ The owner speaks Yiddish (Hasidic spelling, with English loanwords) and is not t
 
 ## What this is
 A static web app (no build step) hosted on **Netlify**, at https://yeshivasmaharitdsatmar.netlify.app.
+- **Netlify credits (2026-11)**: the owner's Netlify team is on the credit-based free plan (1000 credits per cycle, 12th–11th); every production deploy costs ~15 credits, so 38 pushes in 5 days used 75%. **Batch changes into few pushes** (one push per request, not per fix). At 100% Netlify pauses the site until the next cycle. The code works from a sub-folder too (`SITE` in app.js instead of `location.origin`; manifest `start_url`/`scope` "./"), so it can move to free GitHub Pages (https://burach636.github.io/yg-fund/) – then add that URL in Supabase > Authentication > URL Configuration (Site URL / Redirect URLs).
 - Netlify should auto-deploy this repo from the root folder. There is no build command, and the publish directory is the root.
 - After a change is pushed, the site updates in about a minute. Open pages update by themselves (v1.26): `checkUpdate()` fetches index.html every minute and compares `<meta name="app-version">` – **bump it (with the other version labels) on every release**; idle pages reload by themselves and come back to the same view (`sessionStorage yg_view`), busy ones show a "🔄 נייע ווערסיע" button. `_headers` makes Netlify serve html/js/css with `Cache-Control: no-cache`. Ctrl+F5 is only needed once to get v1.26 itself.
 

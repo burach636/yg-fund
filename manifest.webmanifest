@@ -1,8 +1,8 @@
 {
   "name": "YG Fund – ישיבת מהרי\"ט ד'סאטמאר",
   "short_name": "YG Fund",
-  "start_url": "/",
-  "scope": "/",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "dir": "rtl",
   "lang": "yi",
