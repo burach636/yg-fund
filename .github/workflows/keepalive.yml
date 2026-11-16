@@ -26,7 +26,7 @@ jobs:
           done
           exit 1
       - name: Monthly sign of life for GitHub
-        if: github.event_name == 'schedule' && startsWith(format('{0}', github.run_number), '') && github.event.schedule == '17 9 * * *'
+        if: github.event_name == 'schedule'
         run: |
           [ "$(date -u +%d)" = "01" ] || exit 0
           git config user.name "keepalive-bot"; git config user.email "keepalive-bot@users.noreply.github.com"
