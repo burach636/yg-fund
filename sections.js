@@ -40,13 +40,14 @@ function vHome() {
   <div class="row"><div><h2>🏠 Dashboard</h2><p class="sub">${fmtDual(t)}</p></div></div>
   ${next ? `<div class="banner" onclick="go('shuls')">🕍 <div><b>${next.date === t ? 'היינט' : 'מיטוואך ' + fmtDual(next.date)}</b> גייט מען נאך געלט אין: <b class="big">${esc(next.s.name)}</b><br><span class="ltr">${esc(next.s.addr || '')}</span></div></div>` : ''}
   <div class="tiles">
-    <div class="tile t1" onclick="go('accounts')"><i>👥</i><h3>נדבות</h3><b>${IDX.yg.size.toLocaleString()}</b><span>נדבנים · ${money(sinceRH)} זינט ראש השנה</span><span>${askToday} צו בעטן היינט</span></div>
+    <div class="tile t1" onclick="go('accounts')"><i>👥</i><h3>אלע אקאונטס</h3><b>${IDX.yg.size.toLocaleString()}</b><span>נדבנים · ${money(sinceRH)} זינט ראש השנה</span><span>${askToday} צו בעטן היינט</span></div>
     <div class="tile t2" onclick="go('todo')"><i>✅</i><h3>אפיס ארבעט</h3><b>${mineOpen.length}</b><span>מיינע אפענע זאכן</span>${late ? `<span class="bal">${late} שפעט!</span>` : '<span>&nbsp;</span>'}</div>
     <div class="tile t3" onclick="go('fund')"><i>💵</i><h3>פאנדרעיזינג חשבונות</h3><b class="${F.balance > 0.009 ? 'bal' : 'zero'}">${money(F.balance)}</b><span>${F.balance >= 0 ? 'מ\'איז שולדיג די פאנדרעיזערס' : 'איבערבאצאלט'}</span><span>די 2 וואכן: ${money(F.cur ? F.cur.owed : 0)}</span></div>
     <div class="tile t4" onclick="go('shuls')"><i>🕍</i><h3>שולן</h3><b>${shuls.length}</b><span>שולן אויף דער ליסטע</span><span>${next ? 'קומענדיג: ' + esc(next.s.name) : 'לייגט צו שולן'}</span></div>
     <div class="tile t5" onclick="go('rcpt')"><i>🧾</i><h3>רעסיטס/סטעיטמענטס</h3><b>${rcNew}</b><span>נאך נישט געדרוקט</span><span>זינט ${fmtD(F.start)}</span></div>
     <div class="tile t6" onclick="go('reports')"><i>📊</i><h3>באריכטן</h3><b>${money(thisYr)}</b><span>אריינגעקומען ${HEB.gem((HEB.parts(t) || {}).y || 0)}</span><span>לויט חדשים און יארן</span></div>
     <div class="tile t8" onclick="ui.colTab='today';go('col')"><i>📞</i><h3>פאנדרעיזינג קאלעקשען</h3><b>${(() => { try { return colLists().today.filter(r => !r.done).length; } catch (e) { return ''; } })()}</b><span>צו קאלן היינט</span><span>פלעדזשעס און בעטן</span></div>
+    <div class="tile t2" onclick="go('done')"><i>✅</i><h3>נגמר מלאכתו</h3><b>${doneItems().length}</b><span>פארטיג היינט און נעכטן</span></div>
     <div class="tile t7" onclick="go('jrep')"><i>📑</i><h3>רופארטס</h3><b>${jrDefs().length || 1}</b><span>ליסטעס פון JLS צו קאלן</span><span>${esc((jrDefs()[0] || { name: 'דינער מהרי"ט 2026' }).name)}</span></div>
   </div>
   <div class="cols">

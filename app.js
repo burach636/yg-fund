@@ -217,7 +217,7 @@ function idleWatch() {
     else if (idle > IDLE_MS - 60000 && !warned) { warned = true; toast('⏳ אין א מינוט ווערט איר ארויסגעלאגט – רירט די מויז צו בלייבן'); }
   }, 10000);
 }
-// The user box at the bottom of the sidebar (v1.23.1): yeshiva logo + first name(s); it opens a menu with
+// The user box at the bottom of the sidebar (v1.24): yeshiva logo + first name(s); it opens a menu with
 // Phone, Password, update from JLS, switch area, Taskbar and Log out (these used to sit in the header).
 // first names only: "ברוך דוד טענענבוים" -> "ברוך דוד"; with 3+ words the last one is the family name, 1–2 words stay as they are
 const firstNames = n => { const w = String(n || '').trim().split(/\s+/).filter(Boolean); return w.length >= 3 ? w.slice(0, -1).join(' ') : w.join(' '); };
@@ -439,7 +439,7 @@ function wire() {
 function setArea(a, keepView) {
   AREA = a; try { sessionStorage.setItem('yg_area', a); } catch (e) { }
   document.body.classList.toggle('area-tu', a === 'tu');
-  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.23.1</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.23.1</small>';
+  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.24</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.24</small>';
   $('#btnArea').style.display = canFund() && canView('tuition') ? '' : 'none';
   $('#btnArea').textContent = a === 'tu' ? '⇄ צו פאנדרעיזינג' : '⇄ צו שכר לימוד';
   setupUser();
@@ -458,21 +458,21 @@ function render() {
   impInfo();
   const sb = document.querySelector('nav [data-v=settings]'); if (sb) sb.style.display = isAdmin() ? '' : 'none';
   if (view === 'settings' && !isAdmin()) view = 'home';
-  if (AREA === 'tu' && (view === 'home' || (!TU_VIEWS.includes(view) && !['todo', 'settings', 'col', 'calling'].includes(view)))) view = 'thome';
+  if (AREA === 'tu' && (view === 'home' || (!TU_VIEWS.includes(view) && !['todo', 'settings', 'col', 'calling', 'done'].includes(view)))) view = 'thome';
   if (AREA === 'fund' && TU_VIEWS.includes(view)) view = 'home';
   if (!canView(view)) view = AREA === 'tu' ? 'thome' : 'home';
   document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x.dataset.v === view && (!x.dataset.a || x.dataset.a === AREA)));
   if (!JD) { vWelcome(); return; }
   counts();
-  ({ home: vHome, col: vCol, calling: vCalling, thome: vTuHome, tubill: vTuBill, tustmt: vTuStmt, tuition: vTuition, rcpt: vRcpt, jrep: vJrep, todo: vTodo, fund: vFund, shuls: vShuls, today: vToday, pledges: vPledges, accounts: vAccounts, reports: vReports, settings: vSettings }[view] || vHome)();
+  ({ home: vHome, done: vDone, col: vCol, calling: vCalling, thome: vTuHome, tubill: vTuBill, tustmt: vTuStmt, tuition: vTuition, rcpt: vRcpt, jrep: vJrep, todo: vTodo, fund: vFund, shuls: vShuls, today: vToday, pledges: vPledges, accounts: vAccounts, reports: vReports, settings: vSettings }[view] || vHome)();
   applyPerms();
   colNav();
   notifyCheck();
 }
 // ---------- which main sections each user may open (team.perms; null = everything; admins always everything) ----------
-const SECTIONS = [['accounts', '👥 נדבות'], ['rcpt', '🧾 רעסיטס/סטעיטמענטס'], ['todo', '🗂️ אפיס ארבעט'], ['fund', '💵 פאנדרעיזינג חשבונות'], ['shuls', '🕍 שולן'], ['today', '📋 היינט צו בעטן'], ['pledges', '📞 פלעדזשעס'], ['reports', '📊 באריכטן'], ['jrep', '📑 רופארטס'], ['col', '📞 פאנדרעיזינג קאלעקשען'], ['tuition', '🎓 שכר לימוד (גאנצער טייל)']];
+const SECTIONS = [['accounts', '👥 אלע אקאונטס'], ['rcpt', '🧾 רעסיטס/סטעיטמענטס'], ['todo', '🗂️ אפיס ארבעט'], ['fund', '💵 פאנדרעיזינג חשבונות'], ['shuls', '🕍 שולן'], ['today', '📋 היינט צו בעטן'], ['pledges', '📞 פלעדזשעס'], ['reports', '📊 באריכטן'], ['jrep', '📑 רופארטס'], ['col', '📞 פאנדרעיזינג קאלעקשען'], ['tuition', '🎓 שכר לימוד (גאנצער טייל)']];
 const myPerms = () => { const t = TEAM.find(a => a.email.toLowerCase() === myEmail.toLowerCase()); return t && !t.is_admin && Array.isArray(t.perms) ? t.perms : null; };
-const canView = v => { if (v === 'calling') v = 'col'; if (TU_VIEWS.includes(v) || (AREA === 'tu' && v === 'col')) v = 'tuition'; return v === 'home' || v === 'settings' || !myPerms() || myPerms().includes(v); };
+const canView = v => { if (v === 'calling') v = 'col'; if (TU_VIEWS.includes(v) || (AREA === 'tu' && v === 'col')) v = 'tuition'; return v === 'home' || v === 'settings' || v === 'done' || !myPerms() || myPerms().includes(v); };
 const canFund = () => !myPerms() || myPerms().some(v => v !== 'tuition');
 function applyPerms() {
   document.querySelectorAll('nav [data-v]').forEach(b => { if (b.dataset.v !== 'settings') b.style.display = canView(b.dataset.v) && (!b.dataset.a || b.dataset.a === AREA) ? '' : 'none'; });
@@ -560,7 +560,7 @@ async function markOnce(code) {
 }
 async function taskDone(id) {
   const x = S.task[id];
-  await emitTask(id, { done: true, doneAt: todayS() });
+  await emitTask(id, { done: true, doneAt: todayS(), doneBy: me, doneTs: new Date().toISOString() });
   if (x.code && !x.priv) await emit('hist', uid(), { code: +x.code, text: '✓ ' + x.title });
   if (x.repeat && FREQ[x.repeat]) { const nid = uid(); await emitTask(nid, { title: x.title, due: addFreq(x.due && x.due > todayS() ? x.due : todayS(), x.repeat), who: x.who, who2: x.who2 || '', code: x.code, pri: x.pri, note: x.note, repeat: x.repeat, priv: !!x.priv, owner: x.owner || '' }); }
   render(); toast('✓ אפגעמארקירט');
@@ -683,14 +683,14 @@ function filterAccounts() {
   return L;
 }
 function vAccounts() {
-  const L = filterAccounts();
+  const L = fltRows('acc', filterAccounts(), a => a.c);
   window._accL = L;
-  $('#main').innerHTML = `<div class="row"><div><h2>נדבות – אקאונטס</h2><p class="sub">אלע ${JD.accounts.length.toLocaleString()} אקאונטס פון JLS. זוכט אויף ענגליש אדער לשון קודש, לויט טעלעפאן, אדרעס אדער נומער.</p></div><div class="spacer"></div><button class="btn ghost" onclick="csvAcc()">⬇ Excel</button></div>
+  $('#main').innerHTML = `<div class="row"><div><h2>👥 אלע אקאונטס</h2><p class="sub">אלע ${JD.accounts.length.toLocaleString()} אקאונטס פון JLS. זוכט אויף ענגליש אדער לשון קודש, לויט טעלעפאן, אדרעס אדער נומער.</p></div><div class="spacer"></div><button class="btn ghost" onclick="csvAcc()">⬇ Excel</button></div>
   <div class="row"><input id="q" placeholder="🔍 זוך..." value="${esc(ui.accQ)}" style="flex:1;min-width:240px;font-size:16px">
   <div class="chips">${[['all', 'אלע'], ['yg', 'YG נדבנים'], ['bal', 'מיט באלאנס'], ['vip', '⭐ VIP'], ['mine', 'מיינע'], ['once', '🚫 איינמאליגע'], ['active', 'אקטיוו']].map(([k, l]) => `<button class="chip ${ui.accF === k ? 'on' : ''}" onclick="ui.accF='${k}';ui.accN=100;vAccounts()">${l}</button>`).join('')}</div>
   ${allTags().length ? `<select class="mini" onchange="ui.accTag=this.value;ui.accN=100;vAccounts()"><option value="">🏷️ אלע פלאגס</option>${allTags().map(t => `<option value="${esc(t)}" ${t === ui.accTag ? 'selected' : ''}>🏷️ ${esc(t)}</option>`).join('')}</select>` : ''}
   ${shulList().length ? `<select class="mini" onchange="ui.accShul=this.value;ui.accN=100;vAccounts()"><option value="">🕍 אלע שולן</option>${shulList().map(x => `<option value="${x.id}" ${x.id === ui.accShul ? 'selected' : ''}>🕍 ${esc(x.name)}</option>`).join('')}</select>` : ''}</div>
-  <div class="row" style="margin-bottom:6px"><span class="sub" style="margin:0">${L.length.toLocaleString()} געפונען · ריי:</span><div class="chips">${[['abc', 'א-ב (לעצטער נאמען)'], ['total', 'גרעסטע נדבנים']].map(([k, l]) => `<button class="chip ${ui.accSort === k ? 'on' : ''}" onclick="ui.accSort='${k}';vAccounts()">${l}</button>`).join('')}</div></div>
+  <div class="row" style="margin-bottom:6px">${fltBar('acc', 'vAccounts()')}<span class="sub" style="margin:0">${L.length.toLocaleString()} געפונען · ריי:</span><div class="chips">${[['abc', 'א-ב (לעצטער נאמען)'], ['total', 'גרעסטע נדבנים']].map(([k, l]) => `<button class="chip ${ui.accSort === k ? 'on' : ''}" onclick="ui.accSort='${k}';vAccounts()">${l}</button>`).join('')}</div></div>
   ${(bulkList('acc', L.map(a => a.c)), bulkBar('acc'))}
   <table class="acclist"><thead><tr><th>${selAllBox('acc')}</th><th>#</th><th>נאמען</th><th>טעלעפאן</th><th>אדרעס</th><th>YG סך הכל</th><th>לעצטע</th><th>באלאנס</th><th>ווייטער בעטן</th><th>שול</th></tr></thead><tbody>
   ${L.slice(0, ui.accN).map(a => { const g = IDX.yg.get(a.c), p = IDX.pl.get(a.c), k = ask(a.c), st = S.acct[a.c] || {}; return `<tr><td>${selBox('acc', a.c)}</td>

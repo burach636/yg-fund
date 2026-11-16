@@ -3,6 +3,13 @@
    to a chosen campaign (any company), optionally only with a tag. Definitions are events of kind `jrep`. */
 'use strict';
 let JR = null;   // indexes built from the JLS data: udf by code, campaign hits
+// Campaigns of YG FUND only (owner): by Campaigns.CompanyNum after a re-import, until then the campaigns that appear in YG payments/pledges
+function ygCamps() {
+  const co = JD.company || 32, S2 = new Set();
+  if (JD.campCo && Object.keys(JD.campCo).length) Object.entries(JD.campCo).forEach(([n, c]) => { if (+c === +co) S2.add(+n); });
+  else { JD.payments.forEach(p => p[6] && S2.add(+p[6])); JD.pledges.forEach(c => c[6] && S2.add(+c[6])); }
+  return S2;
+}
 function jrIndex() {
   if (JR && JR.v === JD) return JR;
   const udf = new Map(), types = new Map(), hits = new Map(), campN = new Map();
@@ -44,7 +51,7 @@ function vJrep() {
   if (!S.jrep.r983) { jrEnsureDefault().then(render); }
   const D = jrDefs(), cur = D.find(d => d.id === ui.jr) || D[0];
   window._ln = lastNotes();
-  const all = cur ? jrRun(cur) : [];
+  const all = cur ? fltRows('jr', jrRun(cur), a => a.c) : [];   // + the extra 🔎 filter
   // search box + "who calls" filter (mine / not assigned / a user)
   const q = (ui.jrQ || '').trim().toLowerCase(), words = q.split(/\s+/).filter(Boolean), qd = q.replace(/\D/g, ''), who = ui.jrWho || '';
   const L = all.filter(a => {
@@ -63,7 +70,7 @@ function vJrep() {
     ${T ? `<b>${esc(T)}</b> = ${cur.vals && cur.vals.length ? cur.vals.map(esc).join(', ') : 'יעדער ווערט'}` : 'אלע אקאונטס'}
     ${cur.camp ? ` · <b>נישט</b> געגעבן און נישט צוגעזאגט צו: <b>${esc(JD.campaigns[cur.camp] || '')}</b> #${cur.camp}` : ''}${cur.tag ? ` · 🏷️ ${esc(cur.tag)}` : ''}${cur.active ? ' · נאר אקטיווע' : ''}</div></div>
     <div class="spacer"></div><b style="font-size:22px;color:var(--navy)">${L.length.toLocaleString()}</b><span class="sub" style="margin:0">מענטשן${L.length !== all.length ? ' (פון ' + all.length.toLocaleString() + ')' : ''}</span>
-    <button class="btn ghost sm" onclick="jrForm('${cur.id}')">✏️ טויש</button><button class="btn ghost sm" onclick="jrExcel()">⬇ Excel</button><button class="btn gold sm" onclick="colStart('jr:${cur.id}')">▶ Calling mode</button></div></div>
+    <button class="btn ghost sm" onclick="jrForm('${cur.id}')">✏️ טויש</button><button class="btn ghost sm" onclick="jrExcel()">⬇ Excel</button><button class="btn gold sm" onclick="colStart('jr:${cur.id}')">▶ Calling mode</button>${fltBar('jr', 'vJrep()')}</div></div>
   <div class="row"><input id="jrq" placeholder="🔍 זוך: נאמען, טעלעפאן, אדרעס, #נומער..." value="${esc(ui.jrQ || '')}" style="flex:1;min-width:240px;font-size:15px">
    <div class="chips">${[['', 'אלע'], ['__me', '👤 נאר מיינע'], ['__none', 'נישט צוגעטיילט']].map(([k, l]) => `<button class="chip ${who === k ? 'on' : ''}" onclick="ui.jrWho='${k}';ui.jrN=200;vJrep()">${l}</button>`).join('')}</div>
    <select class="mini" onchange="ui.jrWho=this.value;ui.jrN=200;vJrep()"><option value="">👤 ווער קאלט...</option>${USERS().map(u => `<option value="${esc(u)}" ${who === u ? 'selected' : ''}>👤 ${esc(u)}</option>`).join('')}</select></div>
@@ -83,7 +90,7 @@ function vJrep() {
 function jrForm(id) {
   const X = jrIndex(), d = id ? S.jrep[id] : { name: '', udf: '', vals: [], camp: '', tag: '', active: true };
   const types = [...X.types.keys()].sort();
-  const camps = [...X.campN.entries()].sort((a, b) => b[0] - a[0]).slice(0, 400);
+  const YC = ygCamps(), camps = [...X.campN.entries()].filter(([n]) => YC.has(+n) || +n === +d.camp).sort((a, b) => b[0] - a[0]).slice(0, 400);
   const tags = allTags();
   modal(`<h2>${id ? '✏️ טויש רופארט' : '+ נייער רופארט'}</h2><div class="grid2">
    <label class="f" style="grid-column:1/-1">נאמען פון רופארט<input id="jn" value="${esc(d.name)}"></label>

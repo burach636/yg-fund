@@ -13,7 +13,7 @@
 <body class="locked">
 <header>
   <div class="logo3d sm" title='ישיבת מהרי"ט ד&#39;סאטמאר'><div class="in"><img src="logo.png" alt='ישיבת מהרי"ט ד&#39;סאטמאר'><i class="shine"></i></div></div>
-  <div class="logo" id="logoTxt">YG Fund<small>פאנדרעיזינג סיסטעם · v1.23.1</small></div>
+  <div class="logo" id="logoTxt">YG Fund<small>פאנדרעיזינג סיסטעם · v1.24</small></div>
   <button class="btn ghost sm areabtn" id="btnArea" onclick="chooseArea()" style="display:none">⇄ ווקסל</button>
   <button class="btn ghost sm areabtn" id="btnInstall" onclick="installApp()" title="Pin to taskbar">📌 Taskbar</button>
   <div class="spacer"></div>
@@ -23,14 +23,14 @@
 </header>
 <nav id="nav">
   <button data-v="home" data-a="fund" class="on navhome">🏠 Dashboard</button>
-  <button data-v="accounts" data-a="fund">👥 נדבות</button>
+  <button data-v="accounts" data-a="fund">👥 אלע אקאונטס</button>
   <button data-v="rcpt" data-a="fund">🧾 רעסיטס/סטעיטמענטס</button>
   <button data-v="todo" data-a="fund">🗂️ אפיס ארבעט <span class="cnt" id="cTodo"></span></button>
   <button data-v="fund" data-a="fund">💵 פאנדרעיזינג חשבונות</button>
   <button data-v="shuls" data-a="fund">🕍 שולן</button>
   <button data-v="col" data-a="fund">📞 פאנדרעיזינג קאלעקשען</button>
-  <button data-v="today" data-a="fund">📋 היינט צו בעטן <span class="cnt" id="cToday"></span></button>
-  <button data-v="pledges" data-a="fund">📞 פלעדזשעס דעם חודש <span class="cnt" id="cPl"></span></button>
+  <button data-v="today" data-a="old">📋 היינט צו בעטן <span class="cnt" id="cToday"></span></button>
+  <button data-v="pledges" data-a="old">📞 פלעדזשעס דעם חודש <span class="cnt" id="cPl"></span></button>
   <button data-v="reports" data-a="fund">📊 באריכטן</button>
   <button data-v="jrep" data-a="fund">📑 רופארטס</button>
   <button data-v="thome" data-a="tu" class="navhome">🏠 Dashboard</button>
@@ -39,6 +39,7 @@
   <button data-v="tubill" data-a="tu">🧾 Billing</button>
   <button data-v="tustmt" data-a="tu">📄 סטעיטמענטס</button>
   <button data-v="todo" data-a="tu">🗂️ אפיס ארבעט <span class="cnt" id="cTodoT"></span></button>
+  <button data-v="done">✅ נגמר מלאכתו</button>
   <button data-v="settings">⚙️ Settings</button>
 </nav>
 <main id="main"><div class="empty">לאדנט...</div></main>
@@ -56,6 +57,7 @@
 <script src="sections.js"></script>
 <script src="receipts.js"></script>
 <script src="tuition.js"></script>
+<script src="filters.js"></script>
 <script src="collect.js"></script>
 <script src="jreports.js"></script>
 <script src="app.js"></script>

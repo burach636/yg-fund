@@ -6,9 +6,11 @@
 // outAt, outBy, pin (note everybody sees)}; every outcome also writes a `hist` note.
 const COL_OUT = [['noans', '📵 קיין ענטפער'], ['msg', '💬 מעסעדזש געלאזט'], ['prom', '🤝 צוגעזאגט'], ['paid', '✅ באצאלט'], ['check', '🗓️ שעק דעיטעד'],
   ['plan', '📋 וויל א פלאן'], ['ref', '⛔ אפגעזאגט'], ['wrong', '☎️ פאלשער נאמבער'], ['note', '📝 נאר א נאטיץ']];
-const COL_TABS = [['today', '📞 קאלן היינט'], ['cb', '🔁 היינט צוריק קאלן'], ['hold', '⏸ ON HOLD'], ['all', '📚 אלע אקאונטס']];
-// in tuition "call back" is called "אפגעשטופט" (owner)
-const colTabs = () => COL_TABS.map(([k, l]) => [k, k === 'cb' && colArea() === 'tu' ? '🔁 אפגעשטופט' : l]);
+const COL_TABS = [['today', '📞 קאלן היינט'], ['ask', '📋 היינט צו בעטן'], ['pl', '💳 פלעדזשעס'], ['cb', '🔁 היינט צוריק קאלן'], ['hold', '⏸ ON HOLD'], ['all', '📚 אלע אקאונטס']];
+// fundraising only: "היינט צו בעטן" and "פלעדזשעס" (the old separate pages moved in here, owner 2026-11-16) and "all" is
+// called "ישיבה נדבנים"; in tuition "call back" is called "אפגעשטופט" (owner)
+const colTabs = () => COL_TABS.filter(([k]) => colArea() === 'fund' || (k !== 'ask' && k !== 'pl'))
+  .map(([k, l]) => [k, k === 'cb' && colArea() === 'tu' ? '🔁 אפגעשטופט' : k === 'all' && colArea() === 'fund' ? '📚 ישיבה נדבנים' : l]);
 const COL_GAP = 7;   // a family/donor reached in the last 7 days does not come back on "today" (unless a call-back is set)
 const colArea = () => AREA === 'tu' ? 'tu' : 'fund';
 const colKey = c => colArea() + '|' + c;
@@ -31,11 +33,13 @@ function colAll() {
 function colLists() {
   const t = todayS(), all = colAll(), gap = addDays(t, -COL_GAP);
   const askToday = colArea() === 'fund' ? new Set(todayItems('all').filter(x => x.kind === 'ask').map(x => x.code)) : new Set();
-  const L = { all, today: [], cb: [], hold: [] };
+  const L = { all, today: [], cb: [], hold: [], ask: [], pl: [] };
   all.forEach(r => {
     const s = colSt(r.code), outD = (s.outAt || '').slice(0, 10);
     r.done = outD === t; r.s = s;
     if (s.hold) { L.hold.push(r); return; }
+    if (askToday.has(r.code)) L.ask.push(r);
+    if (colArea() === 'fund' && r.bal > 0.009) L.pl.push(Object.assign({}, r, { amt: r.bal, due: r.amt }));   // all open pledges, every year
     if (s.cb && s.cb <= t) L.cb.push(r);
     const need = colArea() === 'tu' ? r.amt > 0.5 : (r.amt > 0.009 || askToday.has(r.code));
     if (!need || (s.cb && s.cb > t)) return;
@@ -45,6 +49,9 @@ function colLists() {
   const srt = (a, b) => (a.done - b.done) || b.amt - a.amt;
   L.today.sort(srt); L.cb.sort((a, b) => (a.done - b.done) || (a.s.cb || '').localeCompare(b.s.cb || ''));
   L.hold.sort((a, b) => b.bal - a.bal);
+  L.ask.sort((a, b) => (a.done - b.done) || ((IDX.yg.get(b.code) || {}).total || 0) - ((IDX.yg.get(a.code) || {}).total || 0));
+  const ps = ui.plSort || 'amt', nextDue = c => { const g = IDX.pl.get(c); return g ? g.list.filter(x => !x[9] && x[5] > 0.009).map(x => x[2] || '9').sort()[0] || '9' : '9'; };
+  L.pl.sort(ps === 'due' ? (a, b) => nextDue(a.code).localeCompare(nextDue(b.code)) : ps === 'abc' ? (a, b) => ((IDX.by.get(a.code) || {})._k || '').localeCompare((IDX.by.get(b.code) || {})._k || '', 'he') : (a, b) => b.amt - a.amt);
   all.sort((a, b) => ((IDX.by.get(a.code) || {})._k || '').localeCompare((IDX.by.get(b.code) || {})._k || '', 'he'));
   return L;
 }
@@ -60,12 +67,29 @@ function colNav() {
   const inCol = view === 'col' || view === 'calling';
   nav.classList.toggle('incol', inCol);
   if (!inCol) { box.innerHTML = ''; return; }
-  let n = {}; try { const L = colLists(); COL_TABS.forEach(([k]) => { n[k] = k === 'today' || k === 'cb' ? L[k].filter(r => !r.done).length : L[k].length; }); } catch (e) { }
+  let n = {}; try { const L = colLists(); colTabs().forEach(([k]) => { n[k] = k === 'today' || k === 'cb' || k === 'ask' ? L[k].filter(r => !r.done).length : L[k].length; }); } catch (e) { }
   const tab = ui.colTab || 'today';
   box.innerHTML = `<button data-v="${colArea() === 'tu' ? 'thome' : 'home'}" class="colback">← ${colArea() === 'tu' ? 'שכר לימוד' : 'פאנדרעיזינג'}</button>
    <div class="navsec">${esc(colTitle())}</div>
    ${colTabs().map(([k, l]) => `<button data-v="col" data-t="${k}" class="${view === 'col' && tab === k ? 'on' : ''}">${l} <span class="cnt ${k === 'cb' ? 'orange' : k === 'hold' ? 'purple' : 'blue'}">${n[k] != null ? n[k] : ''}</span></button>`).join('')}
    <button data-v="calling" class="${view === 'calling' ? 'on' : ''}" style="margin-top:10px">▶ Calling mode</button>`;
+}
+
+// ---------- 💳 pledges tab: this month / a campaign / sort ----------
+function colPlChips() {
+  const f = fltOf('col-pl'), YC = typeof ygCamps === 'function' ? ygCamps() : new Set(), used = new Map();
+  IDX.pl.forEach(g => g.list.forEach(c => { if (!c[9] && c[5] > 0.009 && c[6]) used.set(+c[6], (used.get(+c[6]) || 0) + 1); }));
+  const camps = [...used.keys()].filter(n => !YC.size || YC.has(n)).sort((a, b) => b - a);
+  const setF = js => `ui.flt=ui.flt||{};ui.flt['col-pl']=Object.assign({},ui.flt['col-pl']||{});${js};vCol()`;
+  return `<span class="scope"><button class="chip ${!f.plMonth ? 'on' : ''}" onclick="${setF("delete ui.flt['col-pl'].plMonth")}">אלע יארן</button><button class="chip ${f.plMonth ? 'on' : ''}" onclick="${setF("ui.flt['col-pl'].plMonth=true")}">📅 דעם חודש</button></span>
+   <select class="mini" onchange="${setF("if(this.value)ui.flt['col-pl'].plCamp=this.value;else delete ui.flt['col-pl'].plCamp")}"><option value="">💳 אלע קאמפעינס</option>${camps.map(n => `<option value="${n}" ${+f.plCamp === n ? 'selected' : ''}>#${n} ${esc((JD.campaigns || {})[n] || '')} (${used.get(n)})</option>`).join('')}</select>
+   <select class="mini" onchange="ui.plSort=this.value;vCol()"><option value="amt">סארטיר: סכום</option><option value="due" ${ui.plSort === 'due' ? 'selected' : ''}>סארטיר: ווען פעליג</option><option value="abc" ${ui.plSort === 'abc' ? 'selected' : ''}>סארטיר: א-ב</option></select>`;
+}
+function colPlLine(code) {
+  const g = IDX.pl.get(+code); if (!g) return '';
+  const L = g.list.filter(c => !c[9] && c[5] > 0.009).sort((a, b) => (a[2] || '').localeCompare(b[2] || ''));
+  if (!L.length) return '';
+  return `<div class="cr2">💳 ${L.slice(0, 3).map(c => `${esc((JD.campaigns || {})[c[6]] || c[7] || 'פלעדזש')} <b>${money(c[5])}</b>${c[2] ? ' · ' + fmtD(c[2]) : ''}`).join(' &nbsp;|&nbsp; ')}${L.length > 3 ? ' …' : ''}</div>`;
 }
 
 // ---------- the list ----------
@@ -75,7 +99,7 @@ function vCol() {
   if (!colReady()) return;
   const tab = ui.colTab || 'today', L = colLists(), t = todayS();
   const qs = (ui.colQ || '').trim().toLowerCase();
-  let R = L[tab] || [];
+  let R = fltRows('col-' + tab, L[tab] || [], r => r.code);
   if (qs) R = R.filter(r => { const a = IDX.by.get(r.code) || {}; return ((a._s || '') + ' ' + (r.f ? r.f.kids.map(k => k.slice(2, 6).join(' ')).join(' ') : '')).includes(qs) || ('#' + r.code) === qs; });
   window._colR = R;
   const out = L.all.reduce((s, r) => s + (r.amt > 0 ? r.amt : 0), 0), done = L.today.filter(r => r.done).length;
@@ -88,7 +112,7 @@ function vCol() {
     <div class="tile t5" onclick="ui.colTab='cb';go('col')"><i>🔁</i><h3>${colArea() === 'tu' ? 'אפגעשטופט' : 'היינט צוריק קאלן'}</h3><b>${L.cb.filter(r => !r.done).length}</b><span>&nbsp;</span></div>
     <div class="tile t4" onclick="ui.colTab='hold';go('col')"><i>⏸</i><h3>ON HOLD</h3><b>${L.hold.length}</b><span>&nbsp;</span></div>
    </div>
-   <div class="row" style="margin:8px 0;flex-wrap:wrap;gap:8px">${colArea() === 'tu' ? tuScopeChips('ui.cm=null;render()') : ''}<input id="colq" placeholder="🔍 נאמען, טעלעפאן, #קאוד" value="${esc(ui.colQ || '')}" style="max-width:280px" oninput="ui.colQ=this.value;clearTimeout(window._colT);window._colT=setTimeout(()=>{vCol();const e=$('#colq');e.focus();e.setSelectionRange(e.value.length,e.value.length)},300)"></div>
+   <div class="row" style="margin:8px 0;flex-wrap:wrap;gap:8px">${colArea() === 'tu' ? tuScopeChips('ui.cm=null;render()') : ''}${fltBar('col-' + tab, 'vCol()')}${tab === 'pl' ? colPlChips() : ''}<input id="colq" placeholder="🔍 נאמען, טעלעפאן, #קאוד" value="${esc(ui.colQ || '')}" style="max-width:280px" oninput="ui.colQ=this.value;clearTimeout(window._colT);window._colT=setTimeout(()=>{vCol();const e=$('#colq');e.focus();e.setSelectionRange(e.value.length,e.value.length)},300)"></div>
    ${(bulkList('col-' + tab, R.map(r => r.code)), bulkBar('col-' + tab))}
    <div class="collist">${R.slice(0, ui.colN).map((r, i) => colRow(r, i, tab)).join('') || '<div class="empty">🎉 גארנישט דא</div>'}</div>
    ${R.length > ui.colN ? `<div class="more"><button class="btn ghost" onclick="ui.colN+=300;vCol()">ווייז מער (${(R.length - ui.colN).toLocaleString()})</button></div>` : ''}`;
@@ -101,7 +125,7 @@ function colRow(r, i, tab) {
    ${selBox('col-' + tab, r.code)}
    <div class="cr1"><a class="name" onclick="colStart('${tab}',${i})">${colName(r.code)}</a> <small class="dim">#${r.code}</small> <button class="nbtn" title="📝 נאטיץ" onclick="noteForm(${r.code})">📝</button>
     ${r.f ? tuStChip(r.f) : ''}${s.hold ? ' <span class="tag purple">⏸ On hold</span>' : ''}${s.cb ? ` <span class="tag orange">🔁 ${fmtD(s.cb)}</span>` : ''}${colWho(r.code)}${r.done ? ' <span class="tag ok">✓ היינט</span>' : ''}
-    <div class="cr2">${h ? `💬 "${esc(h.text.length > 80 ? h.text.slice(0, 80) + '…' : h.text)}" · ${fmtD((h.at || '').slice(0, 10))} · ${userChip(h.by || '')}` : '<span class="dim">נאך קיין נאטיץ</span>'}${o ? ` · <b>${o[1]}</b>` : ''}</div></div>
+    ${tab === 'pl' || tab === 'today' ? colPlLine(r.code) : ''}<div class="cr2">${h ? `💬 "${esc(h.text.length > 80 ? h.text.slice(0, 80) + '…' : h.text)}" · ${fmtD((h.at || '').slice(0, 10))} · ${userChip(h.by || '')}` : '<span class="dim">נאך קיין נאטיץ</span>'}${o ? ` · <b>${o[1]}</b>` : ''}</div></div>
    <div class="cr3"><b class="${r.amt > 0.5 ? 'bal' : ''}">${r.amt < -0.005 ? `<span class="credit">קרעדיט ${money(-r.amt)}</span>` : money(r.amt)}</b>${r.bal > r.amt + 0.5 ? `<small class="dim">${money(r.bal)} באלאנס</small>` : ''}</div></div>`;
 }
 
@@ -120,12 +144,12 @@ function colSrcSel(cur) {
 function colStart(tab, i) {
   if (String(tab).startsWith('jr:')) {   // a report: everybody on it, those reached today at the end
     const d = jrDefs().find(x => 'jr:' + x.id === tab); if (!d) return;
-    const t = todayS(), C = jrRun(d).map(a => a.c), done = c => (colSt(c).outAt || '').slice(0, 10) === t;
+    const t = todayS(), C = fltCodes('jr', jrRun(d).map(a => a.c)), done = c => (colSt(c).outAt || '').slice(0, 10) === t;
     const codes = C.filter(c => !done(c)).concat(C.filter(done));
     if (!codes.length) { toast('גארנישט צו קאלן'); return; }
     ui.cm = { tab, codes, i: i || 0 }; go('calling'); return;
   }
-  const L = colLists()[tab] || [];
+  const L = fltRows('col-' + tab, colLists()[tab] || [], r => r.code);
   if (!L.length) { toast('גארנישט צו קאלן'); return; }
   ui.cm = { tab, codes: L.map(r => r.code), i: i || Math.max(0, L.findIndex(r => !r.done)) };
   go('calling');
@@ -152,7 +176,7 @@ function vCalling() {
   }
   const last = r.last || (r.f ? r.f.last : '');
   const isJr = String(cm.tab).startsWith('jr:');
-  $('#main').innerHTML = `<div class="cmbar"><b>📞 Calling mode</b>${colArea() === 'tu' && cm.tab !== 'sel' ? tuScopeChips(`colStart('${cm.tab}')`) : ''} ${colSrcSel(cm.tab)}<span><b>${doneN}</b> פון ${codes.length} געטון</span>
+  $('#main').innerHTML = `<div class="cmbar"><b>📞 Calling mode</b>${colArea() === 'tu' && cm.tab !== 'sel' ? tuScopeChips(`colStart('${cm.tab}')`) : ''} ${colSrcSel(cm.tab)}${cm.tab !== 'sel' ? fltBar(String(cm.tab).startsWith('jr:') ? 'jr' : 'col-' + cm.tab, `colStart('${cm.tab}')`) : ''}<span><b>${doneN}</b> פון ${codes.length} געטון</span>
      <div class="cmprog"><i style="width:${doneN / codes.length * 100}%"></i></div>
      <button class="btn ghost sm" onclick="ui.cm.i--;vCalling()" ${cm.i ? '' : 'disabled'}>› פריער</button><span>${cm.i + 1} פון ${codes.length}</span><button class="btn ghost sm" onclick="ui.cm.i++;vCalling()" ${cm.i < codes.length - 1 ? '' : 'disabled'}>ווייטער ‹</button>
      <button class="btn ghost sm" onclick="${r.f ? `tuFamily(${code})` : `openAcct(${code})`}">גאנצע זייט</button></div>
@@ -187,6 +211,10 @@ async function colSave(code) {
   const text = '📞 ' + (o ? o[1] : '') + (note ? (o ? ': ' : '') + note : '') + (cb ? ' · 🔁 ' + fmtD(cb) : '') + (hold && !s.hold ? ' · ⏸ On hold' : '') + (!hold && s.hold ? ' · ▶ נישט מער On hold' : '');
   await emit('hist', uid(), { code, text, area: colArea() });
   await emit('col', colKey(code), { out: k || 'note', outAt: now, outBy: me, cb: cb || '', hold });
+  if (colArea() === 'fund') {   // was due to be asked again: move "ask again" on, like the old "היינט צו בעטן" page did
+    const t = todayS(), A = ask(code);
+    if (A.next && A.next <= t && k) await emit('acct', code, { lastAsk: t, nextAsk: cb || (k === 'noans' || k === 'msg' ? addDays(t, 3) : (addFreq(t, A.freq) || '')) });
+  }
   toast('✓ אפגעהיטן');
   ui.cm.i++; vCalling(); colNav();
 }
@@ -252,4 +280,35 @@ function bulkNote(k) {
 function bulkCall(k) {
   const C = selCodes(k).filter(c => IDX.by.has(c)); if (!C.length) return;
   ui.cm = { tab: 'sel', codes: C, i: 0 }; view = 'calling'; render();
+}
+
+// ---------- ✅ "נגמר מלאכתו" (v1.24): everything finished in the last 2 days, in this area ----------
+// Finished office work (tasks done: doneAt/doneBy/doneTs) and finished account reminders (call outcomes from the
+// collection, "ask again" results, statements and e-mails sent – their `hist` notes). Nothing is deleted; the page
+// just shows today and yesterday.
+function doneItems() {
+  const from = addDays(todayS(), -1), out = [];
+  Object.entries(S.task).forEach(([id, x]) => {
+    if (!taskVisible(x) || !x.done || !x.doneAt || x.doneAt < from) return;
+    out.push({ ts: x.doneTs || x.doneAt + 'T12:00', kind: 'task', icon: taskCat(x) === 'call' ? '📞' : '📋', text: x.title, who: x.doneBy || x.who || '', code: x.code ? +x.code : 0, id });
+  });
+  Object.values(S.hist).forEach(h => {
+    if (!h.at || h.at.slice(0, 10) < from || (h.area || 'fund') !== colArea()) return;
+    const t = String(h.text || '');
+    if (t.startsWith('✓ ')) return;   // a finished task's note – the task itself is listed
+    if (!(t.startsWith('📞') || h.res || t.startsWith('📄') || t.startsWith('✉️'))) return;
+    out.push({ ts: h.at, kind: 'acct', icon: t.startsWith('📄') ? '📄' : t.startsWith('✉️') ? '✉️' : '☑️', text: t.replace(/^📞\s*/, ''), who: h.by || '', code: +h.code || 0 });
+  });
+  return out.sort((a, b) => String(b.ts).localeCompare(String(a.ts)));
+}
+function vDone() {
+  const L = doneItems(), t = todayS(), nT = L.filter(x => x.kind === 'task').length, nA = L.length - nT;
+  const name = c => { const a = IDX.by.get(+c); return a ? `<a class="name" onclick="${AREA === 'tu' && typeof tuFamily === 'function' ? `tuFamily(${c})` : `openAcct(${c})`}">${esc(a.h || a.n)}</a>` : ''; };
+  const day = d => d === t ? 'היינט' : 'נעכטן';
+  let cur = '';
+  $('#main').innerHTML = `<div class="row"><div><h2>✅ נגמר מלאכתו</h2><p class="sub">וואס מ'האט פארטיג געמאכט היינט און נעכטן: אפיס ארבעט און אקאונטס (רופן, בעטן, סטעיטמענטס, אימעילס).</p></div></div>
+   <div class="tiles"><div class="tile t2"><i>🗂️</i><h3>אפיס ארבעט געענדיגט</h3><b>${nT}</b><span>היינט און נעכטן</span></div><div class="tile t1"><i>☑️</i><h3>אקאונטס געענדיגט</h3><b>${nA}</b><span>רופן, בעטן, סטעיטמענטס</span></div></div>
+   <div class="collist">${L.map(x => { const d = String(x.ts).slice(0, 10), hd = d !== cur ? (cur = d, `<h3 style="margin:14px 0 4px">${day(d)} · ${fmtDual(d)}</h3>`) : '';
+     return hd + `<div class="colrow done0" style="border-right:6px solid ${userColor(x.who)}"><span style="font-size:20px">${x.icon}</span><div class="cr1"><b>${esc(x.text)}</b> ${x.code ? '· ' + name(x.code) : ''}
+       <div class="cr2">${String(x.ts).length > 10 ? new Date(x.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' · ' : ''}${userChip(x.who)}</div></div>${x.kind === 'task' ? `<button class="btn ghost sm" onclick="taskUndo('${x.id}')">↩ צוריק</button>` : ''}</div>`; }).join('') || '<div class="empty">נאך גארנישט פארטיג היינט אדער נעכטן</div>'}</div>`;
 }

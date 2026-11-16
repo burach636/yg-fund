@@ -264,8 +264,11 @@
     } catch (e) { /* optional */ }
 
     step('קאמפעינס...');
-    for (const r of db.rows(db.table('Campaigns'), ['CampaignNum', 'CampaignName', 'CampaignNameH']))
+    out.campCo = {};   // campaign -> its company (Campaigns.CompanyNum), so reports can offer only this company's campaigns
+    for (const r of db.rows(db.table('Campaigns'), ['CampaignNum', 'CampaignName', 'CampaignNameH', 'CompanyNum'])) {
       out.campaigns[r.CampaignNum] = clean(r.CampaignNameH) || clean(r.CampaignName);
+      if (r.CompanyNum != null) out.campCo[r.CampaignNum] = r.CompanyNum;
+    }
 
     step('נאטיצן...');
     try {
