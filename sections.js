@@ -615,7 +615,13 @@ function notifyCheck() {
 // the total that came in this Jewish year (counting up) and, small, a table of every year. ----------
 function homeHero(years, sub) {
   const hy = (HEB.parts(todayS()) || {}).y, cur = (years.find(y => y.y === hy) || { t: 0 }).t;
-  const coins = Array.from({ length: 9 }, (_, i) => `<i class="coin" style="--d:${(i * 0.53).toFixed(2)}s;--x:${[-18, 10, -4, 22, -26, 4, 16, -12, 0][i]}px"><b>$</b></i>`).join('');
+  // the new blue $100 bills (a drawing, not a copy of a real note): light blue paper, "100", the blue ribbon and an oval
+  const bill = `<svg viewBox="0 0 120 52" width="84" height="36" direction="ltr" style="direction:ltr"><defs><linearGradient id="bg100" x1="0" x2="1"><stop offset="0" stop-color="#dcebe6"/><stop offset=".5" stop-color="#eef6f2"/><stop offset="1" stop-color="#cfe2dd"/></linearGradient></defs>
+    <rect x="1" y="1" width="118" height="50" rx="3" fill="url(#bg100)" stroke="#7fa79c" stroke-width="1.5"/><rect x="5" y="5" width="110" height="42" rx="2" fill="none" stroke="#9cbdb4" stroke-width=".8"/>
+    <ellipse cx="60" cy="26" rx="13" ry="16" fill="#c7ddd6" stroke="#6f968b" stroke-width="1"/><rect x="44" y="2" width="5" height="48" fill="#2f6fd6" opacity=".85"/>
+    <text x="13" y="20" font-size="12" font-weight="800" fill="#33584f" font-family="Arial">100</text><text x="86" y="44" font-size="13" font-weight="900" fill="#c9862a" font-family="Arial">100</text>
+    <text x="96" y="17" font-size="9" font-weight="700" fill="#33584f" font-family="Arial">$</text></svg>`;
+  const coins = Array.from({ length: 8 }, (_, i) => `<i class="coin bill" style="--d:${(i * 0.6).toFixed(2)}s;--x:${[-34, 22, -8, 38, -40, 6, 28, -20][i]}px;--r:${[-24, 18, -10, 30, -32, 12, 22, -16][i]}deg">${bill}</i>`).join('');
   $('#main').innerHTML = `<div class="hero">
    <h1 class="hero-t">פרוטה לפרוטה מצטרפות לחשבון גדול</h1>
    <div class="hero-box">
