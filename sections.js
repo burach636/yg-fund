@@ -24,39 +24,7 @@ async function emitTask(id, p) {
 
 // ---------- HOME / DASHBOARD ----------
 function vHome() {
-  window._ln = lastNotes();
-  const t = todayS(), F = fundCalc(), sh = shulSchedule(4);
-  const tasks = Object.entries(S.task).filter(([, x]) => taskVisible(x) && !x.done);
-  const mineOpen = tasks.filter(([, x]) => taskMine(x));
-  const late = mineOpen.filter(([, x]) => x.due && x.due < t).length;
-  const dueToday = mineOpen.filter(([, x]) => x.due && x.due <= t).sort((a, b) => (a[1].due || '').localeCompare(b[1].due || ''));
-  const shuls = shulList();
-  const next = sh[0];
-  let sinceRH = 0; JD.payments.forEach(p => { if (p[2] >= F.start && p[2] <= t && !p[9]) sinceRH += p[3]; });
-  const rcNew = rcItems().filter(p => p[2] >= F.start && p[2] <= t && !rcPrinted(p)).length;
-  const hyNow = (HEB.parts(t) || {}).y; let thisYr = 0; JD.payments.forEach(p => { if (!p[9] && validD(p[2]) && (HEB.parts(p[2]) || {}).y === hyNow) thisYr += p[3]; });
-  const askToday = todayItems('all').filter(x => x.kind === 'ask').length;
-  $('#main').innerHTML = `
-  <div class="row"><div><h2>🏠 Dashboard</h2><p class="sub">${fmtDual(t)}</p></div></div>
-  ${next ? `<div class="banner" onclick="go('shuls')">🕍 <div><b>${next.date === t ? 'היינט' : 'מיטוואך ' + fmtDual(next.date)}</b> גייט מען נאך געלט אין: <b class="big">${esc(next.s.name)}</b><br><span class="ltr">${esc(next.s.addr || '')}</span></div></div>` : ''}
-  <div class="tiles">
-    <div class="tile t1" onclick="go('accounts')"><i>👥</i><h3>אלע אקאונטס</h3><b>${IDX.yg.size.toLocaleString()}</b><span>נדבנים · ${money(sinceRH)} זינט ראש השנה</span><span>${askToday} צו בעטן היינט</span></div>
-    <div class="tile t2" onclick="go('todo')"><i>✅</i><h3>אפיס ארבעט</h3><b>${mineOpen.length}</b><span>מיינע אפענע זאכן</span>${late ? `<span class="bal">${late} שפעט!</span>` : '<span>&nbsp;</span>'}</div>
-    <div class="tile t3" onclick="go('fund')"><i>💵</i><h3>פאנדרעיזינג חשבונות</h3><b class="${F.balance > 0.009 ? 'bal' : 'zero'}">${money(F.balance)}</b><span>${F.balance >= 0 ? 'מ\'איז שולדיג די פאנדרעיזערס' : 'איבערבאצאלט'}</span><span>די 2 וואכן: ${money(F.cur ? F.cur.owed : 0)}</span></div>
-    <div class="tile t4" onclick="go('shuls')"><i>🕍</i><h3>שולן</h3><b>${shuls.length}</b><span>שולן אויף דער ליסטע</span><span>${next ? 'קומענדיג: ' + esc(next.s.name) : 'לייגט צו שולן'}</span></div>
-    <div class="tile t5" onclick="go('rcpt')"><i>🧾</i><h3>רעסיטס/סטעיטמענטס</h3><b>${rcNew}</b><span>נאך נישט געדרוקט</span><span>זינט ${fmtD(F.start)}</span></div>
-    <div class="tile t6" onclick="go('reports')"><i>📊</i><h3>באריכטן</h3><b>${money(thisYr)}</b><span>אריינגעקומען ${HEB.gem((HEB.parts(t) || {}).y || 0)}</span><span>לויט חדשים און יארן</span></div>
-    <div class="tile t8" onclick="ui.colTab='today';go('col')"><i>📞</i><h3>פאנדרעיזינג קאלעקשען</h3><b>${(() => { try { return colLists().today.filter(r => !r.done).length; } catch (e) { return ''; } })()}</b><span>צו קאלן היינט</span><span>פלעדזשעס און בעטן</span></div>
-    <div class="tile t2" onclick="go('done')"><i>✅</i><h3>נגמר מלאכתו</h3><b>${doneItems().length}</b><span>פארטיג היינט און נעכטן</span></div>
-    <div class="tile t7" onclick="go('jrep')"><i>📑</i><h3>רופארטס</h3><b>${jrDefs().length || 1}</b><span>ליסטעס פון JLS צו קאלן</span><span>${esc((jrDefs()[0] || { name: 'דינער מהרי"ט 2026' }).name)}</span></div>
-  </div>
-  <div class="cols">
-   <div class="hcol t2"><h3>מיין אפיס ארבעט פאר היינט</h3>
-    ${dueToday.slice(0, 8).map(([id, x]) => todoRow(id, x)).join('') || '<div class="empty">🎉 גארנישט פאר היינט</div>'}
-    <div class="row" style="margin-top:8px"><button class="btn gold sm" onclick="taskForm()">+ נייע זאך</button><button class="btn ghost sm" onclick="go('todo')">די גאנצע ליסטע</button></div></div>
-   <div class="hcol t4"><h3>שולן – קומענדיגע מיטוואכן</h3>
-    ${sh.length ? `<table><tbody>${sh.map(v => `<tr><td style="white-space:nowrap">${fmtDual(v.date)}</td><td><b>${esc(v.s.name)}</b><br><span class="ltr" style="font-size:12px;color:var(--muted)">${esc(v.s.addr || '')}</span></td></tr>`).join('')}</tbody></table>` : '<div class="empty">נאך קיין שולן. <a class="name" onclick="go(\'shuls\')">לייגט צו</a></div>'}
-   </div></div>`;
+  homeHero(hebYears().map(y => ({ y: y.y, t: y.t })), 'אריינגעקומען');
 }
 
 // ---------- TO-DO LIST ----------
@@ -640,4 +608,25 @@ function notifyCheck() {
   box.innerHTML = `<div class="bh">🔔 <b>${L.length}</b> ${L.length === 1 ? 'נייע זאך' : 'נייע זאכן'} פאר אייך</div>
    ${L.slice(0, 3).map(([, x]) => `<div class="bi" style="border-left:5px solid ${userColor(x.from)}">${esc(x.title)} <small>פון ${userChip(x.from)}</small></div>`).join('')}${L.length > 3 ? '<div class="bi">…</div>' : ''}
    <div class="row" style="margin-top:8px"><button class="btn gold sm" onclick="go('todo')">עפן</button><div class="spacer"></div><button class="btn ghost sm" onclick="markSeen()">שפעטער</button></div>`;
+}
+
+// ---------- 🏠 home page (v1.27): no second dashboard – the sidebar is the dashboard. A moving picture instead:
+// coins falling into a tzedakah box with the yeshiva logo, the flowing words "פרוטה לפרוטה מצטרפות לחשבון גדול",
+// the total that came in this Jewish year (counting up) and, small, a table of every year. ----------
+function homeHero(years, sub) {
+  const hy = (HEB.parts(todayS()) || {}).y, cur = (years.find(y => y.y === hy) || { t: 0 }).t;
+  const coins = Array.from({ length: 9 }, (_, i) => `<i class="coin" style="--d:${(i * 0.53).toFixed(2)}s;--x:${[-18, 10, -4, 22, -26, 4, 16, -12, 0][i]}px"><b>$</b></i>`).join('');
+  $('#main').innerHTML = `<div class="hero">
+   <h1 class="hero-t">פרוטה לפרוטה מצטרפות לחשבון גדול</h1>
+   <div class="hero-box">
+    <div class="coins">${coins}</div>
+    <div class="pushke"><div class="slot"></div><div class="face"><img src="logo.png" alt=""><span>ישיבת מהרי"ט ד'סאטמאר</span></div><div class="shine2"></div></div>
+    <div class="glow"></div>
+   </div>
+   <div class="hero-sum"><small>${esc(sub)} ${HEB.gem(hy)}</small><b id="heroN" data-n="${cur}">$0</b><span>${fmtDual(todayS())}</span></div>
+   ${years.length ? `<table class="hero-yrs"><thead><tr>${years.slice(0, 10).map(y => `<th>${HEB.gem(y.y)}</th>`).join('')}</tr></thead><tbody><tr>${years.slice(0, 10).map(y => `<td>${money(y.t)}</td>`).join('')}</tr></tbody></table>` : ''}
+  </div>`;
+  const el = $('#heroN'), end = +el.dataset.n, t0 = performance.now(), dur = 1800;
+  const step = t => { const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3); el.textContent = money(Math.round(end * e)); if (k < 1 && document.body.contains(el)) requestAnimationFrame(step); else el.textContent = money(end); };
+  requestAnimationFrame(step);
 }

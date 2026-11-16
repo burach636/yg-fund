@@ -202,34 +202,7 @@ function tuReady(v) {
 // ---------- 🏠 tuition dashboard ----------
 function vTuHome() {
   if (!tuReady('thome')) return;
-  window._ln = lastNotes();
-  const { L, tot } = tuCalc(), t = todayS(), y = tuNowY();
-  const tasks = Object.entries(S.task).filter(([, x]) => taskVisible(x) && !x.done && taskMine(x) && x.due && x.due <= t).sort((a, b) => (a[1].due || '').localeCompare(b[1].due || ''));
-  const owe = L.filter(f => f.due > 0.5).sort((a, b) => b.due - a.due).slice(0, 10);
-  const lastPays = TU.payments.filter(p => !p[7] && p[2] <= t).sort((a, b) => b[2].localeCompare(a[2])).slice(0, 10);
-  const thisM = (() => { const h = HEB.parts(t); let b = 0, p = 0; TU.charges.forEach(c => { const x = HEB.parts(c[2]); if (x && x.y === h.y && x.m === h.m && !c[7]) b += c[3]; }); TU.payments.forEach(q => { const x = HEB.parts(q[2]); if (!q[7] && x && x.y === h.y && x.m === h.m) p += q[3]; }); return { b, p, m: HEB.MONTHS[h.m] }; })();
-  $('#main').innerHTML = `<div class="row"><div><h2>🎓 שכר לימוד</h2><p class="sub">${fmtDual(t)} · JLS קאמפעני ${TU.co}${TU.name ? ' – ' + esc(TU.name) : ''} · דערהיינטיגט ${fmtD((TU.importedAt || '').slice(0, 10))}</p></div></div>
-   <div class="tiles">
-    <div class="tile t1" onclick="ui.tuF='cur';go('tuition')"><i>👨‍👦</i><h3>עלטערן</h3><b>${tot.curFams.toLocaleString()}</b><span>${tot.kids.toLocaleString()} תלמידים לערנען יעצט</span></div>
-    <div class="tile t6" onclick="go('tubill')"><i>🧾</i><h3>Billing ${HEB.gem(y)}</h3><b>${money(tot.yrBilled)}</b><span>${tot.yrBilled ? Math.round(tot.yrPaid / tot.yrBilled * 100) + '% באצאלט' : ''}</span></div>
-    <div class="tile t5" onclick="go('tubill')"><i>💵</i><h3>באצאלט ${HEB.gem(y)}</h3><b class="zero">${money(tot.yrPaid)}</b><span>${esc(thisM.m)}: ${money(thisM.p)} פון ${money(thisM.b)}</span></div>
-    <div class="tile t8" onclick="ui.colTab='today';go('col')"><i>📞</i><h3>שכר לימוד קאלעקשען</h3><b>${colLists().today.filter(r => !r.done).length}</b><span>צו קאלן היינט</span></div>
-    <div class="tile t2" onclick="go('done')"><i>✅</i><h3>נגמר מלאכתו</h3><b>${doneItems().length}</b><span>פארטיג היינט און נעכטן</span></div>
-    <div class="tile t7" onclick="ui.tuF='due';go('tuition')"><i>⏰</i><h3>שולדיג שוין יעצט</h3><b class="bal">${money(tot.due)}</b><span>${tot.dueFams} פאמיליעס</span></div>
-    <div class="tile t3" onclick="go('tustmt')"><i>📄</i><h3>סטעיטמענטס</h3><b>${tot.dueFams}</b><span>פאמיליעס מיט אן אפענעם ביל</span></div>
-   </div>
-   <div class="row" style="margin:14px 0 0"><h3 style="margin:0">טאטעס לויט ווי זיי באצאלן</h3><div class="spacer"></div>${tuScopeChips('vTuHome()')}</div>
-   <div class="tiles st3">${['ok', 'fix', 'ign'].map(k => { const F = L.filter(f => f.st && f.st.k === k && tuInScope(f)); return `<div class="tile ${TU_ST[k][1]}" onclick="ui.tuF='${k}';go('tuition')"><i>${({ ok: '🟢', fix: '🟡', ign: '🔴' })[k]}</i><h3>${TU_ST[k][0]}</h3><b>${F.length}</b><span>טאטעס · ${money(F.reduce((s, f) => s + f.due, 0))} שולדיג</span></div>`; }).join('')}</div>
-   <div class="cols">
-    <div class="hcol t2"><h3>מיין אפיס ארבעט פאר היינט</h3>
-     ${tasks.slice(0, 8).map(([id, x]) => todoRow(id, x)).join('') || '<div class="empty">🎉 גארנישט פאר היינט</div>'}
-     <div class="row" style="margin-top:8px"><button class="btn gold sm" onclick="taskForm()">+ נייע זאך</button><button class="btn ghost sm" onclick="go('todo')">די גאנצע ליסטע</button></div></div>
-    <div class="hcol t7"><h3>⏰ שולדיג מערסטע</h3><table><tbody>
-     ${owe.map(f => `<tr><td><a class="name" onclick="tuFamily(${f.code})">${tuFamName(f.code)}</a>${lastNoteHTML(f.code, true)}</td><td class="num bal"><b>${money(f.due)}</b></td></tr>`).join('') || '<tr><td class="empty">🎉 קיינער</td></tr>'}</tbody></table>
-     <div class="row" style="margin-top:8px"><button class="btn ghost sm" onclick="ui.tuF='due';go('tuition')">די גאנצע ליסטע</button></div></div>
-    <div class="hcol t5"><h3>💵 לעצטע באצאלונגען</h3><table><tbody>
-     ${lastPays.map(p => `<tr><td style="white-space:nowrap;font-size:13px">${fmtD(p[2])}</td><td><a class="name" onclick="tuFamily(${p[1]})">${tuFamName(p[1])}</a></td><td class="num">${money(p[3])}</td></tr>`).join('') || '<tr><td class="empty">—</td></tr>'}</tbody></table></div>
-   </div>`;
+  homeHero(tuYears().map(y => ({ y: y.y, t: y.p })), 'שכר לימוד אריינגעקומען');
 }
 
 // ---------- 🧾 Billing: every Jewish year, a box per month ----------
