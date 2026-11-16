@@ -153,23 +153,37 @@ const colSrcName = k => k === 'sel' ? '☑ אויסגעקליבענע' : ((colSo
 function colSrcSel(cur) {
   return `<select class="mini srcsel" onchange="colStart(this.value)" title="וועמען קאלן">${cur === 'sel' ? '<option value="sel" selected>☑ אויסגעקליבענע</option>' : ''}${colSources().map(([k, l]) => `<option value="${esc(k)}" ${k === cur ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
 }
-function colStart(tab, i) {
+// The people of one list for Calling mode, always with that list's (kept) 🔎 filter (v1.28.2)
+function colCm(tab) {
+  const t = todayS();
   if (String(tab).startsWith('jr:')) {   // a report: everybody on it, those reached today at the end
-    const d = jrDefs().find(x => 'jr:' + x.id === tab); if (!d) return;
-    const t = todayS(), C = fltCodes('jr', jrRun(d).map(a => a.c)), done = c => (colSt(c).outAt || '').slice(0, 10) === t;
-    const codes = C.filter(c => !done(c)).concat(C.filter(done));
-    if (!codes.length) { toast('גארנישט צו קאלן'); return; }
-    ui.cm = { tab, codes, i: i || 0 }; go('calling'); return;
+    const d = jrDefs().find(x => 'jr:' + x.id === tab); if (!d) return null;
+    const C = fltCodes('jr', jrRun(d).map(a => a.c)), done = c => (colSt(c).outAt || '').slice(0, 10) === t;
+    return { tab, codes: C.filter(c => !done(c)).concat(C.filter(done)), i: 0 };
   }
   const L = fltRows('col-' + tab, colLists()[tab] || [], r => r.code);
-  if (!L.length) { toast('גארנישט צו קאלן'); return; }
-  ui.cm = { tab, codes: L.map(r => r.code), i: i || Math.max(0, L.findIndex(r => !r.done)) };
-  go('calling');
+  return { tab, codes: L.map(r => r.code), i: Math.max(0, L.findIndex(r => !r.done)) };
+}
+const cmTabKey = () => 'yg_cmtab_' + colArea();
+function colStart(tab, i) {
+  const cm = colCm(tab);
+  if (!cm) return;
+  if (!cm.codes.length && view !== 'calling') { toast('גארנישט צו קאלן'); return; }
+  if (i != null) cm.i = i;
+  try { localStorage.setItem(cmTabKey(), tab); } catch (e) { }   // Calling mode comes back on the same list
+  ui.cm = cm; go('calling');
 }
 function vCalling() {
   if (!colReady()) return;
-  if (!ui.cm) { const L = colLists().today; ui.cm = { tab: 'today', codes: L.map(r => r.code), i: Math.max(0, L.findIndex(r => !r.done)) }; }
-  const cm = ui.cm, codes = cm.codes; if (!codes.length) { $('#main').innerHTML = '<div class="empty">🎉 גארנישט צו קאלן</div>'; return; }
+  if (!ui.cm) {   // opened from the side menu or after a reload: the last list used, with its kept filter
+    let tab = 'today'; try { tab = localStorage.getItem(cmTabKey()) || 'today'; } catch (e) { }
+    ui.cm = colCm(tab) || colCm('today');
+  }
+  const cm = ui.cm, codes = cm.codes;
+  if (!codes.length) {   // nobody (maybe because of the filter): keep the bar, so the list or the filter can be changed
+    $('#main').innerHTML = `<div class="cmbar"><b>📞 Calling mode</b>${colSrcSel(cm.tab)}${cm.tab !== 'sel' ? fltBar(String(cm.tab).startsWith('jr:') ? 'jr' : 'col-' + cm.tab, `colStart('${cm.tab}')`) : ''}</div><div class="empty">🎉 גארנישט צו קאלן${cm.tab !== 'sel' && fltActive(String(cm.tab).startsWith('jr:') ? 'jr' : 'col-' + cm.tab) ? ' – דער 🔎 פילטער לאזט נישט קיינעם' : ''}</div>`;
+    return;
+  }
   cm.i = Math.min(Math.max(0, cm.i), codes.length - 1);
   const map = new Map(colAll().map(r => [r.code, r])), code = codes[cm.i], r = map.get(code) || { code, amt: 0, bal: 0 };
   const a = IDX.by.get(code) || { ph: [], n: '#' + code, h: '' }, s = colSt(code), t = todayS();
