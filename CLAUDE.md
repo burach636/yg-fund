@@ -6,7 +6,7 @@ The owner speaks Yiddish (Hasidic spelling, with English loanwords) and is not t
 ## What this is
 A static web app (no build step) hosted on **Netlify**, at https://yeshivasmaharitdsatmar.netlify.app.
 - Netlify should auto-deploy this repo from the root folder. There is no build command, and the publish directory is the root.
-- After a change is pushed, the site updates in about a minute. Tell the user to press Ctrl+F5.
+- After a change is pushed, the site updates in about a minute. Open pages update by themselves (v1.26): `checkUpdate()` fetches index.html every minute and compares `<meta name="app-version">` – **bump it (with the other version labels) on every release**; idle pages reload by themselves and come back to the same view (`sessionStorage yg_view`), busy ones show a "🔄 נייע ווערסיע" button. `_headers` makes Netlify serve html/js/css with `Cache-Control: no-cache`. Ctrl+F5 is only needed once to get v1.26 itself.
 
 Backend is **Supabase** (project `qrudivrakwoathgbzrwd`).
 - `config.js` holds the project URL and the **publishable** key. That key is public by design; security comes from Row Level Security.

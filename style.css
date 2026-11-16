@@ -329,3 +329,4 @@ nav.incol #navuser{display:block}
 .scope{display:inline-flex;gap:4px;padding:3px;background:#efe9dc;border-radius:20px}.scope .chip{margin:0}
 .srcsel{font-weight:700;max-width:280px}
 .credit{color:var(--green);font-weight:700}
+#updBtn{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:70;box-shadow:0 8px 24px rgba(0,0,0,.3);font-size:15px;padding:10px 18px}

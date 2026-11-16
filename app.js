@@ -194,9 +194,11 @@ async function start() {
   if (want && !AREA) setTimeout(() => toast('🔒 ' + (want === 'tu' ? 'שכר לימוד' : 'פאנדרעיזינג') + ' איז נישט אפן פאר אייך'), 300);
   if (!AREA && !canFund()) AREA = 'tu';
   if (!AREA && !canView('tuition')) AREA = 'fund';
+  try { const v = sessionStorage.getItem('yg_view'); if (v) { sessionStorage.removeItem('yg_view'); if (canView(v)) view = v; } } catch (e) { }
   if (AREA) setArea(AREA, true); else vChooser();
   if (started) return; started = true;
   setInterval(poll, 15000);
+  setInterval(checkUpdate, 60000);
   idleWatch();
 }
 // ---------- automatic log out after 10 minutes without use ----------
@@ -217,7 +219,7 @@ function idleWatch() {
     else if (idle > IDLE_MS - 60000 && !warned) { warned = true; toast('⏳ אין א מינוט ווערט איר ארויסגעלאגט – רירט די מויז צו בלייבן'); }
   }, 10000);
 }
-// The user box at the bottom of the sidebar (v1.25): yeshiva logo + first name(s); it opens a menu with
+// The user box at the bottom of the sidebar (v1.21): yeshiva logo + first name(s); it opens a menu with
 // Phone, Password, update from JLS, switch area, Taskbar and Log out (these used to sit in the header).
 // first names only: "ברוך דוד טענענבוים" -> "ברוך דוד"; with 3+ words the last one is the family name, 1–2 words stay as they are
 const firstNames = n => { const w = String(n || '').trim().split(/\s+/).filter(Boolean); return w.length >= 3 ? w.slice(0, -1).join(' ') : w.join(' '); };
@@ -439,7 +441,7 @@ function wire() {
 function setArea(a, keepView) {
   AREA = a; try { sessionStorage.setItem('yg_area', a); } catch (e) { }
   document.body.classList.toggle('area-tu', a === 'tu');
-  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.25</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.25</small>';
+  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.26</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.26</small>';
   $('#btnArea').style.display = canFund() && canView('tuition') ? '' : 'none';
   $('#btnArea').textContent = a === 'tu' ? '⇄ צו פאנדרעיזינג' : '⇄ צו שכר לימוד';
   setupUser();
@@ -1049,6 +1051,27 @@ function closeM() { $('#ov').classList.remove('on'); }
 
 const setHH = () => document.documentElement.style.setProperty('--hh', document.querySelector('header').offsetHeight + 'px');
 window.addEventListener('resize', setHH); window.addEventListener('load', setHH); setHH();
+// ---------- 🔄 new version on the website: update by itself (v1.26) ----------
+// Every minute the page asks the server for index.html and compares <meta name="app-version">. When it changed:
+// if nobody is in the middle of something (no window open, not typing, no mouse/keys for 20 s) the page reloads by
+// itself and comes back to the same page; otherwise a small "🔄 נייע ווערסיע" button waits for a click.
+const APP_VER = (document.querySelector('meta[name=app-version]') || {}).content || '';
+let _lastUse = Date.now(), _newVer = '';
+['mousemove', 'mousedown', 'keydown', 'wheel', 'touchstart'].forEach(e => window.addEventListener(e, () => { _lastUse = Date.now(); }, { passive: true }));
+async function checkUpdate() {
+  if (!APP_VER) return;
+  try {
+    const r = await fetch('index.html?v=' + Date.now(), { cache: 'no-store' });
+    const m = (await r.text()).match(/name="app-version" content="([^"]+)"/);
+    if (!m || m[1] === APP_VER) return;
+    _newVer = m[1];
+  } catch (e) { return; }
+  const busy = $('#ov').classList.contains('on') || $('#busy').classList.contains('on') || /INPUT|TEXTAREA|SELECT/.test((document.activeElement || {}).tagName || '') || Date.now() - _lastUse < 20000 || view === 'calling';
+  if (!busy) { appReload(); return; }
+  if (!$('#updBtn')) { const b = document.createElement('button'); b.id = 'updBtn'; b.className = 'btn gold'; b.onclick = appReload; b.textContent = '🔄 נייע ווערסיע – דריקט צו דערהיינטיגן'; document.body.appendChild(b); }
+}
+function appReload() { try { sessionStorage.setItem('yg_view', view); } catch (e) { } location.reload(); }
+
 // Install as an app (pin to the taskbar): service worker + the browser's install prompt
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => { });
 let _instEv = null;
