@@ -1,9 +1,11 @@
 // YG Fund – SMS bot (Supabase Edge Function "sms").
 // The owner texts from a basic (kosher) phone; this answers with donor info and adds to-dos.
-// Works with Telnyx (JSON webhook, reply through the Telnyx API) or Twilio (form webhook, TwiML reply).
+// Works with Textillion (JSON webhook with an HMAC signature, reply through the Textillion REST API), Telnyx (JSON
+// webhook, reply through the Telnyx API) or Twilio (form webhook, TwiML reply).
 // Only team members whose phone is saved in table `team` get an answer.
 //
 // Secrets (Supabase > Edge Functions > Secrets), never in the repo:
+//   Textillion: TEXTILLION_API_KEY (tx_live_…, scope messages:send), TEXTILLION_WEBHOOK_SECRET (the webhook's signing secret)
 //   Telnyx: TELNYX_API_KEY, TELNYX_PUBLIC_KEY      Twilio: TWILIO_AUTH_TOKEN
 // Deploy with "Verify JWT" OFF (the phone company cannot send a Supabase login).
 
@@ -265,6 +267,21 @@ async function telnyxOk(req: Request, raw: string) {
   const key = await crypto.subtle.importKey('raw', b64(pub), { name: 'Ed25519' }, false, ['verify']);
   return crypto.subtle.verify('Ed25519', key, b64(sig), new TextEncoder().encode(ts + '|' + raw));
 }
+// Textillion: X-Textillion-Signature: t=<unix>,v1=<hex HMAC-SHA256 of "<t>.<raw body>" with the webhook signing secret>
+const TX_API = () => ENV('TEXTILLION_API_URL') || 'https://ppslldtdmpdmsorbqbjl.supabase.co/functions/v1/api-v1';
+async function textillionOk(req: Request, raw: string) {
+  const sec = ENV('TEXTILLION_WEBHOOK_SECRET'), sig = req.headers.get('x-textillion-signature') || '';
+  const t = (sig.match(/t=(\d+)/) || [])[1], v1 = (sig.match(/v1=([a-f0-9]+)/) || [])[1];
+  if (!sec || !t || !v1) return false;
+  if (Math.abs(Date.now() / 1000 - +t) > 600) return false;
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(sec), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const mac = new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(t + '.' + raw)));
+  const hex = [...mac].map(b => b.toString(16).padStart(2, '0')).join('');
+  if (hex.length !== v1.length) return false;
+  let d = 0; for (let i = 0; i < hex.length; i++) d |= hex.charCodeAt(i) ^ v1.charCodeAt(i);
+  return d === 0;
+}
+const txSeen = new Set<string>();   // the same event can arrive twice (retries): answer once while warm
 async function memberFor(from: string) {
   const team = await (await rest('/rest/v1/team?select=*')).json();
   const d = digits10(from);
@@ -275,7 +292,7 @@ const xml = (s: string) => s.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;'
 const twiml = (msg?: string) => new Response('<?xml version="1.0" encoding="UTF-8"?><Response>' + (msg ? '<Message>' + xml(msg) + '</Message>' : '') + '</Response>', { headers: { 'Content-Type': 'text/xml' } });
 
 async function handle(req: Request): Promise<Response> {
-  if (req.method !== 'POST') return new Response('YG Fund SMS', { status: 200 });
+  if (req.method !== 'POST') return new Response(JSON.stringify({ app: 'YG Fund SMS', textillion: { apiKey: ENV('TEXTILLION_API_KEY') ? 'set' : 'missing', webhookSecret: ENV('TEXTILLION_WEBHOOK_SECRET') ? 'set' : 'missing' }, telnyx: ENV('TELNYX_API_KEY') ? 'set' : 'missing', twilio: ENV('TWILIO_AUTH_TOKEN') ? 'set' : 'missing' }), { status: 200, headers: { 'Content-Type': 'application/json' } });
   const raw = await req.text(), ct = req.headers.get('content-type') || '';
   try {
     if (ct.includes('application/x-www-form-urlencoded')) {          // ---- Twilio
@@ -285,6 +302,21 @@ async function handle(req: Request): Promise<Response> {
       if (!m) return twiml();                                          // not on the team: no answer
       await load();
       return twiml(clip(await answer(params.get('Body') || '', m)));
+    }
+    if (req.headers.get('x-textillion-signature')) {                  // ---- Textillion
+      if (!(await textillionOk(req, raw))) return new Response('forbidden', { status: 403 });
+      const ev = JSON.parse(raw), d = ev.data || {};
+      if (ev.type !== 'message.inbound' || !d.from) return new Response('ok');
+      if (ev.id && txSeen.has(ev.id)) return new Response('ok');
+      if (ev.id) txSeen.add(ev.id);
+      const m = await memberFor(d.from);
+      if (!m) return new Response('ok');
+      await load();
+      const reply = clip(await answer(d.body || '', m));
+      const r = await fetch(TX_API() + '/messages', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + ENV('TEXTILLION_API_KEY'), ...(ev.id ? { 'Idempotency-Key': 'yg-' + ev.id } : {}) },
+        body: JSON.stringify({ to: d.from, ...(d.to ? { from: d.to } : {}), body: reply }) });
+      if (!r.ok) console.error('Textillion send', r.status, (await r.text()).slice(0, 300));
+      return new Response('ok');
     }
     // ---- Telnyx
     if (!(await telnyxOk(req, raw))) return new Response('forbidden', { status: 403 });
