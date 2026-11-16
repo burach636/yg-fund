@@ -38,18 +38,25 @@ function tuCalc() {
   TU.charges.forEach(c => {
     const f = F(c[1]); f.ch.push(c);
     if (c[2] >= ys) { f.yrBilled += c[3]; if (!byKids) f.cur = true; }
-    f.bal += c[5];
-    if (!c[7] && c[5] > 0.005 && c[2] && c[2] <= today) f.due += c[5];
+    // Balance the JLS way: all bills not on hold minus all payments, so a payment not yet applied to a bill (a credit)
+    // counts too. (Adding up the bills' BalanceDue missed credits: a family with a few cents credit showed a balance.)
+    if (!c[7]) { f.bal += c[3]; if (c[2] && c[2] <= today) f.due += c[3]; }
   });
   TU.payments.forEach(p => {
     const f = F(p[1]); f.pay.push(p);
-    if (p[7]) return;
-    if (p[2] >= ys) f.yrPaid += p[3];
+    const amt = p[3] - (p[7] || 0);   // minus what was refunded
+    f.bal -= amt; f.due -= amt;
+    if (p[7] >= p[3]) return;
+    if (p[2] >= ys) f.yrPaid += amt;
     if (p[2] > f.last) f.last = p[2];
   });
   const L = [...fam.values()];
+  L.forEach(f => {   // negative = credit; paying ahead for coming months is not a "due now" credit, only the real overall credit is
+    f.bal = Math.round(f.bal * 100) / 100; f.due = Math.round(f.due * 100) / 100;
+    if (f.due < 0) f.due = Math.max(f.due, Math.min(0, f.bal));
+  });
   const tot = { fams: L.length, curFams: L.filter(f => f.cur).length, kids: TU.students.filter(s => !s[8] || s[8] >= today).length, yrBilled: 0, yrPaid: 0, bal: 0, due: 0, dueFams: 0 };
-  L.forEach(f => { tot.yrBilled += f.yrBilled; tot.yrPaid += f.yrPaid; if (f.bal > 0) tot.bal += f.bal; tot.due += f.due; if (f.due > 0.5) tot.dueFams++; f.st = tuStatus(f, today); });
+  L.forEach(f => { tot.yrBilled += f.yrBilled; tot.yrPaid += f.yrPaid; if (f.bal > 0) tot.bal += f.bal; if (f.due > 0) tot.due += f.due; if (f.due > 0.5) tot.dueFams++; f.st = tuStatus(f, today); });
   const r = { L, tot, ys }; _tuMemo = { tu: TU, d: today, r };
   return r;
 }
@@ -84,6 +91,8 @@ function tuStChip(f, long) {
   return `<span class="tag ${d[1]}">${d[0]}</span>${long !== false ? ` <small class="dim">${mo}</small>` : ''}`;
 }
 
+// A balance for the screen: owed in red, a credit in green ("קרעדיט"), zero plain
+const tuBal = (n, strong) => n > 0.005 ? `<span class="bal">${strong ? '<b>' : ''}${money(n)}${strong ? '</b>' : ''}</span>` : n < -0.005 ? `<span class="credit">קרעדיט ${money(-n)}</span>` : money(0);
 const tuKidName = s => s[4] || s[5] ? (s[4] + ' ' + s[5]).trim() : (s[2] + ' ' + s[3]).trim();
 function tuFamName(code) {
   const a = IDX && IDX.by.get(+code);
@@ -126,7 +135,7 @@ function vTuition() {
     return `<tr><td>${selBox('tu', f.code)}</td><td><a class="name" onclick="tuFamily(${f.code})">${tuFamName(f.code)}</a> <small class="dim">#${f.code}</small><br>${tuStChip(f)}${lastNoteHTML(f.code, true)}</td>
      <td style="font-size:13px">${kids.slice(0, 6).map(k => `<span style="${k[8] ? 'opacity:.55' : ''}">${esc(k[4] || k[2])}${k[6] ? ` <small class="dim">${esc(k[6])}</small>` : ''}${k[8] ? ` <small class="dim">(געלערנט ביז ${HEB.gem(tuHY(k[8]))})</small>` : ''}</span>`).join('<br>') + (kids.length > 6 ? '<br>…' : '') || '—'}</td>
      <td style="font-size:13px" class="ltr">${a.ph.slice(0, 2).map(p => callBtn(p[1], f.code) + ' ' + esc(p[1])).join('<br>')}</td>
-     <td class="num ${f.due > 0.5 ? 'bal' : ''}"><b>${money(f.due)}</b></td><td class="num">${money(f.bal)}</td>
+     <td class="num">${tuBal(f.due, true)}</td><td class="num">${tuBal(f.bal)}</td>
      <td style="font-size:13px">${f.last ? fmtD(f.last) : '—'}</td>
      <td><div class="acts">${whoSel(`tuAssign(${f.code},this.value)`, st.tuWho || '')}<button class="btn ghost sm" onclick="noteForm(${f.code})">📝 נאטיץ</button></div></td></tr>`;
   }).join('') || '<tr><td colspan="8" class="empty">—</td></tr>'}
@@ -144,7 +153,7 @@ function tuFamily(code) {
   modal(`<div class="row"><h2 style="margin:0">🎓 ${tuFamName(code)} <small class="dim">#${code}</small></h2><div class="spacer"></div>
      <button class="btn ghost sm" onclick="tuStOpen([${+code}],false)">📄 סטעיטמענט</button><button class="btn ghost sm" onclick="tuMailForm(${+code})">✉️ אימעיל</button><button class="btn ghost sm" onclick="taskForm(null,${+code})">+ אפיס ארבעט</button><button class="btn ghost sm" onclick="tuFamXls(${+code})">⬇ Excel</button><button class="btn ghost sm" onclick="openAcct(${+code})">👤 אקאונט</button><button class="btn ghost sm" onclick="closeM()">Back</button></div>
    <p class="sub">${tuStChip(f)}<br>${esc(a.a || '')}<br>${a.ph.slice(0, 3).map(p => callBtn(p[1], code) + ' ' + esc(p[0] + ' ' + p[1])).join(' · ')}</p>
-   <div class="tiles" style="margin:8px 0;grid-template-columns:repeat(4,1fr)"><div class="tile t7"><h3>שולדיג יעצט</h3><b class="bal">${money(f.due)}</b></div><div class="tile t3"><h3>באלאנס</h3><b>${money(f.bal)}</b></div>
+   <div class="tiles" style="margin:8px 0;grid-template-columns:repeat(4,1fr)"><div class="tile t7"><h3>שולדיג יעצט</h3><b>${tuBal(f.due)}</b></div><div class="tile t3"><h3>באלאנס</h3><b>${tuBal(f.bal)}</b></div>
     <div class="tile t6"><h3>געטשארדזשט דאס יאר</h3><b>${money(f.yrBilled)}</b></div><div class="tile t5"><h3>באצאלט דאס יאר</h3><b class="zero">${money(f.yrPaid)}</b></div></div>
    <h3>👦 תלמידים</h3><table><thead><tr><th>נאמען</th><th>קלאס</th><th>אנגעהויבן</th><th>געלערנט ביז</th></tr></thead><tbody>
     ${f.kids.map(k => `<tr style="${k[8] && k[8] < todayS() ? 'opacity:.55' : ''}"><td><b>${esc((k[4] + ' ' + k[5]).trim())}</b> <small class="dim">${esc((k[2] + ' ' + k[3]).trim())}</small></td><td>${esc(k[6])}</td><td>${fmtD(k[7])}</td><td>${k[8] ? fmtD(k[8]) : ''}</td></tr>`).join('') || '<tr><td colspan="4" class="empty">—</td></tr>'}</tbody></table>
@@ -347,7 +356,7 @@ function tuStPage(r) {
    <table class="tudet"><thead><tr><th>דאטום</th><th>Date</th><th>איינצעלהייטן</th><th>שם התלמיד</th><th>פרייז</th><th>באצאלט</th><th>באלאנס</th></tr></thead><tbody>
     ${Math.abs(st.old) > 0.005 ? `<tr><td class="r">${HEB.fmtHeb(addDays(M.ds, -1))}</td><td>${rcDate(addDays(M.ds, -1))}</td><td class="r"><b>חוב ישן</b></td><td></td><td>${tuM$(st.old)}</td><td></td><td>${tuM$(st.old)}</td></tr>` : ''}
     ${st.L.map(x => `<tr><td class="r">${HEB.fmtHeb(x.d)}</td><td>${rcDate(x.d)}</td><td class="r">${esc(x.desc)}${x.note ? ' <small>' + esc(x.note) + '</small>' : ''}</td><td class="r">${esc(x.kid)}</td><td>${x.ch ? tuM$(x.ch) : ''}</td><td>${x.pay ? tuM$(x.pay) : ''}</td><td>${tuM$(x.ch - x.pay)}</td></tr>`).join('')}
-   </tbody><tfoot><tr><td colspan="6" class="r">נשאר חוב</td><td><b>${tuM$(st.bal)}</b></td></tr></tfoot></table>
+   </tbody><tfoot><tr><td colspan="6" class="r">${st.bal < -0.005 ? 'קרעדיט · Credit' : 'נשאר חוב'}</td><td><b>${tuM$(Math.abs(st.bal) < 0.005 ? 0 : Math.abs(st.bal))}</b></td></tr></tfoot></table>
    <div class="tusub"><div>Old Balance - חוב ישן: <b>${tuM$(st.prevYr)}</b></div><div>Current Year Balance - חוב משנה זו: <b>${tuM$(st.bal - st.prevYr)}</b></div></div>
    <div class="tuboxes">
     <div class="tubox"><div class="tubh">ס"ה די חודש</div>${st.items.map(o => `<div><span class="r">${esc(o.item)}</span><span>${tuM$(o.amt)}${o.n > 1 ? ' x ' + o.n : ''}</span></div>`).join('') || '<div>—</div>'}<div class="tubt"><span>ס"ה</span><span>${tuM$(st.items.reduce((s2, o) => s2 + o.amt * o.n, 0))}</span></div></div>
@@ -355,7 +364,7 @@ function tuStPage(r) {
     <div class="tubox tunote">${esc(s.tuStText || TU_ST_DEF).replace(/\n/g, '<br>')}</div>
    </div>
    ${tuYrBox(r.f)}
-   <div class="tutot">Total Balance · סך הכל חוב: <b>${tuM$(st.bal)}</b></div>
+   <div class="tutot">${st.bal < -0.005 ? `Credit · קרעדיט: <b>${tuM$(-st.bal)}</b>` : `Total Balance · סך הכל חוב: <b>${tuM$(Math.max(0, st.bal))}</b>`}</div>
    <div class="tunote2">${esc(s.tuStNote2 != null ? s.tuStNote2 : TU_ST_NOTE2).replace(/\n/g, '<br>')}</div>
    <div class="ft">Please make checks payable to <b>Yeshivas Maharit Satmar</b> · P.O. Box 1367 · Monroe NY 10949</div></div>`;
 }

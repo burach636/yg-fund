@@ -217,7 +217,7 @@ function idleWatch() {
     else if (idle > IDLE_MS - 60000 && !warned) { warned = true; toast('⏳ אין א מינוט ווערט איר ארויסגעלאגט – רירט די מויז צו בלייבן'); }
   }, 10000);
 }
-// The user box at the bottom of the sidebar (v1.23): yeshiva logo + first name(s); it opens a menu with
+// The user box at the bottom of the sidebar (v1.23.1): yeshiva logo + first name(s); it opens a menu with
 // Phone, Password, update from JLS, switch area, Taskbar and Log out (these used to sit in the header).
 // first names only: "ברוך דוד טענענבוים" -> "ברוך דוד"; with 3+ words the last one is the family name, 1–2 words stay as they are
 const firstNames = n => { const w = String(n || '').trim().split(/\s+/).filter(Boolean); return w.length >= 3 ? w.slice(0, -1).join(' ') : w.join(' '); };
@@ -439,7 +439,7 @@ function wire() {
 function setArea(a, keepView) {
   AREA = a; try { sessionStorage.setItem('yg_area', a); } catch (e) { }
   document.body.classList.toggle('area-tu', a === 'tu');
-  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.23</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.23</small>';
+  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.23.1</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.23.1</small>';
   $('#btnArea').style.display = canFund() && canView('tuition') ? '' : 'none';
   $('#btnArea').textContent = a === 'tu' ? '⇄ צו פאנדרעיזינג' : '⇄ צו שכר לימוד';
   setupUser();

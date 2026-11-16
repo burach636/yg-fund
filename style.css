@@ -328,3 +328,4 @@ nav.incol #navuser{display:block}
 @media (prefers-reduced-motion:reduce){.logo3d.sm .in{animation:none}}
 .scope{display:inline-flex;gap:4px;padding:3px;background:#efe9dc;border-radius:20px}.scope .chip{margin:0}
 .srcsel{font-weight:700;max-width:280px}
+.credit{color:var(--green);font-weight:700}
