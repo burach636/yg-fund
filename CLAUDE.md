@@ -9,6 +9,7 @@ A static web app (no build step) hosted on **Netlify**, at https://yeshivasmahar
 - After a change is pushed, the site updates in about a minute. Open pages update by themselves (v1.26): `checkUpdate()` fetches index.html every minute and compares `<meta name="app-version">` – **bump it (with the other version labels) on every release**; idle pages reload by themselves and come back to the same view (`sessionStorage yg_view`), busy ones show a "🔄 נייע ווערסיע" button. `_headers` makes Netlify serve html/js/css with `Cache-Control: no-cache`. Ctrl+F5 is only needed once to get v1.26 itself.
 
 Backend is **Supabase** (project `qrudivrakwoathgbzrwd`).
+- Free plan: Supabase pauses a project after 7 days without use. `.github/workflows/keepalive.yml` (GitHub Actions) asks the REST API one small question every day (URL + publishable key read from config.js) and pushes a tiny commit to branch `keepalive` on the 1st of each month (GitHub stops scheduled workflows after 60 days without repo activity). The daily `fundmail` cron (SETUP.sql section 8) also counts as use if the owner set it up.
 - `config.js` holds the project URL and the **publishable** key. That key is public by design; security comes from Row Level Security.
 - **Never** put a `service_role` or `sb_secret_` key in this repo.
 

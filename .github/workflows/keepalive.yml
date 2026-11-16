@@ -1,0 +1,36 @@
+# Keep the Supabase project awake. On the free plan Supabase pauses a project that had no use for 7 days.
+# Every day this asks the database one small question (the same public URL + publishable key the website uses,
+# read from config.js – no secret here). Once a month it also pushes a tiny commit to the branch "keepalive",
+# because GitHub stops scheduled workflows in a repository that had no activity for 60 days.
+name: keep Supabase awake
+on:
+  schedule:
+    - cron: '17 9 * * *'     # every day, 09:17 UTC
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ask the database a small question
+        run: |
+          URL=$(grep -oE "url: *'[^']+'" config.js | sed -E "s/url: *'([^']+)'/\1/")
+          KEY=$(grep -oE "key: *'[^']+'" config.js | sed -E "s/key: *'([^']+)'/\1/")
+          for i in 1 2 3; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "$URL/rest/v1/jls_meta?select=version&limit=1" -H "apikey: $KEY")
+            echo "Supabase answered $code"
+            [ "$code" -lt 500 ] && [ "$code" != "000" ] && exit 0
+            sleep 20
+          done
+          exit 1
+      - name: Monthly sign of life for GitHub
+        if: github.event_name == 'schedule' && startsWith(format('{0}', github.run_number), '') && github.event.schedule == '17 9 * * *'
+        run: |
+          [ "$(date -u +%d)" = "01" ] || exit 0
+          git config user.name "keepalive-bot"; git config user.email "keepalive-bot@users.noreply.github.com"
+          git fetch origin keepalive || true
+          git checkout -B keepalive
+          date -u > .keepalive
+          git add .keepalive && git commit -m "keepalive $(date -u +%F)" && git push -f origin keepalive
