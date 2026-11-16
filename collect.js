@@ -228,6 +228,7 @@ function vCalling() {
      ${codes.map((c, j) => { const rr = map.get(c) || { amt: 0 }, aa = IDX.by.get(c) || {}, dn = (colSt(c).outAt || '').slice(0, 10) === t; return `<div class="cmli${j === cm.i ? ' on' : ''}${dn ? ' done' : ''}" onclick="ui.cm.i=${j};vCalling()"><span>${j + 1}</span><b>${esc(aa.h || aa.n || '#' + c)}</b><i>${money(isJr && !(rr.amt > 0.009) ? (IDX.yg.get(c) || {}).total || 0 : rr.amt)}</i></div>`; }).join('')}
     </div></div>`;
   ui.cmOut = '';
+  initDateFields($('#main'));   // vCalling is also redrawn without render() (prev/next, save)
   setTimeout(() => { const e = $('.cmli.on'); if (e) e.scrollIntoView({ block: 'nearest' }); }, 30);
 }
 async function colSave(code) {
