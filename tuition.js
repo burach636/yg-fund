@@ -14,7 +14,7 @@ async function loadTU() {
   if (tuLoading) return tuLoading;
   tuLoading = (async () => {
     try {
-      const blob = await q(sb.storage.from('jls').download('jls-tuition.json.gz'));
+      const blob = await jlsFile('jls-tuition.json.gz');
       TU = JSON.parse(await gunzip(blob)); TU.contracts = TU.contracts || [];
     } catch (e) { TU = { missing: true, payments: [], charges: [], contracts: [], students: [] }; }
     tuVersion = jlsVersion; tuLoading = null; return TU;

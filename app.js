@@ -77,10 +77,20 @@ async function pullLog() {
   }
   return changed;
 }
+// Download a JLS data file always fresh (v1.28.1.1): the files used to be saved with Supabase's default 1-hour cache, so
+// another user's browser could show the old numbers for up to an hour after an import.
+async function jlsFile(path) {
+  try {
+    const { data } = await sb.auth.getSession(), tok = data && data.session && data.session.access_token;
+    const r = await fetch(CFG.url + '/storage/v1/object/authenticated/jls/' + path, { cache: 'no-store', headers: { apikey: CFG.key, Authorization: 'Bearer ' + (tok || CFG.key) } });
+    if (r.ok) return await r.blob();
+  } catch (e) { }
+  return await q(sb.storage.from('jls').download(path));   // fall back to the normal way
+}
 async function loadJLS() {
   const m = await q(sb.from('jls_meta').select('*').eq('id', 1).single());
   if (!m.version) { JD = null; jlsVersion = 0; return; }
-  const blob = await q(sb.storage.from('jls').download('jls.json.gz'));
+  const blob = await jlsFile('jls.json.gz');
   JD = JSON.parse(await gunzip(blob)); buildIndex(); jlsVersion = m.version;
 }
 async function loadTeam() {
@@ -404,11 +414,11 @@ async function doImport(buf, name, source) {
   const tu = data.tuition; delete data.tuition;
   if (tu) {   // tuition goes to its own file, loaded only when the tuition section is opened
     tu.importedAt = data.importedAt;
-    await q(sb.storage.from('jls').upload('jls-tuition.json.gz', await gz(JSON.stringify(tu)), { upsert: true, contentType: 'application/gzip' }));
+    await q(sb.storage.from('jls').upload('jls-tuition.json.gz', await gz(JSON.stringify(tu)), { upsert: true, contentType: 'application/gzip', cacheControl: '0' }));
     TU = tu; tuVersion = -1;
   }
   const blob = await gz(JSON.stringify(data));
-  try { await q(sb.storage.from('jls').upload('jls.json.gz', blob, { upsert: true, contentType: 'application/gzip' })); }
+  try { await q(sb.storage.from('jls').upload('jls.json.gz', blob, { upsert: true, contentType: 'application/gzip', cacheControl: '0' })); }
   catch (e) { if (/bucket/i.test(e.message || '')) throw new Error('אין Supabase פעלט דער "jls" Storage bucket – לאזט נאכאמאל לויפן SETUP.sql'); throw e; }
   const m = await q(sb.from('jls_meta').select('version').eq('id', 1).single());
   const v = (m.version || 0) + 1;
@@ -441,7 +451,7 @@ function wire() {
 function setArea(a, keepView) {
   AREA = a; try { sessionStorage.setItem('yg_area', a); } catch (e) { }
   document.body.classList.toggle('area-tu', a === 'tu');
-  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.28</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.28</small>';
+  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.28.1</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.28.1</small>';
   $('#btnArea').style.display = canFund() && canView('tuition') ? '' : 'none';
   $('#btnArea').textContent = a === 'tu' ? '⇄ צו פאנדרעיזינג' : '⇄ צו שכר לימוד';
   setupUser();
@@ -1051,7 +1061,7 @@ function closeM() { $('#ov').classList.remove('on'); }
 
 const setHH = () => document.documentElement.style.setProperty('--hh', document.querySelector('header').offsetHeight + 'px');
 window.addEventListener('resize', setHH); window.addEventListener('load', setHH); setHH();
-// ---------- 🔄 new version on the website: update by itself (v1.28) ----------
+// ---------- 🔄 new version on the website: update by itself (v1.28.1) ----------
 // Every minute the page asks the server for index.html and compares <meta name="app-version">. When it changed:
 // if nobody is in the middle of something (no window open, not typing, no mouse/keys for 20 s) the page reloads by
 // itself and comes back to the same page; otherwise a small "🔄 נייע ווערסיע" button waits for a click.

@@ -626,7 +626,7 @@ function homeHero(years, sub) {
     <div class="pushke"><div class="slot"></div><div class="face"><img src="logo.png" alt=""><span>ישיבת מהרי"ט ד'סאטמאר</span></div><div class="shine2"></div></div>
     <div class="glow"></div>
    </div>
-   <div class="hero-sum"><small>${esc(sub)} ${HEB.gem(hy)}</small><b id="heroN" data-n="${cur}">$0</b><span>${fmtDual(todayS())}</span></div>
+   <div class="hero-sum"><small>${esc(sub)} ${HEB.gem(hy)}</small><b id="heroN" data-n="${cur}">$0</b><span>${fmtDual(todayS())}</span><span class="dim" style="font-size:11px">JLS דאטא פון ${JD && JD.importedAt ? new Date(JD.importedAt).toLocaleString() : '—'}</span></div>
    ${years.length ? `<table class="hero-yrs"><thead><tr>${years.slice(0, 10).map(y => `<th>${HEB.gem(y.y)}</th>`).join('')}</tr></thead><tbody><tr>${years.slice(0, 10).map(y => `<td>${money(y.t)}</td>`).join('')}</tr></tbody></table>` : ''}
   </div>`;
   const el = $('#heroN'), end = +el.dataset.n, t0 = performance.now(), dur = 1800;
