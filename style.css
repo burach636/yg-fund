@@ -378,3 +378,5 @@ nav.incol #navuser{display:block}
 .coin.bill .band{position:absolute;top:0;bottom:0;left:50%;width:30px;transform:translateX(-50%);background:linear-gradient(90deg,#b8954a,#d8b96a,#b8954a);border-left:1px solid #8a6d2c;border-right:1px solid #8a6d2c;
   color:#4d3c12;font:900 9px Arial;writing-mode:vertical-rl;display:flex;align-items:center;justify-content:center;letter-spacing:.5px}
 .fltkeep{display:flex;gap:8px;align-items:center;font-size:14px;margin-top:12px;padding:8px 10px;background:#fffaf0;border:1px dashed var(--gold);border-radius:8px}
+#moved{position:sticky;top:0;z-index:80;background:#fff3c4;color:#5a4410;border-bottom:2px solid var(--gold);padding:8px 14px;text-align:center;font-size:15px}
+#moved .btn{margin-inline-start:10px}
