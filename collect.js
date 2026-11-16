@@ -39,9 +39,9 @@ function colLists() {
     r.done = outD === t; r.s = s;
     if (s.hold) { L.hold.push(r); return; }
     if (askToday.has(r.code)) L.ask.push(r);
-    if (colArea() === 'fund' && r.bal > 0.009) L.pl.push(Object.assign({}, r, { amt: r.bal, due: r.amt }));   // all open pledges, every year
+    if (colArea() === 'fund' && r.bal > 0.009 && !plHidden(r.code)) L.pl.push(Object.assign({}, r, { amt: r.bal, due: r.amt }));   // all open pledges, every year
     if (s.cb && s.cb <= t) L.cb.push(r);
-    const need = colArea() === 'tu' ? r.amt > 0.5 : (r.amt > 0.009 || askToday.has(r.code));
+    const need = colArea() === 'tu' ? r.amt > 0.5 : ((r.amt > 0.009 && !plHidden(r.code)) || askToday.has(r.code));
     if (!need || (s.cb && s.cb > t)) return;
     if (outD && outD >= gap && !r.done) return;
     L.today.push(r);
@@ -75,6 +75,17 @@ function colNav() {
    <button data-v="calling" class="${view === 'calling' ? 'on' : ''}" style="margin-top:10px">▶ Calling mode</button>`;
 }
 
+// Accounts whose pledge is already being paid off (owner, v1.25): an active credit-card plan (JD.ccplans: no end date
+// or ending today or later) or a held check (a YG payment whose check date is still ahead, payment [10]).
+// They do not show in the pledge lists unless "💳 אויך מיט קרעדיט קארד / העלד טשעקס" is on (ui.plCovered).
+function plCovered() {
+  if (window._plCov && window._plCov.jd === JD && window._plCov.d === todayS()) return window._plCov.s;
+  const t = todayS(), s = new Set();
+  (JD.ccplans || []).forEach(p => { if (!p[3] || p[3] >= t) s.add(+p[0]); });
+  JD.payments.forEach(p => { if (p[10] && p[10] > t) s.add(+p[1]); });
+  window._plCov = { jd: JD, d: t, s }; return s;
+}
+const plHidden = c => !ui.plCovered && plCovered().has(+c);
 // ---------- 💳 pledges tab: this month / a campaign / sort ----------
 function colPlChips() {
   const f = fltOf('col-pl'), YC = typeof ygCamps === 'function' ? ygCamps() : new Set(), used = new Map();
@@ -83,6 +94,7 @@ function colPlChips() {
   const setF = js => `ui.flt=ui.flt||{};ui.flt['col-pl']=Object.assign({},ui.flt['col-pl']||{});${js};vCol()`;
   return `<span class="scope"><button class="chip ${!f.plMonth ? 'on' : ''}" onclick="${setF("delete ui.flt['col-pl'].plMonth")}">אלע יארן</button><button class="chip ${f.plMonth ? 'on' : ''}" onclick="${setF("ui.flt['col-pl'].plMonth=true")}">📅 דעם חודש</button></span>
    <select class="mini" onchange="${setF("if(this.value)ui.flt['col-pl'].plCamp=this.value;else delete ui.flt['col-pl'].plCamp")}"><option value="">💳 אלע קאמפעינס</option>${camps.map(n => `<option value="${n}" ${+f.plCamp === n ? 'selected' : ''}>#${n} ${esc((JD.campaigns || {})[n] || '')} (${used.get(n)})</option>`).join('')}</select>
+   <label style="font-size:13px;display:flex;gap:5px;align-items:center"><input type="checkbox" ${ui.plCovered ? 'checked' : ''} onchange="ui.plCovered=this.checked;vCol()"> 💳 אויך מיט קרעדיט קארד / העלד טשעקס (${plCovered().size})</label>
    <select class="mini" onchange="ui.plSort=this.value;vCol()"><option value="amt">סארטיר: סכום</option><option value="due" ${ui.plSort === 'due' ? 'selected' : ''}>סארטיר: ווען פעליג</option><option value="abc" ${ui.plSort === 'abc' ? 'selected' : ''}>סארטיר: א-ב</option></select>`;
 }
 function colPlLine(code) {

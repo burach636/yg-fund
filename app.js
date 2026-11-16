@@ -217,7 +217,7 @@ function idleWatch() {
     else if (idle > IDLE_MS - 60000 && !warned) { warned = true; toast('⏳ אין א מינוט ווערט איר ארויסגעלאגט – רירט די מויז צו בלייבן'); }
   }, 10000);
 }
-// The user box at the bottom of the sidebar (v1.24): yeshiva logo + first name(s); it opens a menu with
+// The user box at the bottom of the sidebar (v1.25): yeshiva logo + first name(s); it opens a menu with
 // Phone, Password, update from JLS, switch area, Taskbar and Log out (these used to sit in the header).
 // first names only: "ברוך דוד טענענבוים" -> "ברוך דוד"; with 3+ words the last one is the family name, 1–2 words stay as they are
 const firstNames = n => { const w = String(n || '').trim().split(/\s+/).filter(Boolean); return w.length >= 3 ? w.slice(0, -1).join(' ') : w.join(' '); };
@@ -439,7 +439,7 @@ function wire() {
 function setArea(a, keepView) {
   AREA = a; try { sessionStorage.setItem('yg_area', a); } catch (e) { }
   document.body.classList.toggle('area-tu', a === 'tu');
-  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.24</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.24</small>';
+  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.25</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.25</small>';
   $('#btnArea').style.display = canFund() && canView('tuition') ? '' : 'none';
   $('#btnArea').textContent = a === 'tu' ? '⇄ צו פאנדרעיזינג' : '⇄ צו שכר לימוד';
   setupUser();
@@ -622,7 +622,7 @@ async function delTask(id) { await emitTask(id, { del: true }); closeM(); render
 function vPledges() {
   window._ln = lastNotes();
   const mk = monthKey(), rows = [];
-  IDX.pl.forEach((g, c) => { if (g.open > 0.009 && IDX.by.has(c)) rows.push({ c, g, called: (S.call[c + '|' + mk] || {}).v, a: IDX.by.get(c), y: IDX.yg.get(c), st: S.acct[c] || {} }); });
+  IDX.pl.forEach((g, c) => { if (g.open > 0.009 && IDX.by.has(c) && !plHidden(c)) rows.push({ c, g, called: (S.call[c + '|' + mk] || {}).v, a: IDX.by.get(c), y: IDX.yg.get(c), st: S.acct[c] || {} }); });
   rows.sort((x, y) => (x.called ? 1 : 0) - (y.called ? 1 : 0) || y.g.dueNow - x.g.dueNow);
   const done = rows.filter(r => r.called).length;
   const mName = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });

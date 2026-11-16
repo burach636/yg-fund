@@ -228,8 +228,8 @@
 
     step('באצאלונגען (' + (out.companyName || company) + ')...');
     const isCo = v => v === company;
-    for (const r of db.rows(db.table('MPayments'), ['PaymentNum', 'Code', 'Date', 'Amount', 'Type', 'CheckNum', 'CampaignNum', 'Solicitor', 'Notes', 'Refunded', 'PMethod'], { col: 'Company', test: isCo }))
-      out.payments.push([r.PaymentNum, r.Code, r.Date || '', r.Amount || 0, clean(r.Type || r.PMethod), clean(r.CheckNum), r.CampaignNum || 0, clean(r.Solicitor), clean(r.Notes).slice(0, 300), r.Refunded || 0]);
+    for (const r of db.rows(db.table('MPayments'), ['PaymentNum', 'Code', 'Date', 'Amount', 'Type', 'CheckNum', 'CampaignNum', 'Solicitor', 'Notes', 'Refunded', 'PMethod', 'CheckDate'], { col: 'Company', test: isCo }))
+      out.payments.push([r.PaymentNum, r.Code, r.Date || '', r.Amount || 0, clean(r.Type || r.PMethod), clean(r.CheckNum), r.CampaignNum || 0, clean(r.Solicitor), clean(r.Notes).slice(0, 300), r.Refunded || 0, r.CheckDate || '']);   // [10] = check date (a later date = a held / post-dated check)
 
     step('פלעדזשעס (' + (out.companyName || company) + ')...');
     for (const r of db.rows(db.table('MCharges'), ['ChargeNum', 'Code', 'DueDate', 'Amount', 'Paid', 'BalanceDue', 'CampaignNum', 'Desc', 'Solicitor', 'Hold', 'Note', 'DateE'], { col: 'Company', test: isCo }))
