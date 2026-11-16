@@ -372,3 +372,8 @@ nav.incol #navuser{display:block}
 /* realistic-looking $100 bills (v1.27.2) */
 .coin.bill{width:120px;height:52px;left:calc(50% - 60px + var(--x))}
 .coin.bill.bundle{box-shadow:0 2px 0 #cfd8d3,0 4px 0 #c3cdc8,0 6px 0 #b7c2bd,0 10px 14px rgba(0,0,0,.25)}
+/* the real-looking $100 bill picture (v1.27.3) */
+.coin.bill{width:126px;height:54px;left:calc(50% - 63px + var(--x));overflow:hidden;border-radius:2px}
+.coin.bill img{display:block;width:100%;height:100%;object-fit:cover}
+.coin.bill .band{position:absolute;top:0;bottom:0;left:50%;width:30px;transform:translateX(-50%);background:linear-gradient(90deg,#b8954a,#d8b96a,#b8954a);border-left:1px solid #8a6d2c;border-right:1px solid #8a6d2c;
+  color:#4d3c12;font:900 9px Arial;writing-mode:vertical-rl;display:flex;align-items:center;justify-content:center;letter-spacing:.5px}
