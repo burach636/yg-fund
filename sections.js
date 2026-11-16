@@ -615,13 +615,31 @@ function notifyCheck() {
 // the total that came in this Jewish year (counting up) and, small, a table of every year. ----------
 function homeHero(years, sub) {
   const hy = (HEB.parts(todayS()) || {}).y, cur = (years.find(y => y.y === hy) || { t: 0 }).t;
-  // the new blue $100 bills (a drawing, not a copy of a real note): light blue paper, "100", the blue ribbon and an oval
-  const bill = `<svg viewBox="0 0 120 52" width="84" height="36" direction="ltr" style="direction:ltr"><defs><linearGradient id="bg100" x1="0" x2="1"><stop offset="0" stop-color="#dcebe6"/><stop offset=".5" stop-color="#eef6f2"/><stop offset="1" stop-color="#cfe2dd"/></linearGradient></defs>
-    <rect x="1" y="1" width="118" height="50" rx="3" fill="url(#bg100)" stroke="#7fa79c" stroke-width="1.5"/><rect x="5" y="5" width="110" height="42" rx="2" fill="none" stroke="#9cbdb4" stroke-width=".8"/>
-    <ellipse cx="60" cy="26" rx="13" ry="16" fill="#c7ddd6" stroke="#6f968b" stroke-width="1"/><rect x="44" y="2" width="5" height="48" fill="#2f6fd6" opacity=".85"/>
-    <text x="13" y="20" font-size="12" font-weight="800" fill="#33584f" font-family="Arial">100</text><text x="86" y="44" font-size="13" font-weight="900" fill="#c9862a" font-family="Arial">100</text>
-    <text x="96" y="17" font-size="9" font-weight="700" fill="#33584f" font-family="Arial">$</text></svg>`;
-  const coins = Array.from({ length: 8 }, (_, i) => `<i class="coin bill" style="--d:${(i * 0.6).toFixed(2)}s;--x:${[-34, 22, -8, 38, -40, 6, 28, -20][i]}px;--r:${[-24, 18, -10, 30, -32, 12, 22, -16][i]}deg">${bill}</i>`).join('');
+  // the new $100 bill, drawn (not a copy of a real note; the portrait has no face, like the owner's sample pictures):
+  // grey-green paper, "100" in the corners, gold 100, the blue 3-D ribbon, green seal, copper bell. Some fall as bundles.
+  const bill = (band) => `<svg viewBox="0 0 240 104" width="120" height="52" direction="ltr" style="direction:ltr"><defs>
+    <linearGradient id="hb" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#eef1ec"/><stop offset=".55" stop-color="#e2e8e3"/><stop offset="1" stop-color="#d5ddd8"/></linearGradient>
+    <pattern id="hg" width="6" height="6" patternUnits="userSpaceOnUse"><path d="M0 3h6M3 0v6" stroke="#c9d3ce" stroke-width=".5"/></pattern>
+    <radialGradient id="hf" cx=".5" cy=".45" r=".6"><stop offset="0" stop-color="#ddd6c8"/><stop offset="1" stop-color="#cfc7b8"/></radialGradient>
+    <linearGradient id="hr" x1="0" x2="1"><stop offset="0" stop-color="#3b6fd8"/><stop offset=".5" stop-color="#7fb0ff"/><stop offset="1" stop-color="#2b58b8"/></linearGradient></defs>
+    <rect x="1" y="1" width="238" height="102" rx="4" fill="url(#hb)" stroke="#8b9893" stroke-width="2"/><rect x="1" y="1" width="238" height="102" rx="4" fill="url(#hg)" opacity=".6"/>
+    <rect x="6" y="6" width="228" height="92" rx="2" fill="none" stroke="#7b8984" stroke-width="1"/>
+    <text x="10" y="24" font-size="19" font-weight="900" fill="#4d5a55" font-family="Georgia,serif">100</text>
+    <text x="10" y="94" font-size="19" font-weight="900" fill="#4d5a55" font-family="Georgia,serif">100</text>
+    <text x="52" y="21" font-size="6.2" font-weight="700" fill="#4d5a55" font-family="Georgia,serif">FEDERAL RESERVE NOTE</text>
+    <text x="142" y="17" font-size="6.5" font-weight="900" fill="#4d5a55" font-family="Georgia,serif">THE UNITED STATES</text>
+    <text x="150" y="25" font-size="6.5" font-weight="900" fill="#4d5a55" font-family="Georgia,serif">OF AMERICA</text>
+    <path d="M78 98c-4-22 2-40 8-52-8-6-10-20-4-30 6-9 22-12 32-6 10 6 12 20 6 30 6 12 12 30 8 58z" fill="#7d8984" opacity=".55"/>
+    <ellipse cx="100" cy="42" rx="14" ry="19" fill="url(#hf)"/>
+    <path d="M70 98c2-14 14-24 30-24s28 10 30 24z" fill="#69756f" opacity=".6"/>
+    <circle cx="40" cy="58" r="12" fill="none" stroke="#56635e" stroke-width="2"/><circle cx="40" cy="58" r="7" fill="#9aa59f"/>
+    <rect x="133" y="4" width="9" height="96" fill="url(#hr)"/><g fill="#d9e8ff" font-size="5" font-weight="900" font-family="Arial">${[16, 34, 52, 70, 88].map(y => `<text x="134" y="${y}">100</text>`).join('')}</g>
+    <circle cx="200" cy="50" r="12" fill="none" stroke="#2f8a5a" stroke-width="2.2"/><circle cx="200" cy="50" r="7" fill="none" stroke="#2f8a5a" stroke-width="1.2"/>
+    <text x="170" y="56" font-size="30" font-weight="900" fill="none" stroke="#7b8984" stroke-width="1" font-family="Georgia,serif" opacity=".7">100</text>
+    <path d="M150 66h20v4l-3 4v10h-14v-10l-3-4z" fill="#c9772d"/>
+    <text x="182" y="94" font-size="20" font-weight="900" fill="#c9922f" font-family="Georgia,serif">100</text>
+    ${band ? `<rect x="92" y="1" width="44" height="102" fill="#c4a35a"/><rect x="92" y="1" width="44" height="102" fill="none" stroke="#8a6d2c"/><text x="114" y="60" font-size="12" font-weight="900" fill="#5a4618" font-family="Arial" text-anchor="middle" transform="rotate(-90 114 52)">$10,000</text>` : ''}</svg>`;
+  const coins = Array.from({ length: 8 }, (_, i) => `<i class="coin bill${i % 3 === 1 ? ' bundle' : ''}" style="--d:${(i * 0.6).toFixed(2)}s;--x:${[-34, 22, -8, 38, -40, 6, 28, -20][i]}px;--r:${[-24, 18, -10, 30, -32, 12, 22, -16][i]}deg">${bill(i % 3 === 1)}</i>`).join('');
   $('#main').innerHTML = `<div class="hero">
    <h1 class="hero-t">פרוטה לפרוטה מצטרפות לחשבון גדול</h1>
    <div class="hero-box">

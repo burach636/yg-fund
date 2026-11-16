@@ -369,3 +369,6 @@ nav.incol #navuser{display:block}
   42%{transform:translateX(calc(var(--x) * -.7)) translateY(80px) rotate(calc(var(--r) * .5)) rotateX(-25deg)}
   56%{transform:translateX(calc(var(--x) * -1)) translateY(118px) rotate(0) rotateX(0) scale(.9);opacity:1}
   64%{transform:translateX(calc(var(--x) * -1)) translateY(134px) rotate(0) scale(.85,.05);opacity:0}100%{opacity:0;transform:translateY(134px)}}
+/* realistic-looking $100 bills (v1.27.2) */
+.coin.bill{width:120px;height:52px;left:calc(50% - 60px + var(--x))}
+.coin.bill.bundle{box-shadow:0 2px 0 #cfd8d3,0 4px 0 #c3cdc8,0 6px 0 #b7c2bd,0 10px 14px rgba(0,0,0,.25)}
