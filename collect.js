@@ -91,7 +91,7 @@ function colPlChips() {
   const f = fltOf('col-pl'), YC = typeof ygCamps === 'function' ? ygCamps() : new Set(), used = new Map();
   IDX.pl.forEach(g => g.list.forEach(c => { if (!c[9] && c[5] > 0.009 && c[6]) used.set(+c[6], (used.get(+c[6]) || 0) + 1); }));
   const camps = [...used.keys()].filter(n => !YC.size || YC.has(n)).sort((a, b) => b - a);
-  const setF = js => `ui.flt=ui.flt||{};ui.flt['col-pl']=Object.assign({},ui.flt['col-pl']||{});${js};vCol()`;
+  const setF = js => `ui.flt=ui.flt||{};ui.flt['col-pl']=Object.assign({},ui.flt['col-pl']||{});${js};fltPersist('col-pl',ui.flt['col-pl']);vCol()`;
   return `<span class="scope"><button class="chip ${!f.plMonth ? 'on' : ''}" onclick="${setF("delete ui.flt['col-pl'].plMonth")}">אלע יארן</button><button class="chip ${f.plMonth ? 'on' : ''}" onclick="${setF("ui.flt['col-pl'].plMonth=true")}">📅 דעם חודש</button></span>
    <select class="mini" onchange="${setF("if(this.value)ui.flt['col-pl'].plCamp=this.value;else delete ui.flt['col-pl'].plCamp")}"><option value="">💳 אלע קאמפעינס</option>${camps.map(n => `<option value="${n}" ${+f.plCamp === n ? 'selected' : ''}>#${n} ${esc((JD.campaigns || {})[n] || '')} (${used.get(n)})</option>`).join('')}</select>
    <label style="font-size:13px;display:flex;gap:5px;align-items:center"><input type="checkbox" ${ui.plCovered ? 'checked' : ''} onchange="ui.plCovered=this.checked;vCol()"> 💳 אויך מיט קרעדיט קארד / העלד טשעקס (${plCovered().size})</label>

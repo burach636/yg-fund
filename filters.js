@@ -7,8 +7,18 @@
 //   plMonth true                       – has an open YG pledge due by the end of this month
 //   tag, who ('' / '__none' / '__me' / a name), minTotal (YG total ≥), gaveSince / noGiftSince (date of last YG gift)
 //   tuition: st ('ok'|'fix'|'ign'), minDue (owes now ≥)
-const fltOf = k => { ui.flt = ui.flt || {}; return ui.flt[k] || {}; };
-const fltActive = k => Object.keys(fltOf(k)).some(x => { const v = fltOf(k)[x]; return Array.isArray(v) ? v.length : v !== '' && v != null && v !== false; });
+// 📌 "keep this filter" (v1.28): a filter saved with the checkbox on stays (also after closing the program) until the
+// check is taken off – kept per user on this computer in localStorage `yg_flt_<email>` = {key: filter}.
+const fltStoreKey = () => 'yg_flt_' + (myEmail || '').toLowerCase();
+function fltLoad() {
+  if (ui._fltLoaded === myEmail) return; ui._fltLoaded = myEmail; ui.flt = ui.flt || {};
+  try { const o = JSON.parse(localStorage.getItem(fltStoreKey()) || '{}'); Object.keys(o).forEach(k => { if (!ui.flt[k] || !Object.keys(ui.flt[k]).length) ui.flt[k] = o[k]; }); } catch (e) { }
+}
+function fltPersist(k, f) {
+  try { const o = JSON.parse(localStorage.getItem(fltStoreKey()) || '{}'); if (f && f._keep) o[k] = f; else delete o[k]; localStorage.setItem(fltStoreKey(), JSON.stringify(o)); } catch (e) { }
+}
+const fltOf = k => { fltLoad(); ui.flt = ui.flt || {}; return ui.flt[k] || {}; };
+const fltActive = k => Object.keys(fltOf(k)).some(x => { if (x === '_keep') return false; const v = fltOf(k)[x]; return Array.isArray(v) ? v.length : v !== '' && v != null && v !== false; });
 function fltMatch(f, code) {
   if (!f) return true;
   code = +code;
@@ -62,10 +72,10 @@ function fltLabel(k) {
 function fltBar(k, after) {
   window._fltAfter = window._fltAfter || {}; window._fltAfter[k] = after;
   const L = fltLabel(k);
-  return `<span class="fltbar"><button class="btn ${L.length ? 'gold' : 'ghost'} sm" onclick="fltForm('${k}')">🔎 פילטער${L.length ? ' (' + L.length + ')' : ''}</button>${L.map(t => `<span class="fltchip">${esc(t)}</span>`).join('')}${L.length ? `<button class="btn ghost sm" onclick="fltClear('${k}')">✕</button>` : ''}</span>`;
+  return `<span class="fltbar"><button class="btn ${L.length ? 'gold' : 'ghost'} sm" onclick="fltForm('${k}')">🔎 פילטער${L.length ? ' (' + L.length + ')' : ''}${fltOf(k)._keep ? ' 📌' : ''}</button>${L.map(t => `<span class="fltchip">${esc(t)}</span>`).join('')}${L.length ? `<button class="btn ghost sm" onclick="fltClear('${k}')">✕</button>` : ''}</span>`;
 }
 function fltRun(k) { const a = (window._fltAfter || {})[k]; try { if (a) new Function(a)(); else render(); } catch (e) { render(); } }
-function fltClear(k) { ui.flt = ui.flt || {}; ui.flt[k] = {}; fltRun(k); }
+function fltClear(k) { ui.flt = ui.flt || {}; ui.flt[k] = {}; fltPersist(k, null); fltRun(k); }
 function fltForm(k) {
   const f = fltOf(k), tu = AREA === 'tu', X = JD && JD.udf ? jrIndex() : null;
   const types = X ? [...X.types.keys()].filter(t => /^UDF/i.test(t)).sort() : [];
@@ -90,6 +100,7 @@ function fltForm(k) {
     <label class="f">🏷️ פלאג<select id="ftg"><option value="">—</option>${tags.map(t => `<option ${t === f.tag ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>
     <label class="f">👤 ווער קאלט<select id="fwh"><option value="">—</option><option value="__me" ${f.who === '__me' ? 'selected' : ''}>מיינע</option><option value="__none" ${f.who === '__none' ? 'selected' : ''}>נישט צוגעטיילט</option>${USERS().map(u => `<option ${f.who === u ? 'selected' : ''}>${esc(u)}</option>`).join('')}</select></label>
    </div>
+   <label class="fltkeep"><input type="checkbox" id="fkeep" ${f._keep ? 'checked' : ''}> 📌 היט אפ דעם פילטער – ער בלייבט (אויך ווען מ'מאכט צו די פראגראם) ביז איך נעם אראפ דעם ✓</label>
    <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn ghost" onclick="closeM()">Back</button><button class="btn ghost" onclick="closeM();fltClear('${k}')">✕ אויסמעקן</button><button class="btn" onclick="fltSave('${k}')">🔎 פילטער</button></div>`);
 }
 function fltSave(k) {
@@ -97,7 +108,9 @@ function fltSave(k) {
   const f = { udf: v('fu'), vals: String(v('fv') || '').split(/[,\s]+/).map(x => x.trim()).filter(Boolean), notCamp: v('fnc'), gaveCamp: v('fgc'), plCamp: v('fpc'), plMonth: v('fpm') || false,
     minTotal: v('fmt'), gaveSince: v('fgs'), noGiftSince: v('fng'), st: v('fst'), minDue: v('fmd'), tag: v('ftg'), who: v('fwh') };
   if (!f.udf) f.vals = [];
+  f._keep = !!v('fkeep');
   Object.keys(f).forEach(x => { if (f[x] === '' || f[x] === false || (Array.isArray(f[x]) && !f[x].length)) delete f[x]; });
   ui.flt = ui.flt || {}; ui.flt[k] = f;
+  fltPersist(k, f);
   closeM(); fltRun(k);
 }
