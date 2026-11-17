@@ -1,0 +1,16 @@
+# Every hour: ask the Supabase Edge Function "remind" to e-mail team members who did not open new office work
+# (a task from someone else) within 24 hours. The function sends each reminder only once, so extra calls are harmless.
+name: office-work reminders
+on:
+  schedule:
+    - cron: '23 * * * *'
+  workflow_dispatch:
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Call the remind function
+        run: |
+          URL=$(grep -oE "url: *'[^']+'" config.js | sed -E "s/url: *'([^']+)'/\1/")
+          curl -sS -m 90 "$URL/functions/v1/remind"; echo

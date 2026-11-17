@@ -40,7 +40,7 @@ function todoRow(id, x) {
    <div class="acts">${x.rc ? `<button class="btn gold sm" onclick="rcOpenTask('${id}')">🖨️ עפן רעסיטס</button>` : ''}${x.fm ? `<button class="btn gold sm" onclick="frMailTask('${id}')">✉️ שיק צום אפיס</button>` : ''}${x.done ? '' : `<button class="btn sm" onclick="taskDone('${id}')">✓ געטון</button>`}<button class="btn ghost sm" onclick="taskForm('${id}')">ענדער</button></div></div>`;
 }
 function vTodo() {
-  markSeen();
+  markSeen(); seenServer();
   const all = Object.entries(S.task).filter(([, x]) => taskVisible(x));
   const open = all.filter(([, x]) => !x.done);
   const F = {
@@ -587,6 +587,15 @@ async function expOpen(id) {
 const seenKey = () => 'yg_seen_' + myKey();
 const seenAt = () => { try { return localStorage.getItem(seenKey()) || ''; } catch (e) { return ''; } };
 function markSeen() { try { localStorage.setItem(seenKey(), new Date().toISOString()); } catch (e) { } _lastNew = 0; notifyCheck(); }
+// ⏰ 24-hour e-mail reminder (v1.34): opening the office-work list also tells the server (event kind `seen`,
+// id = <email>|<area>, p {at}); the Edge Function `remind` e-mails anyone who did not open a task from someone else
+// within 24 hours. Written only when there is a task of mine that the server does not know I saw yet.
+function seenServer() {
+  if (!me || !myKey()) return;
+  const id = myKey() + '|' + (AREA || 'fund'), at = (S.seen[id] || {}).at || '';
+  if (Object.values(S.task).some(x => taskVisible(x) && !x.done && taskMine(x) && x.from && x.from !== me && x.created && x.created > at))
+    emit('seen', id, { at: new Date().toISOString() });
+}
 const newForMe = () => { const s = seenAt(); return Object.entries(S.task).filter(([, x]) => taskVisible(x) && !x.done && taskMine(x) && x.from && x.from !== me && x.created && x.created > s); };
 let _lastNew = -1;
 function ding() {
