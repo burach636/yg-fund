@@ -81,7 +81,7 @@ async function pullLog() {
   }
   return changed;
 }
-// Download a JLS data file always fresh (v1.35.1): the files used to be saved with Supabase's default 1-hour cache, so
+// Download a JLS data file always fresh (v1.36.1): the files used to be saved with Supabase's default 1-hour cache, so
 // another user's browser could show the old numbers for up to an hour after an import.
 async function jlsFile(path) {
   try {
@@ -110,6 +110,18 @@ function hebLast(a) {
   const lh = a.lh || (a.h ? a.h.trim().split(/\s+/).pop() : '');
   return lh ? '0' + lh + ' ' + (a.h || '') : '1' + (a.ln || a.n || '').toLowerCase() + ' ' + (a.n || '').toLowerCase();
 }
+// 🔍 Search that understands both keyboards (v1.36, owner): text typed with the keyboard on Hebrew/Yiddish while
+// meaning English letters ("יקךךם" = "hello"), or English letters while meaning Yiddish ("nav" = "מאה"), is also tried through the other layout (standard Israeli layout). Niqqud and Yiddish ligatures
+// (ײ װ ױ) are ignored. qVars(raw) = the normalised text + its swapped twin; every search box tries both.
+const KB_PAIRS = "q/w'eקrרtאyטuוiןoםpפaשsדdגfכgעhיjחkלlךzזxסcבvהbנmצ;ף,ת.ץnמ";
+const KB_E2H = {}, KB_H2E = {};
+for (let i = 0; i < KB_PAIRS.length; i += 2) { KB_E2H[KB_PAIRS[i]] = KB_PAIRS[i + 1]; KB_H2E[KB_PAIRS[i + 1]] = KB_PAIRS[i]; }
+const qNorm = s => String(s || '').toLowerCase().replace(/[\u0591-\u05C7]/g, '').replace(/ײ/g, 'יי').replace(/װ/g, 'וו').replace(/ױ/g, 'וי');
+// a text with Hebrew letters is read as typed on the Hebrew keyboard (→ English), otherwise the other way round
+const qAlt = s => { const M = /[\u05d0-\u05ea]/.test(s) ? KB_H2E : KB_E2H; return [...s].map(c => M[c] || c).join(''); };
+function qVars(raw) { const q = qNorm(raw).trim(); if (!q) return []; const b = qAlt(q); return b !== q ? [q, b] : [q]; }
+// true when every word of one of the variants is in the text (numbers: also digits only, like phones)
+function qHit(V, hay) { hay = qNorm(hay); return V.some(q => { const w = q.split(/\s+/).filter(Boolean), d = q.replace(/\D/g, ''); return w.every(x => hay.includes(x)) || (d.length >= 4 && hay.includes(d)); }); }
 function buildIndex() {
   const by = new Map(), yg = new Map(), pl = new Map();
   const prank = d => { d = (d || '').toLowerCase(); if (/cel|mobile|סעל/.test(d)) return /mother|wife|מאמע/.test(d) ? 1 : 0; if (/home|היים/.test(d)) return 2; return 3; };
@@ -117,7 +129,7 @@ function buildIndex() {
     a.ph.sort((x, y) => prank(x[0]) - prank(y[0]));
     by.set(a.c, a);
     a._k = hebLast(a);
-    a._s = (a.n + ' ' + a.h + ' ' + a.w + ' ' + a.wh + ' ' + a.a + ' ' + a.co + ' #' + a.c + ' ' + (a.em || []).join(' ') + ' ' + ((S.acct[a.c] || {}).email || '') + ' ' + a.ph.map(p => p[1] + ' ' + p[1].replace(/\D/g, '')).join(' ')).toLowerCase();
+    a._s = qNorm(a.n + ' ' + a.h + ' ' + a.w + ' ' + a.wh + ' ' + a.a + ' ' + a.co + ' #' + a.c + ' ' + (a.em || []).join(' ') + ' ' + ((S.acct[a.c] || {}).email || '') + ' ' + a.ph.map(p => p[1] + ' ' + p[1].replace(/\D/g, '')).join(' ')).toLowerCase();
   });
   const today = todayS();
   JD.payments.forEach(p => {
@@ -455,7 +467,7 @@ function wire() {
 function setArea(a, keepView) {
   AREA = a; try { sessionStorage.setItem('yg_area', a); } catch (e) { }
   document.body.classList.toggle('area-tu', a === 'tu');
-  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.35</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.35</small>';
+  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.36</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.36</small>';
   $('#btnArea').style.display = canFund() && canView('tuition') ? '' : 'none';
   $('#btnArea').textContent = a === 'tu' ? '⇄ צו פאנדרעיזינג' : '⇄ צו שכר לימוד';
   setupUser();
@@ -683,9 +695,8 @@ function csvPledges() {
 
 // ---------- ACCOUNTS ----------
 function filterAccounts() {
-  const q = ui.accQ.trim().toLowerCase(), qd = q.replace(/\D/g, '');
-  const words = q.split(/\s+/).filter(Boolean);
-  let L = JD.accounts.filter(a => !words.length || words.every(w => a._s.includes(w)) || (qd.length >= 4 && a._s.includes(qd)));
+  const V = qVars(ui.accQ);
+  let L = JD.accounts.filter(a => !V.length || qHit(V, a._s));
   const f = ui.accF;
   if (f === 'yg') L = L.filter(a => IDX.yg.has(a.c));
   if (f === 'bal') L = L.filter(a => (IDX.pl.get(a.c) || {}).open > 0.009);
@@ -785,7 +796,7 @@ async function addNote(code) {
 
 // ---------- REPORTS ----------
 // Payments by Jewish year and month (refunds left out)
-// Years are shown only up to the current Jewish year (owner, v1.35): no next year from post-dated payments,
+// Years are shown only up to the current Jewish year (owner, v1.36): no next year from post-dated payments,
 // scheduled credit-card charges or bills already entered for later.
 const curHY = () => (HEB.parts(todayS()) || {}).y || 9999;
 function hebYears() {
@@ -1069,7 +1080,7 @@ function closeM() { $('#ov').classList.remove('on'); }
 
 const setHH = () => document.documentElement.style.setProperty('--hh', document.querySelector('header').offsetHeight + 'px');
 window.addEventListener('resize', setHH); window.addEventListener('load', setHH); setHH();
-// ---------- 🔄 new version on the website: update by itself (v1.35) ----------
+// ---------- 🔄 new version on the website: update by itself (v1.36) ----------
 // Every minute the page asks the server for index.html and compares <meta name="app-version">. When it changed:
 // if nobody is in the middle of something (no window open, not typing, no mouse/keys for 20 s) the page reloads by
 // itself and comes back to the same page; otherwise a small "🔄 נייע ווערסיע" button waits for a click.

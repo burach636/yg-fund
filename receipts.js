@@ -49,7 +49,7 @@ function rcList() {
   const r = ui.rc;
   // Searching looks in all years and also shows printed receipts (to print an old one again)
   const q = (r.q || '').trim().toLowerCase(), words = q.split(/\s+/).filter(Boolean), qn = q.replace(/[$,\s]/g, '');
-  const hit = p => { if (!words.length) return true; const a = IDX.by.get(p[1]); if (a && words.every(w => a._s.includes(w))) return true;
+  const V = qVars(q), hit = p => { if (!words.length) return true; const a = IDX.by.get(p[1]); if (a && qHit(V, a._s)) return true;
     return /^\d+(\.\d+)?$/.test(qn) && (Math.abs(p[3] - +qn) < 0.005 || String(p[1]) === qn); };
   if (words.length) return rcItems().filter(p => (r.all !== false || (p[2] >= r.from && p[2] <= r.to)) && hit(p))
     .sort((a, b) => b[2].localeCompare(a[2]));

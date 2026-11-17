@@ -53,9 +53,9 @@ function vJrep() {
   window._ln = lastNotes();
   const all = cur ? fltRows('jr', jrRun(cur), a => a.c).filter(a => !colSt(a.c).ign) : [];   // + the extra 🔎 filter; 🚫 ignored accounts are not on call lists
   // search box + "who calls" filter (mine / not assigned / a user)
-  const q = (ui.jrQ || '').trim().toLowerCase(), words = q.split(/\s+/).filter(Boolean), qd = q.replace(/\D/g, ''), who = ui.jrWho || '';
+  const V = qVars(ui.jrQ || ''), who = ui.jrWho || '';
   const L = all.filter(a => {
-    if (words.length && !(words.every(w => a._s.includes(w)) || (qd.length >= 4 && a._s.includes(qd)))) return false;
+    if (V.length && !qHit(V, a._s)) return false;
     const as = (S.acct[a.c] || {}).assigned || '';
     if (who === '__me' && as !== me) return false;
     if (who === '__none' && as) return false;

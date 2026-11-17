@@ -513,7 +513,7 @@ const expYearOf = d => (HEB.parts(d) || {}).y || 0;
 function expYearSel(F) { const ys = [...new Set([expYearOf(todayS())].concat(F.expenses.map(x => x.hy)))].filter(y => y <= curHY()).sort((a, b) => b - a); const y = ys.includes(+ui.expY) ? +ui.expY : ys[0]; return { ys, y }; }
 function expFiltered(F) {
   const q = (ui.expQ || '').trim().toLowerCase(), words = q.split(/\s+/).filter(Boolean), { y } = expYearSel(F);
-  return F.expenses.filter(x => x.hy === y).filter(x => !words.length || words.every(w => ((x.vendor || '') + ' ' + (x.desc || '') + ' ' + x.date + ' ' + fmtD(x.date) + ' ' + x.amt + ' ' + (x.file ? x.file.name : '')).toLowerCase().includes(w)));
+  return F.expenses.filter(x => x.hy === y).filter(x => !words.length || qHit(qVars(q), (x.vendor || '') + ' ' + (x.desc || '') + ' ' + x.date + ' ' + fmtD(x.date) + ' ' + x.amt + ' ' + (x.file ? x.file.name : '')));
 }
 function expSection(F) {
   const L = expFiltered(F), tot = L.reduce((s, x) => s + x.amt, 0), { ys, y } = expYearSel(F), yAll = F.expenses.filter(x => x.hy === y), all = yAll.reduce((s, x) => s + x.amt, 0);

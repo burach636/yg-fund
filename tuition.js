@@ -112,7 +112,7 @@ function vTuition() {
       const a = IDX.by.get(f.code) || { ph: [] };
       if (qs.replace('#', '') === String(f.code)) return true;
       if (qd.length >= 4 && a.ph.some(p => p[1].replace(/\D/g, '').includes(qd))) return true;
-      return [a.h, a.n, ...f.kids.map(k => k.slice(2, 6).join(' '))].join(' ').toLowerCase().includes(qs);
+      return qHit(qVars(qs), [a.h, a.n, ...f.kids.map(k => k.slice(2, 6).join(' '))].join(' '));
     });
   }
   const srt = ui.tuSort || 'due';
@@ -288,7 +288,7 @@ function tuStCalc(f, M) {
 function tuStRows() {
   const M = tuStMonth(), qs = (ui.tuSt.q || '').trim().toLowerCase();
   return tuCalc().L.map(f => { const st = tuStCalc(f, M); return { c: f.code, f, M, st, bal: st.bal, a: IDX.by.get(f.code) || { h: '', n: '#' + f.code, ph: [], a: '' } }; })
-    .filter(r => (r.bal >= (+ui.tuSt.min || 0.01) || (ui.tuSt.all && r.st.L.length)) && (!qs || [r.a.h, r.a.n, '#' + r.c].join(' ').toLowerCase().includes(qs)))
+    .filter(r => (r.bal >= (+ui.tuSt.min || 0.01) || (ui.tuSt.all && r.st.L.length)) && (!qs || qHit(qVars(qs), [r.a.h, r.a.n, '#' + r.c].join(' '))))
     .sort((a, b) => (a.a.lh || '').localeCompare(b.a.lh || '', 'he'));
 }
 const tuStIsSel = r => ui.tuSt.sel[r.c] !== false;

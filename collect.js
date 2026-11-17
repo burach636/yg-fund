@@ -122,10 +122,10 @@ function colLastNote(code) { let h = null; Object.values(S.hist).forEach(x => { 
 function vCol() {
   if (!colReady()) return;
   const tab = ui.colTab || 'today', L = colLists(), t = todayS();
-  const qs = (ui.colQ || '').trim().toLowerCase();
+  const qs = (ui.colQ || '').trim().toLowerCase(), QV = qVars(qs);
   const needFlt = tab === 'every' && !fltActive('col-every');   // 21,000 accounts: show them only through a 🔎 filter
   let R = needFlt ? [] : fltRows('col-' + tab, colTabRows(tab, L), r => r.code);
-  if (qs) R = R.filter(r => { const a = IDX.by.get(r.code) || {}; return ((a._s || '') + ' ' + (r.f ? r.f.kids.map(k => k.slice(2, 6).join(' ')).join(' ') : '')).includes(qs) || ('#' + r.code) === qs; });
+  if (qs) R = R.filter(r => { const a = IDX.by.get(r.code) || {}; return qHit(QV, (a._s || '') + ' ' + (r.f ? r.f.kids.map(k => k.slice(2, 6).join(' ')).join(' ') : '')) || ('#' + r.code) === qs; });
   window._colR = R;
   const out = L.all.reduce((s, r) => s + (r.amt > 0 ? r.amt : 0), 0), done = L.today.filter(r => r.done).length;
   ui.colN = ui.colN || 150;
@@ -255,11 +255,11 @@ function vCalling() {
 function cmSearchBox() { return `<span class="cmsearch"><input id="cmq" placeholder="🔍 Search: name, phone, #code" autocomplete="off"><div id="cmqres"></div></span>`; }
 function cmSearchList(q) {
   q = q.trim().toLowerCase(); if (!q) return [];
-  const qd = q.replace(/\D/g, ''), words = q.replace(/^#/, '').split(/\s+/).filter(Boolean), num = /^#?\d+$/.test(q) ? +q.replace('#', '') : 0;
+  const V = qVars(q), num = /^#?\d+$/.test(q) ? +q.replace('#', '') : 0;
   const inList = new Set(ui.cm ? ui.cm.codes : []);
   let pool = JD.accounts;
   if (colArea() === 'tu' && TU && !TU.missing) { const fam = new Set(tuCalc().L.map(f => f.code)); pool = pool.filter(a => fam.has(a.c)); }
-  const L = pool.filter(a => (num && a.c === num) || words.every(w => a._s.includes(w)) || (qd.length >= 4 && a._s.includes(qd)));
+  const L = pool.filter(a => (num && a.c === num) || qHit(V, a._s));
   L.sort((x, y) => (y.c === num) - (x.c === num) || inList.has(y.c) - inList.has(x.c) || (x._k || '').localeCompare(y._k || '', 'he'));
   return L.slice(0, 12).map(a => ({ c: a.c, a, on: inList.has(a.c) }));
 }
