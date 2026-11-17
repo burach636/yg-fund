@@ -167,15 +167,18 @@ function colSrcSel(cur) {
   return `<select class="mini srcsel" onchange="colStart(this.value)" title="וועמען קאלן">${cur === 'sel' ? '<option value="sel" selected>☑ אויסגעקליבענע</option>' : ''}${colSources().map(([k, l]) => `<option value="${esc(k)}" ${k === cur ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
 }
 // The people of one list for Calling mode, always with that list's (kept) 🔎 filter (v1.28.2)
+// Calling mode has its OWN 🔎 filter per list ('cm-<list>'), separate from the list pages ('col-<tab>', 'jr') –
+// owner (v1.31): a filter made (and kept) in Calling mode must not change "קאלן היינט" itself, and the other way round.
+const cmFltKey = tab => 'cm-' + tab;
 function colCm(tab) {
   const t = todayS();
   if (String(tab).startsWith('jr:')) {   // a report: everybody on it, those reached today at the end
     const d = jrDefs().find(x => 'jr:' + x.id === tab); if (!d) return null;
-    const C = fltCodes('jr', jrRun(d).map(a => a.c)).filter(c => !colSt(c).ign), done = c => (colSt(c).outAt || '').slice(0, 10) === t;
+    const C = fltCodes(cmFltKey(tab), jrRun(d).map(a => a.c)).filter(c => !colSt(c).ign), done = c => (colSt(c).outAt || '').slice(0, 10) === t;
     return { tab, codes: C.filter(c => !done(c)).concat(C.filter(done)), i: 0 };
   }
-  if (tab === 'every' && !fltActive('col-every')) { toast('🔎 שטעלט ערשט א פילטער – עס זענען ' + JD.accounts.length.toLocaleString() + ' אקאונטס'); return { tab, codes: [], i: 0 }; }
-  const L = fltRows('col-' + tab, colTabRows(tab), r => r.code).filter(r => tab === 'ign' || !(r.s || colSt(r.code)).ign);
+  if (tab === 'every' && !fltActive(cmFltKey(tab))) { toast('🔎 שטעלט ערשט א פילטער – עס זענען ' + JD.accounts.length.toLocaleString() + ' אקאונטס'); return { tab, codes: [], i: 0 }; }
+  const L = fltRows(cmFltKey(tab), colTabRows(tab), r => r.code).filter(r => tab === 'ign' || !(r.s || colSt(r.code)).ign);
   return { tab, codes: L.map(r => r.code), i: Math.max(0, L.findIndex(r => !r.done)) };
 }
 const cmTabKey = () => 'yg_cmtab_' + colArea();
@@ -195,7 +198,7 @@ function vCalling() {
   }
   const cm = ui.cm, codes = cm.codes;
   if (!codes.length) {   // nobody (maybe because of the filter): keep the bar, so the list or the filter can be changed
-    $('#main').innerHTML = `<div class="cmbar"><b>📞 Calling mode</b>${colSrcSel(cm.tab)}${cm.tab !== 'sel' ? fltBar(String(cm.tab).startsWith('jr:') ? 'jr' : 'col-' + cm.tab, `colStart('${cm.tab}')`) : ''}</div><div class="empty">🎉 גארנישט צו קאלן${cm.tab !== 'sel' && fltActive(String(cm.tab).startsWith('jr:') ? 'jr' : 'col-' + cm.tab) ? ' – דער 🔎 פילטער לאזט נישט קיינעם' : ''}</div>`;
+    $('#main').innerHTML = `<div class="cmbar"><b>📞 Calling mode</b>${colSrcSel(cm.tab)}${cm.tab !== 'sel' ? fltBar(cmFltKey(cm.tab), `colStart('${cm.tab}')`) : ''}</div><div class="empty">🎉 גארנישט צו קאלן${cm.tab !== 'sel' && fltActive(cmFltKey(cm.tab)) ? ' – דער 🔎 פילטער לאזט נישט קיינעם' : ''}</div>`;
     return;
   }
   cm.i = Math.min(Math.max(0, cm.i), codes.length - 1);
@@ -216,7 +219,7 @@ function vCalling() {
   }
   const last = r.last || (r.f ? r.f.last : '');
   const isJr = String(cm.tab).startsWith('jr:');
-  $('#main').innerHTML = `<div class="cmbar"><b>📞 Calling mode</b>${colArea() === 'tu' && cm.tab !== 'sel' ? tuScopeChips(`colStart('${cm.tab}')`) : ''} ${colSrcSel(cm.tab)}${cm.tab !== 'sel' ? fltBar(String(cm.tab).startsWith('jr:') ? 'jr' : 'col-' + cm.tab, `colStart('${cm.tab}')`) : ''}<span><b>${doneN}</b> פון ${codes.length} געטון</span>
+  $('#main').innerHTML = `<div class="cmbar"><b>📞 Calling mode</b>${colArea() === 'tu' && cm.tab !== 'sel' ? tuScopeChips(`colStart('${cm.tab}')`) : ''} ${colSrcSel(cm.tab)}${cm.tab !== 'sel' ? fltBar(cmFltKey(cm.tab), `colStart('${cm.tab}')`) : ''}<span><b>${doneN}</b> פון ${codes.length} געטון</span>
      <div class="cmprog"><i style="width:${doneN / codes.length * 100}%"></i></div>
      <button class="btn ghost sm" onclick="ui.cm.i--;vCalling()" ${cm.i ? '' : 'disabled'}>› פריער</button><span>${cm.i + 1} פון ${codes.length}</span><button class="btn ghost sm" onclick="ui.cm.i++;vCalling()" ${cm.i < codes.length - 1 ? '' : 'disabled'}>ווייטער ‹</button>
      <button class="btn ghost sm" onclick="${r.f ? `tuFamily(${code})` : `openAcct(${code})`}">גאנצע זייט</button></div>
