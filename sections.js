@@ -329,25 +329,83 @@ function callBtn(num, code) {
   const t = callTpl(), href = callIsPost(t) || t.startsWith('tlqc:') ? 'tel:+' + d : callFill(t, d);
   return `<a class="callb" title="קאל ${esc(num)}" href="${esc(href)}" data-n="${d}" onclick="return dial(this,${+code || 0})">📞</a>`;
 }
-// TekLink quickcall (Kazoo): the admin pastes "account=<id>" and "101=<user id>" lines (setting tlCfg, kept in the
-// database, not in the repo); each computer picks its extension (localStorage yg_call = "tlqc:101"); the Supabase
-// function "call" holds the API key and places the call.
+// TekLink quickcall (Kazoo), as TekLink explained it (v1.42): the Supabase function "call" holds the API key and logs in;
+// the admin maps every team member to a TekLink user (setting tlMap {name: userId}, tlUsers = the list for display);
+// each member (or the admin) picks which of that user's devices rings (setting tlDev {name: {id, name}}); this
+// computer uses "my" mapping (localStorage yg_call = "tlqc:@me"). Old "tlqc:<ext>" + tlCfg lines still work.
 function tlCfg() {
   const o = { account: '', ext: {} };
   String(SET().tlCfg || '').split(/[\n,;]+/).forEach(l => { const m = l.trim().match(/^([\w ]+?)\s*[=:]\s*([0-9a-f]{32})$/i); if (!m) return; if (/^account/i.test(m[1])) o.account = m[2].toLowerCase(); else o.ext[m[1].trim()] = m[2].toLowerCase(); });
   return o;
 }
+async function tlCall(body) {
+  const { data, error } = await sb.functions.invoke('call', { body });
+  let m = error ? (error.message || String(error)) : data && data.error;
+  if (error) try { const j = await error.context.json(); if (j && j.error) m = j.error; } catch (e) { }
+  if (m) throw new Error(m);
+  return data;
+}
+const tlMine = (n = me) => ({ user: (SET().tlMap || {})[n] || '', dev: (SET().tlDev || {})[n] || null });
 async function tlDial(ext, d) {
-  const c = tlCfg(), user = c.ext[ext];
-  if (!c.account || !user) { toast('⚠️ TekLink is not set up – 📞 Phone'); return; }
   const num = d.length === 11 && d[0] === '1' ? d.slice(1) : d;
-  toast('📞 קאלט... אייער טעלעפאן (' + ext + ') וועט קלינגען, הייבט אויף');
+  let body;
+  if (ext === '@me') {
+    const m = tlMine();
+    if (!m.user && !(m.dev && m.dev.id)) { toast('⚠️ TekLink: you are not mapped yet – 📞 Phone'); return; }
+    body = { action: 'dial', user: m.user, device: m.dev ? m.dev.id : '', number: num };
+    toast('📞 קאלט... ' + (m.dev ? esc(m.dev.name) : 'אייער טעלעפאן') + ' וועט קלינגען, הייבט אויף');
+  } else {
+    const c = tlCfg(), user = c.ext[ext];
+    if (!user) { toast('⚠️ TekLink is not set up – 📞 Phone'); return; }
+    body = { action: 'dial', user, number: num };
+    toast('📞 קאלט... אייער טעלעפאן (' + ext + ') וועט קלינגען, הייבט אויף');
+  }
+  try { await tlCall(body); } catch (e) { toast('⚠️ קאלן: ' + (e.message || e)); }
+}
+// ---- the TekLink part of 📞 Phone setup: status, user mapping (admin), device per user ----
+function tlBox() {
+  const rows = isAdmin() ? USERS() : [me];
+  return `<div id="tlstat" class="sub" style="margin:0 0 8px">⏳ Checking TekLink…</div>
+   ${isAdmin() ? `<div class="row" style="margin-bottom:6px"><b>👥 Map users</b><div class="spacer"></div><button class="btn ghost sm" onclick="tlLoadUsers()">⟳ Load TekLink users</button></div>` : '<b>📱 My phone</b>'}
+   <table class="tbl" style="font-size:13px;width:100%"><tr><th>Team member</th><th>TekLink user</th><th>Device that rings</th></tr>
+   ${rows.map((n, i) => `<tr data-n="${esc(n)}"><td>${userChip(n)}</td><td>${isAdmin() ? `<select class="mini tlu" data-i="${i}" onchange="tlLoadDevs(this.closest('tr'))">${tlUserOpts(tlMine(n).user)}</select>` : esc(((SET().tlUsers || []).find(u => u.id === tlMine(n).user) || {}).name || (tlMine(n).user ? tlMine(n).user.slice(0, 8) + '…' : '– the admin maps you –'))}</td>
+     <td><select class="mini tld">${tlMine(n).dev ? `<option value="${esc(tlMine(n).dev.id)}" selected>${esc(tlMine(n).dev.name)}</option>` : ''}<option value="">All my devices</option></select></td></tr>`).join('')}</table>`;
+}
+const tlUserOpts = cur => '<option value="">—</option>' + (SET().tlUsers || []).map(u => `<option value="${u.id}" ${u.id === cur ? 'selected' : ''}>${esc(u.name)}${u.ext ? ' (' + esc(u.ext) + ')' : ''}</option>`).join('') + (cur && !(SET().tlUsers || []).some(u => u.id === cur) ? `<option value="${cur}" selected>${cur.slice(0, 8)}…</option>` : '');
+let _tlUsers = null;
+async function tlLoadUsers() {
   try {
-    const { data, error } = await sb.functions.invoke('call', { body: { account: c.account, user, number: num } });
-    let m = error ? (error.message || String(error)) : data && data.error;
-    if (error) try { const j = await error.context.json(); if (j && j.error) m = j.error; } catch (e) { }
-    if (m) throw new Error(m);
-  } catch (e) { toast('⚠️ קאלן: ' + (e.message || e)); }
+    const d = await tlCall({ action: 'users' }); _tlUsers = d.users || [];
+    S.settings.s.tlUsers = _tlUsers;   // shown now; saved with Save
+    document.querySelectorAll('#c_tl .tlu').forEach(s => { s.innerHTML = tlUserOpts(s.value); });
+    toast('✓ ' + _tlUsers.length + ' TekLink users');
+  } catch (e) { toast('⚠️ ' + (e.message || e)); }
+}
+async function tlLoadDevs(tr) {
+  const n = tr.dataset.n, u = isAdmin() ? tr.querySelector('.tlu').value : tlMine(n).user, sel = tr.querySelector('.tld'), cur = sel.value;
+  if (!u) { sel.innerHTML = '<option value="">All my devices</option>'; return; }
+  try {
+    const d = await tlCall({ action: 'devices', user: u });
+    sel.innerHTML = (d.devices || []).map(x => `<option value="${x.id}" ${x.id === cur ? 'selected' : ''}>${esc(x.name)}${x.type ? ' · ' + esc(x.type) : ''}${x.enabled ? '' : ' (off)'}</option>`).join('') + `<option value="" ${cur ? '' : 'selected'}>All my devices</option>`;
+    if (!cur && (d.devices || []).length === 1) sel.value = d.devices[0].id;
+  } catch (e) { toast('⚠️ ' + (e.message || e)); }
+}
+async function tlInit() {
+  const st = $('#tlstat'); if (!st) return;
+  try { const d = await tlCall({ action: 'info' }); st.innerHTML = '✅ TekLink connected (account …' + esc(String(d.account || '').slice(-6)) + ')'; }
+  catch (e) { st.innerHTML = '⚠️ ' + esc(e.message || String(e)) + (/TEKLINK_API_KEY/.test(e.message || '') ? '<br>The admin adds the API key in Supabase > Edge Functions > Secrets (TEKLINK_API_KEY).' : ''); return; }
+  document.querySelectorAll('#c_tl tr[data-n]').forEach(tr => tlLoadDevs(tr));
+}
+async function tlSaveMap() {
+  const map = Object.assign({}, SET().tlMap || {}), dev = Object.assign({}, SET().tlDev || {});
+  document.querySelectorAll('#c_tl tr[data-n]').forEach(tr => {
+    const n = tr.dataset.n, sel = tr.querySelector('.tld'), o = sel.options[sel.selectedIndex];
+    if (isAdmin()) { const u = tr.querySelector('.tlu').value; if (u) map[n] = u; else delete map[n]; }
+    if (sel.value) dev[n] = { id: sel.value, name: o ? o.textContent.replace(/ · .*$/, '') : '' }; else delete dev[n];
+  });
+  const p = { tlDev: dev };
+  if (isAdmin()) { p.tlMap = map; if (_tlUsers) p.tlUsers = _tlUsers.map(u => ({ id: u.id, name: u.name, ext: u.ext })); }
+  await emit('settings', 's', p);
 }
 function dial(el, code, tplOverride, keepOpen) {
   const t = tplOverride || callTpl(), d = el.dataset.n || '';
@@ -376,7 +434,6 @@ function callSetup() {
   const t = callTpl(), yl = t.match(/^(https?:\/\/[^/]+)\/servlet\?key=number=\{digits\}$/);
   const ls = k => { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } };
   const mode = t.startsWith('tlqc:') ? 'tl' : callIsPost(t) || (ls('yg_call_src') && /%PhoneNum%|\{num1\}/.test(t)) ? 'jls' : t === 'tel:{num}' ? 'tel' : yl ? 'yealink' : 'custom';
-  const tc = tlCfg(), exts = Object.keys(tc.ext);
   modal(`<div dir="ltr" style="text-align:left"><h2>📞 Calling from this computer</h2>
    <p class="sub">When you click 📞 next to a donor, it calls him through your office phone. This setting is for <b>this</b> computer only and is not uploaded.</p>
    <label class="f">Which phone<select id="cs" onchange="callMode(this.value)">
@@ -385,10 +442,9 @@ function callSetup() {
     <option value="yealink" ${mode === 'yealink' ? 'selected' : ''}>Yealink desk phone (IP)</option>
     <option value="tel" ${mode === 'tel' ? 'selected' : ''}>Phone program on this computer (tel:)</option>
     <option value="custom" ${mode === 'custom' ? 'selected' : ''}>Other (link)</option></select></label>
-   <div id="c_tl" style="margin-top:10px"><label class="f">This computer's extension<select id="ctx">${exts.map(x => `<option ${t === 'tlqc:' + x ? 'selected' : ''}>${esc(x)}</option>`).join('') || '<option value="">– the admin sets up TekLink below –</option>'}</select></label>
-    ${isAdmin() ? `<label class="f" style="margin-top:8px">TekLink setup (admin, for all computers): one line "account=…" and one line per extension "101=…" (the IDs from TekLink's e-mail)<textarea id="ctc" rows="4" style="direction:ltr;font-size:12px" placeholder="account=...&#10;101=...&#10;103=...">${esc(SET().tlCfg || '')}</textarea></label>` : ''}
+   <div id="c_tl" style="margin-top:10px">${tlBox()}
     <div class="grid2" style="margin-top:8px"><label class="f">🧪 Test – a number to call<input id="ctt" type="tel" style="direction:ltr" placeholder="845-555-1234"></label><div style="align-self:end"><button class="btn ghost sm" onclick="tlTest()">🧪 Test</button></div></div>
-    <p class="sub" style="margin-top:6px">Your desk phone rings first; when you pick it up, it dials the number. The API key is kept only in Supabase (secret TEKLINK_API_KEY).</p></div>
+    <p class="sub" style="margin-top:6px">The chosen device rings first; when you pick it up, it dials the number. The API key is kept only in Supabase (secret TEKLINK_API_KEY).</p></div>
    <div id="c_jl" style="margin-top:10px"><label class="f">CALL URL – paste the whole line exactly as in JLS<textarea id="cjl" rows="3" style="direction:ltr;font-size:12px">${esc(mode === 'jls' ? (ls('yg_call_src') || t) : '')}</textarea></label>
     <div class="grid2" style="margin-top:8px"><label class="f">Send as<select id="cjm">${[['post', 'POST (like JLS)'], ['get', 'GET (in the link)'], ['post1', 'POST, with a leading 1'], ['get1', 'GET, with a leading 1']].map(([k, l]) => `<option value="${k}" ${(ls('yg_call_m') || 'post') === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
     <label class="f">🧪 Test – your own number<input id="cjt" type="tel" style="direction:ltr" placeholder="845-555-1234"></label></div>
@@ -397,7 +453,7 @@ function callSetup() {
     <p class="sub" style="margin-top:6px">💡 To find it: press <b>OK</b> on the phone (or Menu > Status) and look at IPv4.</p></div>
    <div id="c_cu" style="margin-top:10px"><label class="f">Link ({num} = +18455551234, {digits} = 8455551234)<input id="cu" style="direction:ltr" value="${esc(mode === 'custom' ? t : '')}"></label></div>
    <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn ghost" onclick="closeM()">Back</button><button class="btn" onclick="callSave()">Save</button></div></div>`, 'narrow');
-  callMode(mode);
+  window._tlDone = false; callMode(mode);
 }
 // Build the template from the pasted JLS line and the chosen way of sending
 function callJlsTpl() {
@@ -416,23 +472,20 @@ function callTest() {
   const el = document.createElement('a'); el.dataset.n = d;
   dial(el, 0, r.tpl, true);
 }
-function callMode(m) { $('#c_tl').style.display = m === 'tl' ? '' : 'none'; $('#c_jl').style.display = m === 'jls' ? '' : 'none'; $('#c_yl').style.display = m === 'yealink' ? '' : 'none'; $('#c_cu').style.display = m === 'custom' ? '' : 'none'; }
-async function tlSaveCfg() { if (isAdmin() && $('#ctc') && $('#ctc').value.trim() !== (SET().tlCfg || '')) await emit('settings', 's', { tlCfg: $('#ctc').value.trim() }); }
+function callMode(m) { if (m === 'tl' && !window._tlDone) { window._tlDone = true; tlInit(); } $('#c_tl').style.display = m === 'tl' ? '' : 'none'; $('#c_jl').style.display = m === 'jls' ? '' : 'none'; $('#c_yl').style.display = m === 'yealink' ? '' : 'none'; $('#c_cu').style.display = m === 'custom' ? '' : 'none'; }
 async function tlTest() {
-  await tlSaveCfg();
-  const d = callNum($('#ctt').value), x = $('#ctx').value || Object.keys(tlCfg().ext)[0];
+  const d = callNum($('#ctt').value);
   if (d.length < 10) { toast('⚠️ Enter a number'); return; }
-  if (!x) { toast('⚠️ Fill in the TekLink setup first'); return; }
-  tlDial(x, d);
+  await tlSaveMap();
+  tlDial('@me', d);
 }
 async function callSave() {
   const m = $('#cs').value; let v = 'tel:{num}';
   if (m === 'tl') {
-    await tlSaveCfg();
-    const x = $('#ctx').value || Object.keys(tlCfg().ext)[0];
-    if (!x) { toast('⚠️ Fill in the TekLink setup first'); return; }
-    try { localStorage.setItem('yg_call', 'tlqc:' + x); } catch (e) { }
-    closeM(); render(); toast('✓ 📞 TekLink ' + x); return;
+    await tlSaveMap();
+    if (!tlMine().user && !tlMine().dev) { toast('⚠️ Saved – but you are not mapped to a TekLink user yet'); }
+    try { localStorage.setItem('yg_call', 'tlqc:@me'); } catch (e) { }
+    closeM(); render(); toast('✓ 📞 TekLink'); return;
   }
   if (m === 'jls') {
     const r = callJlsTpl(); if (!r) return;

@@ -397,3 +397,4 @@ nav.incol #navuser{display:block}
 .cpev b{display:inline-block;min-width:22px;color:var(--muted)}
 .cpev .ev-yt{color:#9a6b00;font-weight:700}.cpev .ev-fast{color:#b3261e;font-weight:700}.cpev .ev-min{color:#2f6fd6}.cpev .ev-par{color:#1d3557}.cpev .ev-rc{color:#888}
 .cpd.sel[class]{background:var(--navy);color:#fff}
+#c_tl .tbl{border-collapse:collapse}#c_tl .tbl th,#c_tl .tbl td{padding:5px 6px;border-bottom:1px solid var(--line);text-align:left}#c_tl .tbl select{max-width:180px}
