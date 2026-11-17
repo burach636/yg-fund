@@ -41,6 +41,7 @@ const CFG = window.YG_CONFIG || {};
 // The site's own address with its folder (Netlify: https://…/ , GitHub Pages: https://…/yg-fund/) – used instead of
 // location.origin so pictures in printed pages and the e-mail links also work when the site lives in a sub-folder.
 const SITE = new URL('.', location.href.split('#')[0].split('?')[0]).href;
+if (/[?&]u=\d/.test(location.search)) try { history.replaceState(null, '', SITE + location.hash); } catch (e) { }   // tidy the address after an update reload
 const sb = (window.supabase && /^https:\/\//.test(CFG.url || '') && CFG.key && CFG.key.length > 20) ? window.supabase.createClient(CFG.url, CFG.key, { auth: { persistSession: true, autoRefreshToken: true } }) : null;
 let TEAM = [], myEmail = '', lastId = 0, jlsVersion = -1;
 async function q(promise) { const { data, error } = await promise; if (error) throw error; return data; }
@@ -80,7 +81,7 @@ async function pullLog() {
   }
   return changed;
 }
-// Download a JLS data file always fresh (v1.32.1): the files used to be saved with Supabase's default 1-hour cache, so
+// Download a JLS data file always fresh (v1.33.1): the files used to be saved with Supabase's default 1-hour cache, so
 // another user's browser could show the old numbers for up to an hour after an import.
 async function jlsFile(path) {
   try {
@@ -454,7 +455,7 @@ function wire() {
 function setArea(a, keepView) {
   AREA = a; try { sessionStorage.setItem('yg_area', a); } catch (e) { }
   document.body.classList.toggle('area-tu', a === 'tu');
-  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.32</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.32</small>';
+  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.33</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.33</small>';
   $('#btnArea').style.display = canFund() && canView('tuition') ? '' : 'none';
   $('#btnArea').textContent = a === 'tu' ? '⇄ צו פאנדרעיזינג' : '⇄ צו שכר לימוד';
   setupUser();
@@ -784,7 +785,7 @@ async function addNote(code) {
 
 // ---------- REPORTS ----------
 // Payments by Jewish year and month (refunds left out)
-// Years are shown only up to the current Jewish year (owner, v1.32): no next year from post-dated payments,
+// Years are shown only up to the current Jewish year (owner, v1.33): no next year from post-dated payments,
 // scheduled credit-card charges or bills already entered for later.
 const curHY = () => (HEB.parts(todayS()) || {}).y || 9999;
 function hebYears() {
@@ -1068,7 +1069,7 @@ function closeM() { $('#ov').classList.remove('on'); }
 
 const setHH = () => document.documentElement.style.setProperty('--hh', document.querySelector('header').offsetHeight + 'px');
 window.addEventListener('resize', setHH); window.addEventListener('load', setHH); setHH();
-// ---------- 🔄 new version on the website: update by itself (v1.32) ----------
+// ---------- 🔄 new version on the website: update by itself (v1.33) ----------
 // Every minute the page asks the server for index.html and compares <meta name="app-version">. When it changed:
 // if nobody is in the middle of something (no window open, not typing, no mouse/keys for 20 s) the page reloads by
 // itself and comes back to the same page; otherwise a small "🔄 נייע ווערסיע" button waits for a click.
@@ -1087,7 +1088,9 @@ async function checkUpdate() {
   if (!busy) { appReload(); return; }
   if (!$('#updBtn')) { const b = document.createElement('button'); b.id = 'updBtn'; b.className = 'btn gold'; b.onclick = appReload; b.textContent = '🔄 נייע ווערסיע – דריקט צו דערהיינטיגן'; document.body.appendChild(b); }
 }
-function appReload() { try { sessionStorage.setItem('yg_view', view); } catch (e) { } location.reload(); }
+// Reload on an address the browser has not cached yet, so it fetches the new index.html (and through its "?vX.Y"
+// links, the new scripts) – a plain reload could get GitHub Pages' cached copy for up to 10 minutes.
+function appReload() { try { sessionStorage.setItem('yg_view', view); } catch (e) { } location.replace(SITE + '?u=' + Date.now() + location.hash); }
 
 // The program moved to free GitHub Pages (Netlify's free credits ran low, 2026-11): on the old Netlify address show
 // a notice with a button to the new one (not a forced redirect).
