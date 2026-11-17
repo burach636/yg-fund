@@ -352,7 +352,7 @@ async function tlDial(ext, d) {
   if (ext === '@me') {
     const m = tlMine();
     if (!m.user && !(m.dev && m.dev.id)) { toast('⚠️ TekLink: you are not mapped yet – 📞 Phone'); return; }
-    body = { action: 'dial', user: m.user, device: m.dev ? m.dev.id : '', number: num };
+    body = { action: 'dial', user: m.user, device: m.dev ? m.dev.id : '', number: num, auto: !!(SET().tlAuto || {})[me] };
     toast('📞 קאלט... ' + (m.dev ? esc(m.dev.name) : 'אייער טעלעפאן') + ' וועט קלינגען, הייבט אויף');
   } else {
     const c = tlCfg(), user = c.ext[ext];
@@ -367,9 +367,10 @@ function tlBox() {
   const rows = isAdmin() ? USERS() : [me];
   return `<div id="tlstat" class="sub" style="margin:0 0 8px">⏳ Checking TekLink…</div>
    ${isAdmin() ? `<div class="row" style="margin-bottom:6px"><b>👥 Map users</b><div class="spacer"></div><button class="btn ghost sm" onclick="tlLoadUsers()">⟳ Load TekLink users</button></div>` : '<b>📱 My phone</b>'}
-   <table class="tbl" style="font-size:13px;width:100%"><tr><th>Team member</th><th>TekLink user</th><th>Device that rings</th></tr>
+   <table class="tbl" style="font-size:13px;width:100%"><tr><th>Team member</th><th>TekLink user</th><th>Device that rings</th><th title="The phone picks up by itself – no need to answer it first (if the phone supports it)">Auto answer</th></tr>
    ${rows.map((n, i) => `<tr data-n="${esc(n)}"><td>${userChip(n)}</td><td>${isAdmin() ? `<select class="mini tlu" data-i="${i}" onchange="tlLoadDevs(this.closest('tr'))">${tlUserOpts(tlMine(n).user)}</select>` : esc(((SET().tlUsers || []).find(u => u.id === tlMine(n).user) || {}).name || (tlMine(n).user ? tlMine(n).user.slice(0, 8) + '…' : '– the admin maps you –'))}</td>
-     <td><select class="mini tld">${tlMine(n).dev ? `<option value="${esc(tlMine(n).dev.id)}" selected>${esc(tlMine(n).dev.name)}</option>` : ''}<option value="">All my devices</option></select></td></tr>`).join('')}</table>`;
+     <td><select class="mini tld">${tlMine(n).dev ? `<option value="${esc(tlMine(n).dev.id)}" selected>${esc(tlMine(n).dev.name)}</option>` : ''}<option value="">All my devices</option></select></td>
+     <td style="text-align:center"><input type="checkbox" class="tla" ${(SET().tlAuto || {})[n] ? 'checked' : ''}></td></tr>`).join('')}</table>`;
 }
 const tlUserOpts = cur => '<option value="">—</option>' + (SET().tlUsers || []).map(u => `<option value="${u.id}" ${u.id === cur ? 'selected' : ''}>${esc(u.name)}${u.ext ? ' (' + esc(u.ext) + ')' : ''}</option>`).join('') + (cur && !(SET().tlUsers || []).some(u => u.id === cur) ? `<option value="${cur}" selected>${cur.slice(0, 8)}…</option>` : '');
 let _tlUsers = null;
@@ -397,13 +398,14 @@ async function tlInit() {
   document.querySelectorAll('#c_tl tr[data-n]').forEach(tr => tlLoadDevs(tr));
 }
 async function tlSaveMap() {
-  const map = Object.assign({}, SET().tlMap || {}), dev = Object.assign({}, SET().tlDev || {});
+  const map = Object.assign({}, SET().tlMap || {}), dev = Object.assign({}, SET().tlDev || {}), auto = Object.assign({}, SET().tlAuto || {});
   document.querySelectorAll('#c_tl tr[data-n]').forEach(tr => {
     const n = tr.dataset.n, sel = tr.querySelector('.tld'), o = sel.options[sel.selectedIndex];
     if (isAdmin()) { const u = tr.querySelector('.tlu').value; if (u) map[n] = u; else delete map[n]; }
     if (sel.value) dev[n] = { id: sel.value, name: o ? o.textContent.replace(/ · .*$/, '') : '' }; else delete dev[n];
+    if (tr.querySelector('.tla').checked) auto[n] = true; else delete auto[n];
   });
-  const p = { tlDev: dev };
+  const p = { tlDev: dev, tlAuto: auto };
   if (isAdmin()) { p.tlMap = map; if (_tlUsers) p.tlUsers = _tlUsers.map(u => ({ id: u.id, name: u.name, ext: u.ext })); }
   await emit('settings', 's', p);
 }

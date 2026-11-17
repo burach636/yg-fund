@@ -12,6 +12,7 @@
 //   3. action "devices": GET /v2/accounts/<acct>/users/<user>/devices  -> each member picks the device to ring
 //   4. action "dial":    POST /v2/accounts/<acct>/devices/<device>/quickcall/<number> (blocking: errors if the
 //      device cannot be rung); without a device: POST …/users/<user>/quickcall/<number> (all the user's devices).
+//   dial with auto: true sends {data:{auto_answer:true}} – the device answers by itself (per-user setting tlAuto).
 //   action "info": is the key set, which account.
 
 const ENV = (k: string) => (globalThis as any).Deno?.env.get(k) || (globalThis as any).process?.env?.[k] || '';
@@ -40,11 +41,11 @@ async function login(force = false) {
   tokAt = Date.now();
 }
 // One Kazoo request; a token that expired early gets one renewal
-async function kz(method: string, path: string) {
+async function kz(method: string, path: string, data: any = {}) {
   let r: Response | null = null;
   for (const force of [false, true]) {
     await login(force);
-    r = await fetch(base() + '/v2/accounts/' + acct + path, { method, headers: { 'X-Auth-Token': tok, 'Content-Type': 'application/json' }, ...(method === 'POST' ? { body: '{"data":{}}' } : {}) });
+    r = await fetch(base() + '/v2/accounts/' + acct + path, { method, headers: { 'X-Auth-Token': tok, 'Content-Type': 'application/json' }, ...(method === 'POST' ? { body: JSON.stringify({ data }) } : {}) });
     if (r.status !== 401) break;
   }
   const t = await r!.text();
@@ -85,7 +86,7 @@ async function handle(req: Request): Promise<Response> {
       if (number.length < 7 || number.length > 15) return json({ error: 'bad number' }, 400);
       if (!device && !user) return json({ error: 'no user or device chosen' }, 400);
       const qc = (device ? '/devices/' + device : '/users/' + user) + '/quickcall/' + number;
-      await kz('POST', qc);   // blocking: tells us when the phone cannot be rung (body {"data":{}} – a bare {} was refused)
+      await kz('POST', qc, b.auto ? { auto_answer: true } : {});   // auto_answer: the SIP phone picks up by itself (if it supports it)   // blocking: tells us when the phone cannot be rung (body {"data":{}} – a bare {} was refused)
       return json({ ok: true });
     }
     return json({ error: 'unknown action' }, 400);
