@@ -510,7 +510,7 @@ function frMailTask(id) { const x = S.task[id]; if (!x || !x.fm) return; const k
 // The invoice is kept in Storage (bucket jls, invoices/...), uploaded as a plain binary file with retries.
 const expRows = L => [['יאר', 'טאג', 'טאג (אידיש)', 'פון וועמען', 'וואס', 'סכום', 'אינוואיס', 'ארייןגעלייגט דורך']].concat(L.map(x => [HEB.gem(x.hy || expYearOf(x.date)), x.date, hebD(x.date), x.vendor || '', x.desc || '', r2(x.amt), x.file ? x.file.name : '', x.by || '']));
 const expYearOf = d => (HEB.parts(d) || {}).y || 0;
-function expYearSel(F) { const ys = [...new Set([expYearOf(todayS())].concat(F.expenses.map(x => x.hy)))].sort((a, b) => b - a); const y = ys.includes(+ui.expY) ? +ui.expY : ys[0]; return { ys, y }; }
+function expYearSel(F) { const ys = [...new Set([expYearOf(todayS())].concat(F.expenses.map(x => x.hy)))].filter(y => y <= curHY()).sort((a, b) => b - a); const y = ys.includes(+ui.expY) ? +ui.expY : ys[0]; return { ys, y }; }
 function expFiltered(F) {
   const q = (ui.expQ || '').trim().toLowerCase(), words = q.split(/\s+/).filter(Boolean), { y } = expYearSel(F);
   return F.expenses.filter(x => x.hy === y).filter(x => !words.length || words.every(w => ((x.vendor || '') + ' ' + (x.desc || '') + ' ' + x.date + ' ' + fmtD(x.date) + ' ' + x.amt + ' ' + (x.file ? x.file.name : '')).toLowerCase().includes(w)));

@@ -210,7 +210,7 @@ function tuYears() {
   const Y = {}, G = y => Y[y] || (Y[y] = { y, b: 0, p: 0, o: 0, n: new Set(), m: {} }), M = (o, m) => o.m[m] || (o.m[m] = { b: 0, p: 0, o: 0 });
   TU.charges.forEach(c => { if (c[7]) return; const h = HEB.parts(c[2]); if (!h || c[2] < '1990') return; const o = G(h.y), m = M(o, h.m); o.b += c[3]; m.b += c[3]; o.o += c[5]; m.o += c[5]; o.n.add(c[1]); });
   TU.payments.forEach(p => { if (p[7]) return; const h = HEB.parts(p[2]); if (!h || p[2] < '1990') return; const o = G(h.y), m = M(o, h.m); o.p += p[3]; m.p += p[3]; });
-  return Object.values(Y).sort((a, b) => b.y - a.y);
+  return Object.values(Y).filter(y => y.y <= curHY()).sort((a, b) => b.y - a.y);   // not later than the current Jewish year
 }
 function vTuBill() {
   if (!tuReady('tubill')) return;
@@ -263,7 +263,7 @@ function tuStMonth() {   // {y, m, ds, de, name}
 }
 function tuStMonthOpts() {   // this Hebrew month back 14 months, plus next month
   const out = []; let d = addMonths(todayS(), 1);
-  for (let i = 0; i < 16; i++) { const h = HEB.parts(d), k = h.y + '|' + h.m; if (!out.some(o => o[0] === k)) out.push([k, HEB.MONTHS[h.m] + ' ' + HEB.gem(h.y)]); d = addMonths(d, -1); }
+  for (let i = 0; i < 16; i++) { const h = HEB.parts(d), k = h.y + '|' + h.m; if (h.y <= curHY() && !out.some(o => o[0] === k)) out.push([k, HEB.MONTHS[h.m] + ' ' + HEB.gem(h.y)]); d = addMonths(d, -1); }
   return out;
 }
 const tuPayDesc = p => (/check/i.test(p[4]) && p[5] ? 'Check #' + p[5] : p[4]);

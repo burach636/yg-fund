@@ -80,7 +80,7 @@ async function pullLog() {
   }
   return changed;
 }
-// Download a JLS data file always fresh (v1.31.1): the files used to be saved with Supabase's default 1-hour cache, so
+// Download a JLS data file always fresh (v1.32.1): the files used to be saved with Supabase's default 1-hour cache, so
 // another user's browser could show the old numbers for up to an hour after an import.
 async function jlsFile(path) {
   try {
@@ -454,7 +454,7 @@ function wire() {
 function setArea(a, keepView) {
   AREA = a; try { sessionStorage.setItem('yg_area', a); } catch (e) { }
   document.body.classList.toggle('area-tu', a === 'tu');
-  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.31</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.31</small>';
+  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.32</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.32</small>';
   $('#btnArea').style.display = canFund() && canView('tuition') ? '' : 'none';
   $('#btnArea').textContent = a === 'tu' ? '⇄ צו פאנדרעיזינג' : '⇄ צו שכר לימוד';
   setupUser();
@@ -784,6 +784,9 @@ async function addNote(code) {
 
 // ---------- REPORTS ----------
 // Payments by Jewish year and month (refunds left out)
+// Years are shown only up to the current Jewish year (owner, v1.32): no next year from post-dated payments,
+// scheduled credit-card charges or bills already entered for later.
+const curHY = () => (HEB.parts(todayS()) || {}).y || 9999;
 function hebYears() {
   const Y = {};
   JD.payments.forEach(p => {
@@ -793,7 +796,7 @@ function hebYears() {
     const m = y.m[h.m] || (y.m[h.m] = { t: 0, n: 0 });
     y.t += p[3]; y.n++; m.t += p[3]; m.n++;
   });
-  return Object.values(Y).sort((a, b) => b.y - a.y);
+  return Object.values(Y).filter(y => y.y <= curHY()).sort((a, b) => b.y - a.y);
 }
 // Credit-card plans from JLS (MCCInfo schedule columns): [code, freq, start, end, amount, campaign]
 // ChargeFreq is free text in JLS; unknown values are counted as monthly and listed on the reports page.
@@ -836,7 +839,7 @@ function expPledges(hy, m) {
 function expYears() {
   const Y = {};
   expPledges().forEach(c => {
-    const h = HEB.parts(c[2]); if (!h) return;
+    const h = HEB.parts(c[2]); if (!h || h.y > curHY()) return;
     const y = Y[h.y] || (Y[h.y] = { y: h.y, t: 0, n: 0, m: {} });
     const m = y.m[h.m] || (y.m[h.m] = { t: 0, n: 0 });
     y.t += c[5]; y.n++; m.t += c[5]; m.n++;
@@ -1065,7 +1068,7 @@ function closeM() { $('#ov').classList.remove('on'); }
 
 const setHH = () => document.documentElement.style.setProperty('--hh', document.querySelector('header').offsetHeight + 'px');
 window.addEventListener('resize', setHH); window.addEventListener('load', setHH); setHH();
-// ---------- 🔄 new version on the website: update by itself (v1.31) ----------
+// ---------- 🔄 new version on the website: update by itself (v1.32) ----------
 // Every minute the page asks the server for index.html and compares <meta name="app-version">. When it changed:
 // if nobody is in the middle of something (no window open, not typing, no mouse/keys for 20 s) the page reloads by
 // itself and comes back to the same page; otherwise a small "🔄 נייע ווערסיע" button waits for a click.
