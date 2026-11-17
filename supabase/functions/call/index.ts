@@ -44,13 +44,14 @@ async function kz(method: string, path: string) {
   let r: Response | null = null;
   for (const force of [false, true]) {
     await login(force);
-    r = await fetch(base() + '/v2/accounts/' + acct + path, { method, headers: { 'X-Auth-Token': tok, 'Content-Type': 'application/json' }, ...(method === 'POST' ? { body: '{}' } : {}) });
+    r = await fetch(base() + '/v2/accounts/' + acct + path, { method, headers: { 'X-Auth-Token': tok, 'Content-Type': 'application/json' }, ...(method === 'POST' ? { body: '{"data":{}}' } : {}) });
     if (r.status !== 401) break;
   }
   const t = await r!.text();
   let j: any = null; try { j = JSON.parse(t); } catch (_) { }
   if (!r!.ok) {
     const m = (j && (j.message || (j.data && (j.data.message || JSON.stringify(j.data))))) || t.slice(0, 300);
+    console.error('TekLink', method, path.replace(/[0-9a-f]{32}/g, x => x.slice(0, 4) + '…'), r!.status, t.slice(0, 500));
     throw Object.assign(new Error('TekLink ' + r!.status + ': ' + m), { http: 502 });
   }
   return j;
@@ -83,7 +84,13 @@ async function handle(req: Request): Promise<Response> {
       const number = String(b.number || '').replace(/\D/g, '');
       if (number.length < 7 || number.length > 15) return json({ error: 'bad number' }, 400);
       if (!device && !user) return json({ error: 'no user or device chosen' }, 400);
-      await kz('POST', (device ? '/devices/' + device : '/users/' + user) + '/quickcall/' + number);
+      const qc = (device ? '/devices/' + device : '/users/' + user) + '/quickcall/' + number;
+      try { await kz('POST', qc); }   // blocking: tells us when the phone cannot be rung
+      catch (e) {   // some Kazoo versions only take the GET (non-blocking) form
+        if (!/^TekLink (400|404|405|415|500):/.test(String((e as any).message))) throw e;
+        await kz('GET', qc);
+        return json({ ok: true, via: 'get', post: String((e as any).message) });
+      }
       return json({ ok: true });
     }
     return json({ error: 'unknown action' }, 400);
