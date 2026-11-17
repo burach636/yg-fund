@@ -80,7 +80,7 @@ async function pullLog() {
   }
   return changed;
 }
-// Download a JLS data file always fresh (v1.29.1): the files used to be saved with Supabase's default 1-hour cache, so
+// Download a JLS data file always fresh (v1.29.1.1): the files used to be saved with Supabase's default 1-hour cache, so
 // another user's browser could show the old numbers for up to an hour after an import.
 async function jlsFile(path) {
   try {
@@ -454,7 +454,7 @@ function wire() {
 function setArea(a, keepView) {
   AREA = a; try { sessionStorage.setItem('yg_area', a); } catch (e) { }
   document.body.classList.toggle('area-tu', a === 'tu');
-  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.29</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.29</small>';
+  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.29.1</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.29.1</small>';
   $('#btnArea').style.display = canFund() && canView('tuition') ? '' : 'none';
   $('#btnArea').textContent = a === 'tu' ? '⇄ צו פאנדרעיזינג' : '⇄ צו שכר לימוד';
   setupUser();
@@ -1065,7 +1065,7 @@ function closeM() { $('#ov').classList.remove('on'); }
 
 const setHH = () => document.documentElement.style.setProperty('--hh', document.querySelector('header').offsetHeight + 'px');
 window.addEventListener('resize', setHH); window.addEventListener('load', setHH); setHH();
-// ---------- 🔄 new version on the website: update by itself (v1.29) ----------
+// ---------- 🔄 new version on the website: update by itself (v1.29.1) ----------
 // Every minute the page asks the server for index.html and compares <meta name="app-version">. When it changed:
 // if nobody is in the middle of something (no window open, not typing, no mouse/keys for 20 s) the page reloads by
 // itself and comes back to the same page; otherwise a small "🔄 נייע ווערסיע" button waits for a click.
@@ -1088,7 +1088,7 @@ function appReload() { try { sessionStorage.setItem('yg_view', view); } catch (e
 
 // The program moved to free GitHub Pages (Netlify's free credits ran low, 2026-11): on the old Netlify address show
 // a notice with a button to the new one (not a forced redirect).
-const NEW_HOME = 'https://burach636.github.io/yg-fund/';
+const NEW_HOME = 'https://yeshivasmaharitdsatmar.github.io/';
 if (/netlify\.app$/i.test(location.hostname)) document.addEventListener('DOMContentLoaded', () => {
   const d = document.createElement('div'); d.id = 'moved';
   d.innerHTML = `📢 די פראגראם איז אריבער צו א נייע אדרעס: <b dir="ltr">${NEW_HOME}</b> <a class="btn gold sm" href="${NEW_HOME}">➜ גיי צו דער נייער אדרעס</a>`;
