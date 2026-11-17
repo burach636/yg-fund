@@ -523,7 +523,7 @@ function expSection(F) {
     <button class="btn ghost sm" onclick="xlsx([{name:'דינער עקספענסעס',rows:expRows(expFiltered(fundCalc()))}],'dinner-expenses-'+todayS()+'.xlsx')">⬇ Excel</button><button class="btn gold sm" onclick="expForm()">+ נייע עקספענס</button></div>
    <p class="sub">דאס געלט וואס קומט אריין אין ${HEB.gem(y)} דעקט ערשט די עקספענסעס פון ${HEB.gem(y)}; ערשט דערנאך באקומען די פאנדרעיזערס ${F.pct}%.</p>
    <div class="stats" style="margin-bottom:10px"><div class="stat"><b>${money(Y.total)}</b><span>עקספענסעס ${HEB.gem(y)}</span></div><div class="stat"><b class="zero">${money(Y.covered)}</b><span>שוין געדעקט פון אריינגעקומענעם געלט</span></div><div class="stat"><b class="${Y.left > 0.009 ? 'bal' : 'zero'}">${money(Y.left)}</b><span>נאך צו דעקן (קיין % ביז דאן)</span></div></div>
-   <div class="row"><input id="expq" placeholder="🔍 זוך: פון וועמען, וואס, סכום, טאג..." value="${esc(ui.expQ || '')}" style="flex:1;min-width:240px;font-size:15px">
+   <div class="row"><input id="expq" placeholder="🔍 Search: vendor, what, amount, date..." value="${esc(ui.expQ || '')}" style="flex:1;min-width:240px;font-size:15px">
     <b>${L.length} · ${money(tot)}</b>${L.length !== yAll.length ? `<span class="sub" style="margin:0">(פון ${yAll.length} · ${money(all)})</span>` : ''}</div>
    <table><thead><tr><th>טאג</th><th>פון וועמען</th><th>וואס</th><th>סכום</th><th>אינוואיס</th><th></th></tr></thead><tbody>
    ${L.map(x => `<tr><td class="num" style="font-size:13px">${fmtD(x.date)}</td><td><b>${esc(x.vendor || '')}</b></td><td style="font-size:13px">${esc(x.desc || '')}<br><small class="dim">${esc(x.by || '')}</small></td><td class="num"><b>${money(x.amt)}</b></td>

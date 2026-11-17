@@ -81,7 +81,7 @@ async function pullLog() {
   }
   return changed;
 }
-// Download a JLS data file always fresh (v1.34.1): the files used to be saved with Supabase's default 1-hour cache, so
+// Download a JLS data file always fresh (v1.35.1): the files used to be saved with Supabase's default 1-hour cache, so
 // another user's browser could show the old numbers for up to an hour after an import.
 async function jlsFile(path) {
   try {
@@ -455,7 +455,7 @@ function wire() {
 function setArea(a, keepView) {
   AREA = a; try { sessionStorage.setItem('yg_area', a); } catch (e) { }
   document.body.classList.toggle('area-tu', a === 'tu');
-  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.34</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.34</small>';
+  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.35</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.35</small>';
   $('#btnArea').style.display = canFund() && canView('tuition') ? '' : 'none';
   $('#btnArea').textContent = a === 'tu' ? '⇄ צו פאנדרעיזינג' : '⇄ צו שכר לימוד';
   setupUser();
@@ -703,7 +703,7 @@ function vAccounts() {
   const L = fltRows('acc', filterAccounts(), a => a.c);
   window._accL = L;
   $('#main').innerHTML = `<div class="row"><div><h2>👥 אלע אקאונטס</h2><p class="sub">אלע ${JD.accounts.length.toLocaleString()} אקאונטס פון JLS. זוכט אויף ענגליש אדער לשון קודש, לויט טעלעפאן, אדרעס אדער נומער.</p></div><div class="spacer"></div><button class="btn ghost" onclick="csvAcc()">⬇ Excel</button></div>
-  <div class="row"><input id="q" placeholder="🔍 זוך..." value="${esc(ui.accQ)}" style="flex:1;min-width:240px;font-size:16px">
+  <div class="row"><input id="q" placeholder="🔍 Search..." value="${esc(ui.accQ)}" style="flex:1;min-width:240px;font-size:16px">
   <div class="chips">${[['all', 'אלע'], ['yg', 'YG נדבנים'], ['bal', 'מיט באלאנס'], ['vip', '⭐ VIP'], ['mine', 'מיינע'], ['once', '🚫 איינמאליגע'], ['active', 'אקטיוו']].map(([k, l]) => `<button class="chip ${ui.accF === k ? 'on' : ''}" onclick="ui.accF='${k}';ui.accN=100;vAccounts()">${l}</button>`).join('')}</div>
   ${allTags().length ? `<select class="mini" onchange="ui.accTag=this.value;ui.accN=100;vAccounts()"><option value="">🏷️ אלע פלאגס</option>${allTags().map(t => `<option value="${esc(t)}" ${t === ui.accTag ? 'selected' : ''}>🏷️ ${esc(t)}</option>`).join('')}</select>` : ''}
   ${shulList().length ? `<select class="mini" onchange="ui.accShul=this.value;ui.accN=100;vAccounts()"><option value="">🕍 אלע שולן</option>${shulList().map(x => `<option value="${x.id}" ${x.id === ui.accShul ? 'selected' : ''}>🕍 ${esc(x.name)}</option>`).join('')}</select>` : ''}</div>
@@ -785,7 +785,7 @@ async function addNote(code) {
 
 // ---------- REPORTS ----------
 // Payments by Jewish year and month (refunds left out)
-// Years are shown only up to the current Jewish year (owner, v1.34): no next year from post-dated payments,
+// Years are shown only up to the current Jewish year (owner, v1.35): no next year from post-dated payments,
 // scheduled credit-card charges or bills already entered for later.
 const curHY = () => (HEB.parts(todayS()) || {}).y || 9999;
 function hebYears() {
@@ -1069,7 +1069,7 @@ function closeM() { $('#ov').classList.remove('on'); }
 
 const setHH = () => document.documentElement.style.setProperty('--hh', document.querySelector('header').offsetHeight + 'px');
 window.addEventListener('resize', setHH); window.addEventListener('load', setHH); setHH();
-// ---------- 🔄 new version on the website: update by itself (v1.34) ----------
+// ---------- 🔄 new version on the website: update by itself (v1.35) ----------
 // Every minute the page asks the server for index.html and compares <meta name="app-version">. When it changed:
 // if nobody is in the middle of something (no window open, not typing, no mouse/keys for 20 s) the page reloads by
 // itself and comes back to the same page; otherwise a small "🔄 נייע ווערסיע" button waits for a click.

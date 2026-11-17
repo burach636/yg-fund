@@ -71,7 +71,7 @@ function vJrep() {
     ${cur.camp ? ` · <b>נישט</b> געגעבן און נישט צוגעזאגט צו: <b>${esc(JD.campaigns[cur.camp] || '')}</b> #${cur.camp}` : ''}${cur.tag ? ` · 🏷️ ${esc(cur.tag)}` : ''}${cur.active ? ' · נאר אקטיווע' : ''}</div></div>
     <div class="spacer"></div><b style="font-size:22px;color:var(--navy)">${L.length.toLocaleString()}</b><span class="sub" style="margin:0">מענטשן${L.length !== all.length ? ' (פון ' + all.length.toLocaleString() + ')' : ''}</span>
     <button class="btn ghost sm" onclick="jrForm('${cur.id}')">✏️ טויש</button><button class="btn ghost sm" onclick="jrExcel()">⬇ Excel</button><button class="btn gold sm" onclick="colStart('jr:${cur.id}')">▶ Calling mode</button>${fltBar('jr', 'vJrep()')}</div></div>
-  <div class="row"><input id="jrq" placeholder="🔍 זוך: נאמען, טעלעפאן, אדרעס, #נומער..." value="${esc(ui.jrQ || '')}" style="flex:1;min-width:240px;font-size:15px">
+  <div class="row"><input id="jrq" placeholder="🔍 Search: name, phone, address, #code..." value="${esc(ui.jrQ || '')}" style="flex:1;min-width:240px;font-size:15px">
    <div class="chips">${[['', 'אלע'], ['__me', '👤 נאר מיינע'], ['__none', 'נישט צוגעטיילט']].map(([k, l]) => `<button class="chip ${who === k ? 'on' : ''}" onclick="ui.jrWho='${k}';ui.jrN=200;vJrep()">${l}</button>`).join('')}</div>
    <select class="mini" onchange="ui.jrWho=this.value;ui.jrN=200;vJrep()"><option value="">👤 ווער קאלט...</option>${USERS().map(u => `<option value="${esc(u)}" ${who === u ? 'selected' : ''}>👤 ${esc(u)}</option>`).join('')}</select></div>
   ${(bulkList('jr', L.map(a => a.c)), bulkBar('jr'))}

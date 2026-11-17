@@ -137,7 +137,7 @@ function vCol() {
     <div class="tile t5" onclick="ui.colTab='cb';go('col')"><i>🔁</i><h3>${colArea() === 'tu' ? 'אפגעשטופט' : 'היינט צוריק קאלן'}</h3><b>${L.cb.filter(r => !r.done).length}</b><span>&nbsp;</span></div>
     <div class="tile t4" onclick="ui.colTab='hold';go('col')"><i>⏸</i><h3>ON HOLD</h3><b>${L.hold.length}</b><span>&nbsp;</span></div>
    </div>
-   <div class="row" style="margin:8px 0;flex-wrap:wrap;gap:8px">${colArea() === 'tu' ? tuScopeChips('ui.cm=null;render()') : ''}${fltBar('col-' + tab, 'vCol()')}${tab === 'pl' ? colPlChips() : ''}<input id="colq" placeholder="🔍 נאמען, טעלעפאן, #קאוד" value="${esc(ui.colQ || '')}" style="max-width:280px" oninput="ui.colQ=this.value;clearTimeout(window._colT);window._colT=setTimeout(()=>{vCol();const e=$('#colq');e.focus();e.setSelectionRange(e.value.length,e.value.length)},300)"></div>
+   <div class="row" style="margin:8px 0;flex-wrap:wrap;gap:8px">${colArea() === 'tu' ? tuScopeChips('ui.cm=null;render()') : ''}${fltBar('col-' + tab, 'vCol()')}${tab === 'pl' ? colPlChips() : ''}<input id="colq" placeholder="🔍 Search: name, phone, #code" value="${esc(ui.colQ || '')}" style="max-width:280px" oninput="ui.colQ=this.value;clearTimeout(window._colT);window._colT=setTimeout(()=>{vCol();const e=$('#colq');e.focus();e.setSelectionRange(e.value.length,e.value.length)},300)"></div>
    ${(bulkList('col-' + tab, R.map(r => r.code)), bulkBar('col-' + tab))}
    <div class="collist">${R.slice(0, ui.colN).map((r, i) => colRow(r, i, tab)).join('') || (needFlt ? `<div class="empty">👥 דא זענען אלע ${JD.accounts.length.toLocaleString()} אקאונטס פון JLS (אויך די וואס האבן קיינמאל נישט געגעבן צו YG).<br>דריקט <b>🔎 פילטער</b> אויבן, למשל UDF4 = 1,2,3 און נאך נישט געגעבן צו דעם דינער.</div>` : '<div class="empty">🎉 גארנישט דא</div>')}</div>
    ${R.length > ui.colN ? `<div class="more"><button class="btn ghost" onclick="ui.colN+=300;vCol()">ווייז מער (${(R.length - ui.colN).toLocaleString()})</button></div>` : ''}`;
@@ -198,11 +198,12 @@ function vCalling() {
   }
   const cm = ui.cm, codes = cm.codes;
   if (!codes.length) {   // nobody (maybe because of the filter): keep the bar, so the list or the filter can be changed
-    $('#main').innerHTML = `<div class="cmbar"><b>📞 Calling mode</b>${colSrcSel(cm.tab)}${cm.tab !== 'sel' ? fltBar(cmFltKey(cm.tab), `colStart('${cm.tab}')`) : ''}</div><div class="empty">🎉 גארנישט צו קאלן${cm.tab !== 'sel' && fltActive(cmFltKey(cm.tab)) ? ' – דער 🔎 פילטער לאזט נישט קיינעם' : ''}</div>`;
+    $('#main').innerHTML = `<div class="cmbar"><b>📞 Calling mode</b>${colSrcSel(cm.tab)}${cm.tab !== 'sel' ? fltBar(cmFltKey(cm.tab), `colStart('${cm.tab}')`) : ''}${cmSearchBox()}</div><div class="empty">🎉 גארנישט צו קאלן${cm.tab !== 'sel' && fltActive(cmFltKey(cm.tab)) ? ' – דער 🔎 פילטער לאזט נישט קיינעם' : ''}</div>`;
+    cmSearchInit();
     return;
   }
   cm.i = Math.min(Math.max(0, cm.i), codes.length - 1);
-  const map = new Map(colAll().map(r => [r.code, r])), code = codes[cm.i], r = map.get(code) || { code, amt: 0, bal: 0 };
+  const map = new Map(colAll().map(r => [r.code, r])), code = codes[cm.i], r = map.get(code) || cmExtraRow(code);
   const a = IDX.by.get(code) || { ph: [], n: '#' + code, h: '' }, s = colSt(code), t = todayS();
   const doneN = codes.filter(c => (colSt(c).outAt || '').slice(0, 10) === t).length;
   const hist = Object.values(S.hist).filter(x => +x.code === code).sort((x, y) => (y.at || '').localeCompare(x.at || '')).slice(0, 6);
@@ -219,7 +220,7 @@ function vCalling() {
   }
   const last = r.last || (r.f ? r.f.last : '');
   const isJr = String(cm.tab).startsWith('jr:');
-  $('#main').innerHTML = `<div class="cmbar"><b>📞 Calling mode</b>${colArea() === 'tu' && cm.tab !== 'sel' ? tuScopeChips(`colStart('${cm.tab}')`) : ''} ${colSrcSel(cm.tab)}${cm.tab !== 'sel' ? fltBar(cmFltKey(cm.tab), `colStart('${cm.tab}')`) : ''}<span><b>${doneN}</b> פון ${codes.length} געטון</span>
+  $('#main').innerHTML = `<div class="cmbar"><b>📞 Calling mode</b>${colArea() === 'tu' && cm.tab !== 'sel' ? tuScopeChips(`colStart('${cm.tab}')`) : ''} ${colSrcSel(cm.tab)}${cm.tab !== 'sel' ? fltBar(cmFltKey(cm.tab), `colStart('${cm.tab}')`) : ''}${cmSearchBox()}<span><b>${doneN}</b> פון ${codes.length} געטון</span>
      <div class="cmprog"><i style="width:${doneN / codes.length * 100}%"></i></div>
      <button class="btn ghost sm" onclick="ui.cm.i--;vCalling()" ${cm.i ? '' : 'disabled'}>› פריער</button><span>${cm.i + 1} פון ${codes.length}</span><button class="btn ghost sm" onclick="ui.cm.i++;vCalling()" ${cm.i < codes.length - 1 ? '' : 'disabled'}>ווייטער ‹</button>
      <button class="btn ghost sm" onclick="${r.f ? `tuFamily(${code})` : `openAcct(${code})`}">גאנצע זייט</button></div>
@@ -245,8 +246,47 @@ function vCalling() {
      ${codes.map((c, j) => { const rr = map.get(c) || { amt: 0 }, aa = IDX.by.get(c) || {}, dn = (colSt(c).outAt || '').slice(0, 10) === t; return `<div class="cmli${j === cm.i ? ' on' : ''}${dn ? ' done' : ''}" onclick="ui.cm.i=${j};vCalling()"><span>${j + 1}</span><b>${esc(aa.h || aa.n || '#' + c)}</b><i>${money(isJr && !(rr.amt > 0.009) ? (IDX.yg.get(c) || {}).total || 0 : rr.amt)}</i></div>`; }).join('')}
     </div></div>`;
   ui.cmOut = '';
+  cmSearchInit();
   initDateFields($('#main'));   // vCalling is also redrawn without render() (prev/next, save)
   setTimeout(() => { const e = $('.cmli.on'); if (e) e.scrollIntoView({ block: 'nearest' }); }, 30);
+}
+// 🔍 Search inside Calling mode (v1.35, owner): find anyone by name / phone / #code. Someone on the list → jump to
+// them; anyone else → put in the list right here (fund: every JLS account; tuition: every family) and shown.
+function cmSearchBox() { return `<span class="cmsearch"><input id="cmq" placeholder="🔍 Search: name, phone, #code" autocomplete="off"><div id="cmqres"></div></span>`; }
+function cmSearchList(q) {
+  q = q.trim().toLowerCase(); if (!q) return [];
+  const qd = q.replace(/\D/g, ''), words = q.replace(/^#/, '').split(/\s+/).filter(Boolean), num = /^#?\d+$/.test(q) ? +q.replace('#', '') : 0;
+  const inList = new Set(ui.cm ? ui.cm.codes : []);
+  let pool = JD.accounts;
+  if (colArea() === 'tu' && TU && !TU.missing) { const fam = new Set(tuCalc().L.map(f => f.code)); pool = pool.filter(a => fam.has(a.c)); }
+  const L = pool.filter(a => (num && a.c === num) || words.every(w => a._s.includes(w)) || (qd.length >= 4 && a._s.includes(qd)));
+  L.sort((x, y) => (y.c === num) - (x.c === num) || inList.has(y.c) - inList.has(x.c) || (x._k || '').localeCompare(y._k || '', 'he'));
+  return L.slice(0, 12).map(a => ({ c: a.c, a, on: inList.has(a.c) }));
+}
+function cmSearchInit() {
+  const qi = $('#cmq'), box = $('#cmqres'); if (!qi) return;
+  let tm;
+  const show = () => {
+    const L = cmSearchList(qi.value);
+    box.innerHTML = !qi.value.trim() ? '' : L.length ? L.map(x => `<div class="cmqi" onmousedown="cmPick(${x.c})"><b>${esc(x.a.h || x.a.n)}</b> <small>${esc(x.a.h ? x.a.n : '')} · #${x.c}${x.a.ph && x.a.ph[0] ? ' · ' + esc(x.a.ph[0][1]) : ''}</small>${x.on ? ' <span class="tag custom">אין דער ליסטע</span>' : ''}</div>`).join('') : '<div class="cmqi dim">גארנישט געטראפן</div>';
+    box.classList.toggle('on', !!qi.value.trim());
+  };
+  qi.oninput = () => { clearTimeout(tm); tm = setTimeout(show, 200); };
+  qi.onkeydown = e => { if (e.key === 'Enter') { const L = cmSearchList(qi.value); if (L.length) cmPick(L[0].c); } else if (e.key === 'Escape') { qi.value = ''; show(); } };
+  qi.onblur = () => setTimeout(() => box.classList.remove('on'), 150);
+  qi.onfocus = () => { if (qi.value.trim()) show(); };
+}
+function cmPick(code) {
+  const cm = ui.cm || (ui.cm = { tab: 'sel', codes: [], i: 0 });
+  let j = cm.codes.indexOf(code);
+  if (j < 0) { j = cm.codes.length ? cm.i : 0; cm.codes.splice(j, 0, code); }
+  cm.i = j; vCalling();
+}
+// The Calling-mode row for someone who is not on the collection lists (found with 🔍)
+function cmExtraRow(code) {
+  if (colArea() === 'tu' && TU && !TU.missing) { const f = tuCalc().L.find(x => x.code === code); if (f) return { code, amt: f.due, bal: f.bal, f, last: f.last }; }
+  const pl = IDX.pl.get(code), g = IDX.yg.get(code);
+  return { code, amt: pl ? pl.open || 0 : 0, bal: pl ? pl.open || 0 : 0, last: g ? g.last : '' };
 }
 async function colSave(code) {
   const k = ui.cmOut, note = $('#cmnote').value.trim(), cb = $('#cmcb').value, hold = $('#cmhold').checked, s = colSt(code);

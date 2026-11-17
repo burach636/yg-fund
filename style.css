@@ -380,3 +380,11 @@ nav.incol #navuser{display:block}
 .fltkeep{display:flex;gap:8px;align-items:center;font-size:14px;margin-top:12px;padding:8px 10px;background:#fffaf0;border:1px dashed var(--gold);border-radius:8px}
 #moved{position:sticky;top:0;z-index:80;background:#fff3c4;color:#5a4410;border-bottom:2px solid var(--gold);padding:8px 14px;text-align:center;font-size:15px}
 #moved .btn{margin-inline-start:10px}
+.cmsearch{position:relative}
+.cmsearch input{width:230px;padding:6px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.95);color:#222;font-size:14px}
+#cmqres{display:none;position:absolute;top:100%;right:0;z-index:50;width:360px;max-height:380px;overflow:auto;background:#fff;color:#222;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.25);margin-top:4px}
+#cmqres.on{display:block}
+.cmqi{padding:8px 12px;border-bottom:1px solid #eee;cursor:pointer}
+.cmqi:hover{background:#f3efe2}
+.cmqi small{color:#777}
+@media(max-width:900px){.cmsearch input{width:100%}#cmqres{width:92vw}}

@@ -122,7 +122,7 @@ function vTuition() {
     $('#main').innerHTML = `<div class="row"><div><h2>👨‍👦 עלטערן און תלמידים</h2><p class="sub">JLS קאמפעני ${TU.co}${TU.name ? ' – ' + esc(TU.name) : ''} · דערהיינטיגט ${fmtD((TU.importedAt || '').slice(0, 10))}</p></div><div class="spacer"></div>
      <button class="btn ghost" onclick="tuXls()">⬇ Excel</button></div>
    <div class="row" style="margin:10px 0;flex-wrap:wrap;gap:6px">
-    <input id="tuq" placeholder="🔍 נאמען, תלמיד, טעלעפאן, #קאוד" value="${esc(ui.tuQ || '')}" style="max-width:260px" oninput="ui.tuQ=this.value;clearTimeout(window._tuT);window._tuT=setTimeout(()=>{vTuition();const e=$('#tuq');e.focus();e.setSelectionRange(e.value.length,e.value.length)},300)">
+    <input id="tuq" placeholder="🔍 Search: name, student, phone, #code" value="${esc(ui.tuQ || '')}" style="max-width:260px" oninput="ui.tuQ=this.value;clearTimeout(window._tuT);window._tuT=setTimeout(()=>{vTuition();const e=$('#tuq');e.focus();e.setSelectionRange(e.value.length,e.value.length)},300)">
     ${fltBar('tu', 'vTuition()')}${chip('tuF', 'cur', '🎓 לערנען יעצט')}${chip('tuF', 'due', '⏰ שולדיג יעצט')}${chip('tuF', 'bal', '📒 מיט באלאנס')}${chip('tuF', 'all', 'אלע (אויך פריער)')}<span class="bsep"></span>${['ok', 'fix', 'ign'].map(k => chip('tuF', k, ({ ok: '🟢', fix: '🟡', ign: '🔴' })[k] + ' ' + TU_ST[k][0] + ' (' + L.filter(f => f.st && f.st.k === k && tuInScope(f)).length + ')')).join('')}${TU_ST[ui.tuF] ? tuScopeChips('vTuition()') : ''}
     <select class="mini" onchange="ui.tuW=this.value;vTuition()"><option value="">👤 אלע</option><option value="__me" ${ui.tuW === '__me' ? 'selected' : ''}>👤 מיינע</option><option value="__none" ${ui.tuW === '__none' ? 'selected' : ''}>👤 נישט צוגעטיילט</option>${USERS().map(u => `<option ${ui.tuW === u ? 'selected' : ''}>${esc(u)}</option>`).join('')}</select>
     <select class="mini" onchange="ui.tuSort=this.value;vTuition()"><option value="due">סארטיר: שולדיג יעצט</option><option value="bal" ${srt === 'bal' ? 'selected' : ''}>סארטיר: באלאנס</option><option value="abc" ${srt === 'abc' ? 'selected' : ''}>סארטיר: א-ב</option></select>
@@ -300,7 +300,7 @@ function vTuStmt() {
      <button class="btn ghost" onclick="tuStSettings()">⚙️ Text</button></div>
    <div class="row" style="flex-wrap:wrap;gap:8px;margin:10px 0">
     <select onchange="ui.tuSt.ym=this.value;ui.tuSt.sel={};vTuStmt()">${tuStMonthOpts().map(([k, t]) => `<option value="${k}" ${k === ui.tuSt.ym ? 'selected' : ''}>חודש ${esc(t)}</option>`).join('')}</select>
-    <input placeholder="🔍 נאמען / #קאוד" value="${esc(ui.tuSt.q)}" style="max-width:200px" onchange="ui.tuSt.q=this.value;vTuStmt()">
+    <input placeholder="🔍 Search: name / #code" value="${esc(ui.tuSt.q)}" style="max-width:200px" onchange="ui.tuSt.q=this.value;vTuStmt()">
     <label style="font-size:13px">מינימום חוב $<input type="number" value="${ui.tuSt.min}" style="width:80px" onchange="ui.tuSt.min=+this.value||0;vTuStmt()"></label>
     <label style="font-size:13px;display:flex;gap:6px;align-items:center"><input type="checkbox" ${ui.tuSt.all ? 'checked' : ''} onchange="ui.tuSt.all=this.checked;vTuStmt()"> אויך די וואס זענען אויסגעגליכן</label>
     <div class="spacer"></div><span class="dim">${sel.length} אויסגעקליבן · ${money(sel.reduce((s, r) => s + r.bal, 0))}</span>
