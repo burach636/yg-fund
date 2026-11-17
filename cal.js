@@ -213,7 +213,6 @@ function calOpen(w, value, set, clearable) {
       const big = st.mode === 'heb' ? HEB.gem(p.d) : dd, small = st.mode === 'heb' ? (dd === 1 || d === a ? CAL_EN[m - 1].slice(0, 3) + ' ' : '') + dd : (p.d === 1 || d === a ? HEB.MONTHS[p.m] + ' ' : '') + HEB.gem(p.d);
       const ev = HEBEV.events(d), main = ['yt', 'fast', 'par', 'min', 'rc'].map(k => ev.find(x => x.k === k)).find(Boolean);
       return `<button type="button" class="cpd${d === value ? ' sel' : ''}${d === t ? ' today' : ''}${new Date(y, m - 1, dd).getDay() === 6 ? ' sh' : ''}${main ? ' ev-' + main.k : ''}" data-d="${d}"${ev.length ? ` title="${ev.map(x => x.t).join(' · ')}"` : ''}><b>${big}</b><small>${small}</small>${main ? `<i>${main.t.replace(/^פ' /, '').replace(/^חול המועד .*/, 'חוה"מ').replace(' – ', ' ')}</i>` : ''}</button>`; }).join('')}</div>
-     <div class="cpev">${D.map(d => { const ev = HEBEV.events(d).filter(x => x.k !== 'rc' || HEB.parts(d).d === 1); return ev.length ? `<div><b>${HEB.gem(HEB.parts(d).d)}</b> ${ev.map(x => `<span class="ev-${x.k}">${x.t}</span>`).join(' · ')}</div>` : ''; }).join('')}</div>
      <div class="cpf"><button type="button" class="btn ghost sm" data-d="${t}">Today</button>${clearable ? '<button type="button" class="btn ghost sm" data-d="">✕ Clear</button>' : ''}<div class="spacer"></div><button type="button" class="btn ghost sm" data-x="1">Close</button></div>`;
     pop.querySelectorAll('.cpn').forEach(b => b.onclick = () => move(+b.dataset.k));
     pop.querySelectorAll('[data-m]').forEach(b => b.onclick = () => {
