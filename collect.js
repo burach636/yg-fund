@@ -132,17 +132,22 @@ function vCol() {
   const qs = (ui.colQ || '').trim().toLowerCase(), QV = qVars(qs);
   const needFlt = tab === 'every' && !fltActive('col-every');   // 21,000 accounts: show them only through a 🔎 filter
   let R = needFlt ? [] : fltRows('col-' + tab, colTabRows(tab, L), r => r.code);
-  if (qs) R = R.filter(r => { const a = IDX.by.get(r.code) || {}; return qHit(QV, (a._s || '') + ' ' + (r.f ? r.f.kids.map(k => k.slice(2, 6).join(' ')).join(' ') : '')) || ('#' + r.code) === qs; });
+  const qHitR = r => { const a = IDX.by.get(r.code) || {}; return qHit(QV, (a._s || '') + ' ' + (r.f ? r.f.kids.map(k => k.slice(2, 6).join(' ')).join(' ') : '')) || ('#' + r.code) === qs; };
+  if (qs) R = R.filter(qHitR);
   window._colR = R;
-  const out = L.all.reduce((s, r) => s + (r.amt > 0 ? r.amt : 0), 0), done = L.today.filter(r => r.done).length;
+  // the tiles on top count with this list's 🔎 filter and search too (owner, v1.41)
+  const fk = 'col-' + tab, fOn = fltActive(fk), narrowed = fOn || !!qs;
+  const keep = r => (!fOn || fltMatch(fltOf(fk), r.code)) && (!qs || qHitR(r));
+  const T = narrowed ? { all: L.all.filter(keep), today: L.today.filter(keep), cb: L.cb.filter(keep), hold: L.hold.filter(keep) } : L;
+  const out = T.all.reduce((s, r) => s + (r.amt > 0 ? r.amt : 0), 0), done = T.today.filter(r => r.done).length;
   ui.colN = ui.colN || 150;
   $('#main').innerHTML = `<div class="row"><div><h2>📞 ${esc(colTitle())}</h2><p class="sub">${esc((colTabs().find(x => x[0] === tab) || [])[1] || '')} · ${R.length.toLocaleString()} אקאונטס</p></div><div class="spacer"></div>
      ${tab !== 'all' ? `<button class="btn gold" onclick="colStart('${tab}')">▶ Calling mode</button>` : ''}${colArea() === 'fund' ? `<span class="dim" style="font-size:13px">אדער:</span><select class="mini" onchange="if(this.value)colStart(this.value)"><option value="">▶ Calling mode פון א רופארט…</option>${colSources().filter(([k]) => k.startsWith('jr:')).map(([k, l]) => `<option value="${esc(k)}">${esc(l)}</option>`).join('')}</select>` : ''}</div>
    <div class="tiles">
-    <div class="tile t7"><i>💰</i><h3>${colArea() === 'tu' ? 'שולדיג יעצט' : 'פלעדזשעס פעליג'}</h3><b class="bal">${money(out)}</b><span>${L.all.filter(r => r.amt > 0.5).length} אקאונטס</span></div>
-    <div class="tile t1" onclick="ui.colTab='today';go('col')"><i>📞</i><h3>קאלן היינט</h3><b>${L.today.length - done}</b><span>${done} פון ${L.today.length} געטון</span></div>
-    <div class="tile t5" onclick="ui.colTab='cb';go('col')"><i>🔁</i><h3>${colArea() === 'tu' ? 'אפגעשטופט' : 'היינט צוריק קאלן'}</h3><b>${L.cb.filter(r => !r.done).length}</b><span>&nbsp;</span></div>
-    <div class="tile t4" onclick="ui.colTab='hold';go('col')"><i>⏸</i><h3>ON HOLD</h3><b>${L.hold.length}</b><span>&nbsp;</span></div>
+    <div class="tile t7"><i>💰</i><h3>${colArea() === 'tu' ? 'שולדיג יעצט' : 'פלעדזשעס פעליג'}</h3><b class="bal">${money(out)}</b><span>${T.all.filter(r => r.amt > 0.5).length} אקאונטס${narrowed ? ' · 🔎' : ''}</span></div>
+    <div class="tile t1" onclick="ui.colTab='today';go('col')"><i>📞</i><h3>קאלן היינט</h3><b>${T.today.length - done}</b><span>${done} פון ${T.today.length} געטון${narrowed ? ' · 🔎' : ''}</span></div>
+    <div class="tile t5" onclick="ui.colTab='cb';go('col')"><i>🔁</i><h3>${colArea() === 'tu' ? 'אפגעשטופט' : 'היינט צוריק קאלן'}</h3><b>${T.cb.filter(r => !r.done).length}</b><span>${narrowed ? '🔎' : '&nbsp;'}</span></div>
+    <div class="tile t4" onclick="ui.colTab='hold';go('col')"><i>⏸</i><h3>ON HOLD</h3><b>${T.hold.length}</b><span>${narrowed ? '🔎' : '&nbsp;'}</span></div>
    </div>
    <div class="row" style="margin:8px 0;flex-wrap:wrap;gap:8px">${colArea() === 'tu' ? tuScopeChips('ui.cm=null;render()') : ''}${fltBar('col-' + tab, 'vCol()')}${tab === 'pl' ? colPlChips() : ''}<input id="colq" placeholder="🔍 Search: name, phone, #code" value="${esc(ui.colQ || '')}" style="max-width:280px" oninput="ui.colQ=this.value;clearTimeout(window._colT);window._colT=setTimeout(()=>{vCol();const e=$('#colq');e.focus();e.setSelectionRange(e.value.length,e.value.length)},300)"></div>
    ${(bulkList('col-' + tab, R.map(r => r.code)), bulkBar('col-' + tab))}
