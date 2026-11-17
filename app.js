@@ -81,7 +81,7 @@ async function pullLog() {
   }
   return changed;
 }
-// Download a JLS data file always fresh (v1.38.1): the files used to be saved with Supabase's default 1-hour cache, so
+// Download a JLS data file always fresh (v1.39.1): the files used to be saved with Supabase's default 1-hour cache, so
 // another user's browser could show the old numbers for up to an hour after an import.
 async function jlsFile(path) {
   try {
@@ -110,7 +110,7 @@ function hebLast(a) {
   const lh = a.lh || (a.h ? a.h.trim().split(/\s+/).pop() : '');
   return lh ? '0' + lh + ' ' + (a.h || '') : '1' + (a.ln || a.n || '').toLowerCase() + ' ' + (a.n || '').toLowerCase();
 }
-// 🔍 Search that understands both keyboards (v1.38, owner): text typed with the keyboard on Hebrew/Yiddish while
+// 🔍 Search that understands both keyboards (v1.39, owner): text typed with the keyboard on Hebrew/Yiddish while
 // meaning English letters ("יקךךם" = "hello"), or English letters while meaning Yiddish ("nav" = "מאה"), is also tried through the other layout (standard Israeli layout). Niqqud and Yiddish ligatures
 // (ײ װ ױ) are ignored. qVars(raw) = the normalised text + its swapped twin; every search box tries both.
 const KB_PAIRS = "q/w'eקrרtאyטuוiןoםpפaשsדdגfכgעhיjחkלlךzזxסcבvהbנmצ;ף,ת.ץnמ";
@@ -467,7 +467,7 @@ function wire() {
 function setArea(a, keepView) {
   AREA = a; try { sessionStorage.setItem('yg_area', a); } catch (e) { }
   document.body.classList.toggle('area-tu', a === 'tu');
-  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.38</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.38</small>';
+  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.39</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.39</small>';
   $('#btnArea').style.display = canFund() && canView('tuition') ? '' : 'none';
   $('#btnArea').textContent = a === 'tu' ? '⇄ צו פאנדרעיזינג' : '⇄ צו שכר לימוד';
   setupUser();
@@ -796,7 +796,7 @@ async function addNote(code) {
 
 // ---------- REPORTS ----------
 // Payments by Jewish year and month (refunds left out)
-// Years are shown only up to the current Jewish year (owner, v1.38): no next year from post-dated payments,
+// Years are shown only up to the current Jewish year (owner, v1.39): no next year from post-dated payments,
 // scheduled credit-card charges or bills already entered for later.
 const curHY = () => (HEB.parts(todayS()) || {}).y || 9999;
 function hebYears() {
@@ -1080,7 +1080,7 @@ function closeM() { $('#ov').classList.remove('on'); }
 
 const setHH = () => document.documentElement.style.setProperty('--hh', document.querySelector('header').offsetHeight + 'px');
 window.addEventListener('resize', setHH); window.addEventListener('load', setHH); setHH();
-// ---------- 🔄 new version on the website: update by itself (v1.38) ----------
+// ---------- 🔄 new version on the website: update by itself (v1.39) ----------
 // Every minute the page asks the server for index.html and compares <meta name="app-version">. When it changed:
 // if nobody is in the middle of something (no window open, not typing, no mouse/keys for 20 s) the page reloads by
 // itself and comes back to the same page; otherwise a small "🔄 נייע ווערסיע" button waits for a click.
