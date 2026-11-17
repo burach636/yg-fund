@@ -85,12 +85,7 @@ async function handle(req: Request): Promise<Response> {
       if (number.length < 7 || number.length > 15) return json({ error: 'bad number' }, 400);
       if (!device && !user) return json({ error: 'no user or device chosen' }, 400);
       const qc = (device ? '/devices/' + device : '/users/' + user) + '/quickcall/' + number;
-      try { await kz('POST', qc); }   // blocking: tells us when the phone cannot be rung
-      catch (e) {   // some Kazoo versions only take the GET (non-blocking) form
-        if (!/^TekLink (400|404|405|415|500):/.test(String((e as any).message))) throw e;
-        await kz('GET', qc);
-        return json({ ok: true, via: 'get', post: String((e as any).message) });
-      }
+      await kz('POST', qc);   // blocking: tells us when the phone cannot be rung (body {"data":{}} – a bare {} was refused)
       return json({ ok: true });
     }
     return json({ error: 'unknown action' }, 400);
