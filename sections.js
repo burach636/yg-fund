@@ -37,7 +37,7 @@ function todoRow(id, x) {
     ${a ? `· <a class="name" onclick="openAcct(${x.code})">${esc(a.h || a.n)}</a>` : ''} ${x.pri === 'hi' ? '<span class="tag hi">דרינגענד</span>' : ''}
     ${late ? `<span class="tag late">שפעט ${late} טעג</span>` : (x.due === t && !x.done ? '<span class="tag ask">היינט</span>' : '')}</div>
    <div class="m"><span>📅 ${x.due ? fmtDual(x.due) : 'אן א דאטום'}</span><span>${taskCat(x) === 'call' ? '📞' : '📋'}</span><span>👤 ${[x.who, x.who2].filter(Boolean).map(userChip).join(' + ') || 'נישט צוגעטיילט'}</span>${fr ? `<span>פון ${userChip(fr)}</span>` : ''}${x.note ? `<span>📝 ${esc(x.note)}</span>` : ''}${x.repeat && FREQ[x.repeat] ? `<span>🔁 ${FREQ[x.repeat][0]}</span>` : ''}${x.done ? `<span>✓ ${fmtD(x.doneAt)}</span>` : ''}</div></div>
-   <div class="acts">${x.rc ? `<button class="btn gold sm" onclick="rcOpenTask('${id}')">🖨️ עפן רעסיטס</button>` : ''}${x.fm ? `<button class="btn gold sm" onclick="frMailTask('${id}')">✉️ שיק צום אפיס</button>` : ''}${x.done ? '' : `<button class="btn sm" onclick="taskDone('${id}')">✓ געטון</button>`}<button class="btn ghost sm" onclick="taskForm('${id}')">ענדער</button></div></div>`;
+   <div class="acts">${x.rc ? `<button class="btn gold sm" onclick="rcOpenTask('${id}')">🖨️ Open receipts</button>` : ''}${x.fm ? `<button class="btn gold sm" onclick="frMailTask('${id}')">✉️ Send to office</button>` : ''}${x.done ? '' : `<button class="btn sm" onclick="taskDone('${id}')">✓ Done</button>`}<button class="btn ghost sm" onclick="taskForm('${id}')">Edit</button></div></div>`;
 }
 function vTodo() {
   markSeen(); seenServer();
@@ -56,7 +56,7 @@ function vTodo() {
   let L = ui.todoDone ? all.filter(([, x]) => x.done && F[f][1](x) && inC(x)).sort((a, b) => (b[1].doneAt || '').localeCompare(a[1].doneAt || ''))
     : open.filter(([, x]) => F[f][1](x) && inC(x)).sort((a, b) => (a[1].due || '9999').localeCompare(b[1].due || '9999') || (b[1].pri === 'hi') - (a[1].pri === 'hi'));
   $('#main').innerHTML = `<div class="row"><div><h2>🗂️ אפיס ארבעט</h2><p class="sub">אלע זאכן וואס מ'דארף טון. 🔒 פריוואט = נאר דער וואס האט עס געמאכט זעט עס. 👥 = פאר צוויי באניצער צוזאמען.</p></div><div class="spacer"></div>
-   <button class="btn gold" onclick="taskForm()">+ נייע זאך</button></div>
+   <button class="btn gold" onclick="taskForm()">+ New item</button></div>
   <div class="chips" style="margin-bottom:8px">${[['', '🗂️ אלעס'], ['call', '📞 קאלן'], ['proj', '📋 פראיעקטן']].map(([k, l]) => `<button class="chip big ${C === k ? 'on' : ''}" onclick="ui.todoC='${k}';vTodo()">${l} (${open.filter(([, x]) => F[f][1](x) && (!k || taskCat(x) === k)).length})</button>`).join('')}
    <span class="dim" style="font-size:12px;margin-inline-start:10px">${USERS().map(userChip).join(' ')}</span></div>
   <div class="row"><div class="chips">${Object.entries(F).map(([k, [l, fn]]) => `<button class="chip ${f === k ? 'on' : ''}" onclick="ui.todoF='${k}';vTodo()">${l} (${open.filter(([, x]) => fn(x)).length})</button>`).join('')}</div>
@@ -107,7 +107,7 @@ function fundCalc() {
 function vFund() {
   const F = fundCalc();
   $('#main').innerHTML = `<div class="row"><div><h2>פאנדרעיזינג חשבונות</h2><p class="sub">פון יעדן דאלער וואס קומט אריין זינט ${fmtDual(F.start)} באקומען די פאנדרעיזערס <b>${F.pct}%</b>. עס ווערט אויסגערעכנט יעדע 2 וואכן. די באצאלונגען צו זיי ווערן אראפגערעכנט.</p></div><div class="spacer"></div>
-   ${SET().frAuto ? `<span class="tag ok" title="ווערט געשיקט אליין ${SET().frAutoDays != null ? SET().frAutoDays : 2} טעג נאך די 2 וואכן">⏰ אויטאמאטיש</span>` : ''}<button class="btn" onclick="frMailForm()">✉️ אימעיל צום אפיס</button><button class="btn ghost" onclick="xlsFund()">⬇ Excel</button><button class="btn ghost" onclick="fundSettings()" title="${F.pct}% · ${fmtD(F.start)}">⚙️ Settings</button><button class="btn ghost" onclick="frInForm()">+ אריינקומען (נישט אין JLS)</button><button class="btn ghost" onclick="frExForm()">+ סכום אן פראצענט</button><button class="btn ghost" onclick="expForm()">🍽️ + דינער עקספענס</button><button class="btn gold" onclick="frForm()">+ באצאלט די פאנדרעיזערס</button></div>
+   ${SET().frAuto ? `<span class="tag ok" title="ווערט געשיקט אליין ${SET().frAutoDays != null ? SET().frAutoDays : 2} טעג נאך די 2 וואכן">⏰ אויטאמאטיש</span>` : ''}<button class="btn" onclick="frMailForm()">✉️ Email the office</button><button class="btn ghost" onclick="xlsFund()">⬇ Excel</button><button class="btn ghost" onclick="fundSettings()" title="${F.pct}% · ${fmtD(F.start)}">⚙️ Settings</button><button class="btn ghost" onclick="frInForm()">+ Income (not in JLS)</button><button class="btn ghost" onclick="frExForm()">+ Amount without %</button><button class="btn ghost" onclick="expForm()">🍽️ + Dinner expense</button><button class="btn gold" onclick="frForm()">+ Paid the fundraisers</button></div>
   <div class="stats">
    <div class="stat"><b>${money(F.totIn)}</b><span>אריינגעקומען זינט ${fmtD(F.start)}</span></div>
    ${F.totEx ? `<div class="stat"><b>${money(F.totEx)}</b><span>אן פראצענט (אראפגערעכנט)</span></div>` : ''}
@@ -118,14 +118,14 @@ function vFund() {
   <p class="sub">💡 די JLS באצאלונגען זענען ביז דער לעצטער דערהיינטיגונג (${new Date(JD.importedAt).toLocaleDateString()}). דערהיינטיגט פון JLS כדי עס זאל זיין גענוי.</p>
   <div class="cols"><div><h3>יעדע 2 וואכן</h3>
    <table><thead><tr><th>תקופה</th><th>באצאל.</th><th>אריינגעקומען</th>${F.totEx ? '<th>אן %</th>' : ''}${F.totExp ? '<th>🍽️ עקספענסעס</th>' : ''}<th>${F.pct}%</th><th>באצאלט</th><th>באלאנס</th><th></th></tr></thead><tbody>
-   ${F.periods.slice().reverse().map(p => `<tr><td style="font-size:13px;white-space:nowrap">${fmtD(p.from)} –<br>${fmtD(p.to)}${p === F.cur ? ' <span class="tag ask">יעצט</span>' : ''}</td><td class="num">${p.count}</td><td class="num">${money(p.income)}</td>${F.totEx ? `<td class="num">${p.ex ? '−' + money(p.ex) : ''}</td>` : ''}${F.totExp ? `<td class="num">${p.exp ? '−' + money(p.exp) : ''}</td>` : ''}<td class="num"><b>${money(p.owed)}</b></td><td class="num">${p.paid ? money(p.paid) : ''}</td><td class="num ${p.bal > 0.009 ? 'bal' : 'zero'}">${money(p.bal)}</td><td><button class="btn ghost sm" onclick="frPeriod(${p.k})">ווייז</button> <button class="btn ghost sm" title="שיק אימעיל צום אפיס" onclick="frMailForm(${p.k})">✉️</button>${(S.frmail[p.from] || {}).sent ? `<br><span class="tag ok">✉️ ${fmtD(S.frmail[p.from].sent)}</span>` : ''}</td></tr>`).join('') || `<tr><td colspan="9" class="empty">הייבט זיך אן ${fmtD(F.start)}</td></tr>`}
+   ${F.periods.slice().reverse().map(p => `<tr><td style="font-size:13px;white-space:nowrap">${fmtD(p.from)} –<br>${fmtD(p.to)}${p === F.cur ? ' <span class="tag ask">יעצט</span>' : ''}</td><td class="num">${p.count}</td><td class="num">${money(p.income)}</td>${F.totEx ? `<td class="num">${p.ex ? '−' + money(p.ex) : ''}</td>` : ''}${F.totExp ? `<td class="num">${p.exp ? '−' + money(p.exp) : ''}</td>` : ''}<td class="num"><b>${money(p.owed)}</b></td><td class="num">${p.paid ? money(p.paid) : ''}</td><td class="num ${p.bal > 0.009 ? 'bal' : 'zero'}">${money(p.bal)}</td><td><button class="btn ghost sm" onclick="frPeriod(${p.k})">Show</button> <button class="btn ghost sm" title="שיק אימעיל צום אפיס" onclick="frMailForm(${p.k})">✉️</button>${(S.frmail[p.from] || {}).sent ? `<br><span class="tag ok">✉️ ${fmtD(S.frmail[p.from].sent)}</span>` : ''}</td></tr>`).join('') || `<tr><td colspan="9" class="empty">הייבט זיך אן ${fmtD(F.start)}</td></tr>`}
    </tbody></table></div>
   <div><h3>באצאלונגען צו די פאנדרעיזערס</h3>
    <table><thead><tr><th>טאג</th><th>סכום</th><th>צו וועמען</th><th>נאטיץ</th><th></th></tr></thead><tbody>
-   ${F.paid.map(x => `<tr><td class="num">${fmtD(x.date)}</td><td class="num"><b>${money(x.amt)}</b></td><td>${esc(x.to || '')}</td><td style="font-size:13px">${esc(x.note || '')}<br><small class="dim">${esc(x.by || '')}</small></td><td><button class="btn ghost sm" onclick="frForm('${x.id}')">ענדער</button></td></tr>`).join('') || '<tr><td colspan="5" class="empty">נאך גארנישט באצאלט</td></tr>'}
+   ${F.paid.map(x => `<tr><td class="num">${fmtD(x.date)}</td><td class="num"><b>${money(x.amt)}</b></td><td>${esc(x.to || '')}</td><td style="font-size:13px">${esc(x.note || '')}<br><small class="dim">${esc(x.by || '')}</small></td><td><button class="btn ghost sm" onclick="frForm('${x.id}')">Edit</button></td></tr>`).join('') || '<tr><td colspan="5" class="empty">נאך גארנישט באצאלט</td></tr>'}
    </tbody></table>
-   ${F.exempt.length ? `<h3>סכומים אן פראצענט</h3><table><tbody>${F.exempt.map(x => `<tr><td class="num">${fmtD(x.date)}</td><td class="num">−${money(x.amt)}</td><td style="font-size:13px">${esc(x.note || '')}</td><td><button class="btn ghost sm" onclick="frExForm('${x.id}')">ענדער</button></td></tr>`).join('')}</tbody></table>` : ''}
-   ${Object.values(S.frin).some(x => !x.del) ? `<h3>אריינקומען וואס איז נישט אין JLS</h3><table><tbody>${Object.entries(S.frin).filter(([, x]) => !x.del).sort((a, b) => b[1].date.localeCompare(a[1].date)).map(([id, x]) => `<tr><td class="num">${fmtD(x.date)}</td><td class="num">${money(x.amt)}</td><td style="font-size:13px">${esc(x.note || '')}</td><td><button class="btn ghost sm" onclick="frInForm('${id}')">ענדער</button></td></tr>`).join('')}</tbody></table>` : ''}
+   ${F.exempt.length ? `<h3>סכומים אן פראצענט</h3><table><tbody>${F.exempt.map(x => `<tr><td class="num">${fmtD(x.date)}</td><td class="num">−${money(x.amt)}</td><td style="font-size:13px">${esc(x.note || '')}</td><td><button class="btn ghost sm" onclick="frExForm('${x.id}')">Edit</button></td></tr>`).join('')}</tbody></table>` : ''}
+   ${Object.values(S.frin).some(x => !x.del) ? `<h3>אריינקומען וואס איז נישט אין JLS</h3><table><tbody>${Object.entries(S.frin).filter(([, x]) => !x.del).sort((a, b) => b[1].date.localeCompare(a[1].date)).map(([id, x]) => `<tr><td class="num">${fmtD(x.date)}</td><td class="num">${money(x.amt)}</td><td style="font-size:13px">${esc(x.note || '')}</td><td><button class="btn ghost sm" onclick="frInForm('${id}')">Edit</button></td></tr>`).join('')}</tbody></table>` : ''}
   </div></div>
   ${expSection(F)}`;
   const qi = $('#expq');
@@ -149,7 +149,7 @@ function frForm(id) {
    <label class="f">סכום $<input id="fa" type="number" step="0.01" value="${esc(x.amt)}"></label>
    <label class="f">צו וועמען<input id="ft" list="frnames" value="${esc(x.to || '')}"><datalist id="frnames">${names.map(n => `<option value="${esc(n)}">`).join('')}</datalist></label>
    <label class="f">נאטיץ (טשעק נומער א.א.וו.)<input id="fn" value="${esc(x.note || '')}"></label></div>
-   <div class="row" style="justify-content:flex-end;margin-top:14px">${id ? `<button class="btn red" onclick="frDel('fr','${id}')">אויסמעקן</button><div class="spacer"></div>` : ''}<button class="btn ghost" onclick="closeM()">Back</button><button class="btn" onclick="frSave('${id || ''}')">Save</button></div>`, 'narrow');
+   <div class="row" style="justify-content:flex-end;margin-top:14px">${id ? `<button class="btn red" onclick="frDel('fr','${id}')">Delete</button><div class="spacer"></div>` : ''}<button class="btn ghost" onclick="closeM()">Back</button><button class="btn" onclick="frSave('${id || ''}')">Save</button></div>`, 'narrow');
   setTimeout(() => $('#fa').focus(), 50);
 }
 async function frSave(id) {
@@ -163,7 +163,7 @@ function frInForm(id) {
    <label class="f">טאג${dateField('id_', x.date)}</label>
    <label class="f">סכום $<input id="ia" type="number" step="0.01" value="${esc(x.amt)}"></label>
    <label class="f" style="grid-column:1/-1">פון וועמען / נאטיץ<input id="in_" value="${esc(x.note || '')}"></label></div>
-   <div class="row" style="justify-content:flex-end;margin-top:14px">${id ? `<button class="btn red" onclick="frDel('frin','${id}')">אויסמעקן</button><div class="spacer"></div>` : ''}<button class="btn ghost" onclick="closeM()">Back</button><button class="btn" onclick="frInSave('${id || ''}')">Save</button></div>`, 'narrow');
+   <div class="row" style="justify-content:flex-end;margin-top:14px">${id ? `<button class="btn red" onclick="frDel('frin','${id}')">Delete</button><div class="spacer"></div>` : ''}<button class="btn ghost" onclick="closeM()">Back</button><button class="btn" onclick="frInSave('${id || ''}')">Save</button></div>`, 'narrow');
 }
 async function frInSave(id) {
   const amt = +$('#ia').value; if (!amt) { $('#ia').focus(); return; }
@@ -176,7 +176,7 @@ function frExForm(id) {
    <label class="f">טאג${dateField('xd', x.date)}</label>
    <label class="f">סכום $<input id="xa" type="number" step="0.01" value="${esc(x.amt)}"></label>
    <label class="f" style="grid-column:1/-1">פאר וואס / נאטיץ<input id="xn" value="${esc(x.note || '')}"></label></div>
-   <div class="row" style="justify-content:flex-end;margin-top:14px">${id ? `<button class="btn red" onclick="frDel('frex','${id}')">אויסמעקן</button><div class="spacer"></div>` : ''}<button class="btn ghost" onclick="closeM()">Back</button><button class="btn" onclick="frExSave('${id || ''}')">Save</button></div>`, 'narrow');
+   <div class="row" style="justify-content:flex-end;margin-top:14px">${id ? `<button class="btn red" onclick="frDel('frex','${id}')">Delete</button><div class="spacer"></div>` : ''}<button class="btn ghost" onclick="closeM()">Back</button><button class="btn" onclick="frExSave('${id || ''}')">Save</button></div>`, 'narrow');
   setTimeout(() => $('#xa').focus(), 50);
 }
 async function frExSave(id) {
@@ -255,13 +255,13 @@ function vShuls() {
   Object.entries(S.acct).forEach(([c, st]) => { if (st.shul) { const o = stats[st.shul] || (stats[st.shul] = { n: 0, t: 0 }); o.n++; o.t += (IDX.yg.get(+c) || {}).total || 0; } });
   const nextOf = id => (sch.find(v => v.s.id === id) || {}).date;
   $('#main').innerHTML = `<div class="row"><div><h2>שולן</h2><p class="sub">יעדע צווייטע מיטוואך קומט ארויף די קומענדיגע שול אויף דער ליסטע (לויט דער ריי). ביי יעדן נדבן קען מען אויסקלייבן אין וועלכע שול מ'האט אים געטראפן.</p></div><div class="spacer"></div>
-   <button class="btn ghost" onclick="shulStartForm()">📅 אנגעהויבן: ${fmtD(shulStart())}</button><button class="btn gold" onclick="shulForm()">+ נייע שול</button></div>
+   <button class="btn ghost" onclick="shulStartForm()">📅 Started: ${fmtD(shulStart())}</button><button class="btn gold" onclick="shulForm()">+ New shul</button></div>
   ${sch.length ? `<div class="banner">🕍 <div><b>${sch[0].date === todayS() ? 'היינט' : 'קומענדיגע מיטוואך, ' + fmtDual(sch[0].date)}</b>: <b class="big">${esc(sch[0].s.name)}</b><br><span class="ltr">${esc(sch[0].s.addr || '')}</span> ${sch[0].s.addr ? `<a class="name" style="font-size:13px" target="_blank" href="https://maps.google.com/?q=${encodeURIComponent(sch[0].s.addr)}">🗺️ מאפע</a>` : ''}</div></div>` : ''}
   <div class="cols"><div><h3>אלע שולן (די ריי)</h3>
    <table><thead><tr><th>#</th><th>שול</th><th>נדבנים</th><th>קומענדיג</th><th></th></tr></thead><tbody>
    ${L.map((s, i) => `<tr style="${s.paused ? 'opacity:.5' : ''}"><td class="num">${i + 1}</td><td><a class="name" onclick="shulDonors('${s.id}')">${esc(s.name)}</a>${s.paused ? ' <span class="tag gray">אפגעשטעלט</span>' : ''}<br><span class="ltr" style="font-size:12px;color:var(--muted)">${esc(s.addr || '')}</span>${s.notes ? `<div class="sub" style="margin:2px 0 0">${esc(s.notes)}</div>` : ''}</td>
     <td class="num">${(stats[s.id] || {}).n || 0}<br><small class="dim">${money((stats[s.id] || {}).t || 0)}</small></td><td style="font-size:13px">${s.paused ? '' : fmtD(nextOf(s.id))}</td>
-    <td><div class="acts"><button class="btn ghost sm" title="ארויף" onclick="shulMove('${s.id}',-1)">▲</button><button class="btn ghost sm" title="אראפ" onclick="shulMove('${s.id}',1)">▼</button><button class="btn ghost sm" onclick="shulForm('${s.id}')">ענדער</button></div></td></tr>`).join('') || '<tr><td colspan="5" class="empty">נאך קיין שולן – דריקט "+ נייע שול"</td></tr>'}
+    <td><div class="acts"><button class="btn ghost sm" title="ארויף" onclick="shulMove('${s.id}',-1)">▲</button><button class="btn ghost sm" title="אראפ" onclick="shulMove('${s.id}',1)">▼</button><button class="btn ghost sm" onclick="shulForm('${s.id}')">Edit</button></div></td></tr>`).join('') || '<tr><td colspan="5" class="empty">נאך קיין שולן – דריקט "+ נייע שול"</td></tr>'}
    </tbody></table></div>
   <div><h3>מיטוואכן</h3><table><tbody>${sch.map(v => `<tr><td style="white-space:nowrap">${fmtDual(v.date)}</td><td><b>${esc(v.s.name)}</b></td></tr>`).join('') || '<tr><td class="empty">—</td></tr>'}</tbody></table></div></div>`;
 }
@@ -272,7 +272,7 @@ function shulForm(id) {
    <label class="f" style="grid-column:1/-1">אדרעס<input id="sa" value="${esc(x.addr || '')}" style="direction:ltr"></label>
    <label class="f" style="grid-column:1/-1">נאטיץ (גבאי, צייטן א.א.וו.)<input id="snt" value="${esc(x.notes || '')}"></label>
    <label style="display:flex;gap:8px;align-items:center;font-size:14px"><input type="checkbox" id="sp" ${x.paused ? 'checked' : ''}> אפגעשטעלט (נישט אריין אין דער ריי)</label></div>
-   <div class="row" style="justify-content:flex-end;margin-top:14px">${id ? `<button class="btn red" onclick="shulDel('${id}')">אויסמעקן</button><div class="spacer"></div>` : ''}<button class="btn ghost" onclick="closeM()">Back</button><button class="btn" onclick="shulSave('${id || ''}')">Save</button></div>`, 'narrow');
+   <div class="row" style="justify-content:flex-end;margin-top:14px">${id ? `<button class="btn red" onclick="shulDel('${id}')">Delete</button><div class="spacer"></div>` : ''}<button class="btn ghost" onclick="closeM()">Back</button><button class="btn" onclick="shulSave('${id || ''}')">Save</button></div>`, 'narrow');
   setTimeout(() => $('#sn').focus(), 50);
 }
 async function shulSave(id) {
@@ -471,7 +471,7 @@ function frMailForm(k) {
    <label class="f" style="grid-column:1/-1">סאבדזשעקט<input id="fms" value="${esc(frFill(s.frMailSubject || FR_SUBJ_DEF, F, p))}"></label>
    <label class="f" style="grid-column:1/-1">דער בריוו<textarea id="fmb" rows="12">${esc(frFill(s.frMailBody || FR_BODY_DEF, F, p))}</textarea></label></div>
    <label style="display:flex;gap:8px;align-items:center;font-size:13px;margin-top:8px"><input type="checkbox" id="fmx" checked> לייג צו אן Excel: די נדבנים מיט זייערע נדבות פון די 2 וואכן, און אלע באצאלונגען</label>
-   <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn ghost" onclick="closeM()">Back</button><button class="btn" id="fmgo" onclick="frMailGo(${k})">✉️ שיק</button></div>`, 'narrow');
+   <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn ghost" onclick="closeM()">Back</button><button class="btn" id="fmgo" onclick="frMailGo(${k})">✉️ Send</button></div>`, 'narrow');
 }
 async function frMailGo(k) {
   const F = fundCalc(), p = F.periods[k], to = $('#fmt').value.trim(), cc = $('#fmc').value.trim();
@@ -520,7 +520,7 @@ function expSection(F) {
   const Y = F.expYears[y] || { total: all, covered: 0, left: all };
   return `<div class="box" id="expbox" style="margin-top:18px"><div class="row" style="margin:0 0 10px"><h3 style="margin:0">🍽️ דינער עקספענסעס</h3>
     <div class="chips">${ys.map(v => `<button class="chip ${v === y ? 'on' : ''}" onclick="ui.expY=${v};vFund()">${HEB.gem(v)}</button>`).join('')}</div><div class="spacer"></div>
-    <button class="btn ghost sm" onclick="xlsx([{name:'דינער עקספענסעס',rows:expRows(expFiltered(fundCalc()))}],'dinner-expenses-'+todayS()+'.xlsx')">⬇ Excel</button><button class="btn gold sm" onclick="expForm()">+ נייע עקספענס</button></div>
+    <button class="btn ghost sm" onclick="xlsx([{name:'דינער עקספענסעס',rows:expRows(expFiltered(fundCalc()))}],'dinner-expenses-'+todayS()+'.xlsx')">⬇ Excel</button><button class="btn gold sm" onclick="expForm()">+ New expense</button></div>
    <p class="sub">דאס געלט וואס קומט אריין אין ${HEB.gem(y)} דעקט ערשט די עקספענסעס פון ${HEB.gem(y)}; ערשט דערנאך באקומען די פאנדרעיזערס ${F.pct}%.</p>
    <div class="stats" style="margin-bottom:10px"><div class="stat"><b>${money(Y.total)}</b><span>עקספענסעס ${HEB.gem(y)}</span></div><div class="stat"><b class="zero">${money(Y.covered)}</b><span>שוין געדעקט פון אריינגעקומענעם געלט</span></div><div class="stat"><b class="${Y.left > 0.009 ? 'bal' : 'zero'}">${money(Y.left)}</b><span>נאך צו דעקן (קיין % ביז דאן)</span></div></div>
    <div class="row"><input id="expq" placeholder="🔍 Search: vendor, what, amount, date..." value="${esc(ui.expQ || '')}" style="flex:1;min-width:240px;font-size:15px">
@@ -528,7 +528,7 @@ function expSection(F) {
    <table><thead><tr><th>טאג</th><th>פון וועמען</th><th>וואס</th><th>סכום</th><th>אינוואיס</th><th></th></tr></thead><tbody>
    ${L.map(x => `<tr><td class="num" style="font-size:13px">${fmtD(x.date)}</td><td><b>${esc(x.vendor || '')}</b></td><td style="font-size:13px">${esc(x.desc || '')}<br><small class="dim">${esc(x.by || '')}</small></td><td class="num"><b>${money(x.amt)}</b></td>
     <td>${x.file ? `<button class="btn ghost sm" title="${esc(x.file.name)}" onclick="expOpen('${x.id}')">📎 ${esc(x.file.name.length > 22 ? x.file.name.slice(0, 20) + '…' : x.file.name)}</button>` : '<span class="dim">—</span>'}</td>
-    <td><button class="btn ghost sm" onclick="expForm('${x.id}')">ענדער</button></td></tr>`).join('') || '<tr><td colspan="6" class="empty">נאך קיין עקספענסעס</td></tr>'}
+    <td><button class="btn ghost sm" onclick="expForm('${x.id}')">Edit</button></td></tr>`).join('') || '<tr><td colspan="6" class="empty">נאך קיין עקספענסעס</td></tr>'}
    </tbody>${L.length ? `<tfoot><tr><td colspan="3" style="text-align:left"><b>סך הכל</b></td><td class="num"><b>${money(tot)}</b></td><td colspan="2"></td></tr></tfoot>` : ''}</table></div>`;
 }
 function expForm(id) {
@@ -542,7 +542,7 @@ function expForm(id) {
    <label class="f">וואס (באשרייבונג)<input id="xs" value="${esc(x.desc || '')}" placeholder="קעיטערינג, האל, בלומען..."></label>
    <label class="f" style="grid-column:1/-1">📎 אינוואיס (PDF אדער בילד)<input id="xf" type="file" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx"></label>
    ${x.file ? `<div style="grid-column:1/-1" class="sub">איצטיגע: <a class="name" onclick="expOpen('${id}')">📎 ${esc(x.file.name)}</a> · <label><input type="checkbox" id="xfr"> אראפנעמען</label></div>` : ''}</div>
-   <div class="row" style="justify-content:flex-end;margin-top:14px">${id ? `<button class="btn red" onclick="expDel('${id}')">אויסמעקן</button><div class="spacer"></div>` : ''}<button class="btn ghost" onclick="closeM()">Back</button><button class="btn" id="xgo" onclick="expSave('${id || ''}')">Save</button></div>`, 'narrow');
+   <div class="row" style="justify-content:flex-end;margin-top:14px">${id ? `<button class="btn red" onclick="expDel('${id}')">Delete</button><div class="spacer"></div>` : ''}<button class="btn ghost" onclick="closeM()">Back</button><button class="btn" id="xgo" onclick="expSave('${id || ''}')">Save</button></div>`, 'narrow');
   setTimeout(() => $('#xa').focus(), 50);
 }
 async function expSave(id) {
@@ -616,7 +616,7 @@ function notifyCheck() {
   box.className = 'on';
   box.innerHTML = `<div class="bh">🔔 <b>${L.length}</b> ${L.length === 1 ? 'נייע זאך' : 'נייע זאכן'} פאר אייך</div>
    ${L.slice(0, 3).map(([, x]) => `<div class="bi" style="border-left:5px solid ${userColor(x.from)}">${esc(x.title)} <small>פון ${userChip(x.from)}</small></div>`).join('')}${L.length > 3 ? '<div class="bi">…</div>' : ''}
-   <div class="row" style="margin-top:8px"><button class="btn gold sm" onclick="go('todo')">עפן</button><div class="spacer"></div><button class="btn ghost sm" onclick="markSeen()">שפעטער</button></div>`;
+   <div class="row" style="margin-top:8px"><button class="btn gold sm" onclick="go('todo')">Open</button><div class="spacer"></div><button class="btn ghost sm" onclick="markSeen()">Later</button></div>`;
 }
 
 // ---------- 🏠 home page (v1.27): no second dashboard – the sidebar is the dashboard. A moving picture instead:

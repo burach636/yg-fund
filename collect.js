@@ -140,7 +140,7 @@ function vCol() {
    <div class="row" style="margin:8px 0;flex-wrap:wrap;gap:8px">${colArea() === 'tu' ? tuScopeChips('ui.cm=null;render()') : ''}${fltBar('col-' + tab, 'vCol()')}${tab === 'pl' ? colPlChips() : ''}<input id="colq" placeholder="🔍 Search: name, phone, #code" value="${esc(ui.colQ || '')}" style="max-width:280px" oninput="ui.colQ=this.value;clearTimeout(window._colT);window._colT=setTimeout(()=>{vCol();const e=$('#colq');e.focus();e.setSelectionRange(e.value.length,e.value.length)},300)"></div>
    ${(bulkList('col-' + tab, R.map(r => r.code)), bulkBar('col-' + tab))}
    <div class="collist">${R.slice(0, ui.colN).map((r, i) => colRow(r, i, tab)).join('') || (needFlt ? `<div class="empty">👥 דא זענען אלע ${JD.accounts.length.toLocaleString()} אקאונטס פון JLS (אויך די וואס האבן קיינמאל נישט געגעבן צו YG).<br>דריקט <b>🔎 פילטער</b> אויבן, למשל UDF4 = 1,2,3 און נאך נישט געגעבן צו דעם דינער.</div>` : '<div class="empty">🎉 גארנישט דא</div>')}</div>
-   ${R.length > ui.colN ? `<div class="more"><button class="btn ghost" onclick="ui.colN+=300;vCol()">ווייז מער (${(R.length - ui.colN).toLocaleString()})</button></div>` : ''}`;
+   ${R.length > ui.colN ? `<div class="more"><button class="btn ghost" onclick="ui.colN+=300;vCol()">Show more (${(R.length - ui.colN).toLocaleString()})</button></div>` : ''}`;
 }
 const colWho = c => { const w = (S.acct[c] || {})[colArea() === 'tu' ? 'tuWho' : 'assigned']; return w ? ' ' + userChip(w) : ''; };
 function colRow(r, i, tab) {
@@ -222,8 +222,8 @@ function vCalling() {
   const isJr = String(cm.tab).startsWith('jr:');
   $('#main').innerHTML = `<div class="cmbar"><b>📞 Calling mode</b>${colArea() === 'tu' && cm.tab !== 'sel' ? tuScopeChips(`colStart('${cm.tab}')`) : ''} ${colSrcSel(cm.tab)}${cm.tab !== 'sel' ? fltBar(cmFltKey(cm.tab), `colStart('${cm.tab}')`) : ''}${cmSearchBox()}<span><b>${doneN}</b> פון ${codes.length} געטון</span>
      <div class="cmprog"><i style="width:${doneN / codes.length * 100}%"></i></div>
-     <button class="btn ghost sm" onclick="ui.cm.i--;vCalling()" ${cm.i ? '' : 'disabled'}>› פריער</button><span>${cm.i + 1} פון ${codes.length}</span><button class="btn ghost sm" onclick="ui.cm.i++;vCalling()" ${cm.i < codes.length - 1 ? '' : 'disabled'}>ווייטער ‹</button>
-     <button class="btn ghost sm" onclick="${r.f ? `tuFamily(${code})` : `openAcct(${code})`}">גאנצע זייט</button></div>
+     <button class="btn ghost sm" onclick="ui.cm.i--;vCalling()" ${cm.i ? '' : 'disabled'}>› Previous</button><span>${cm.i + 1} פון ${codes.length}</span><button class="btn ghost sm" onclick="ui.cm.i++;vCalling()" ${cm.i < codes.length - 1 ? '' : 'disabled'}>Next ‹</button>
+     <button class="btn ghost sm" onclick="${r.f ? `tuFamily(${code})` : `openAcct(${code})`}">Full page</button></div>
    <div class="cmgrid">
     <div class="cmmain">
      <div class="cmcard">
@@ -239,7 +239,7 @@ function vCalling() {
      <div class="grid2" style="margin-top:8px"><label class="f" style="grid-column:1/-1">נאטיץ<textarea id="cmnote" rows="2" placeholder="וואס האט ער געזאגט?"></textarea></label>
       <label class="f">🔁 רוף צוריק אום${dateField('cmcb', '', { clear: true })}</label>
       <label style="display:flex;gap:8px;align-items:center;font-size:14px;align-self:end"><input type="checkbox" id="cmhold" ${s.hold ? 'checked' : ''}> ⏸ On hold</label></div>
-     <div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn ghost" onclick="ui.cm.i++;vCalling()">איבערשפרינגען</button><button class="btn gold" onclick="colSave(${code})">✓ היט אפ און ווייטער</button></div>
+     <div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn ghost" onclick="ui.cm.i++;vCalling()">Skip</button><button class="btn gold" onclick="colSave(${code})">✓ Save & next</button></div>
      <h3 style="margin-top:16px">📝 נאטיצן</h3>${hist.map(h => `<div class="cmh">💬 ${esc(h.text)} <small class="dim">– ${userChip(h.by || '')} · ${fmtD((h.at || '').slice(0, 10))}</small></div>`).join('') || '<p class="dim">—</p>'}
     </div>
     <div class="cmside"><div class="cmsh">UP NEXT <span class="cnt blue">${codes.length}</span></div>
@@ -321,14 +321,14 @@ function bulkRefresh(k) { const e = document.getElementById('bulk-' + k); if (e)
 const cbWord = () => colArea() === 'tu' ? 'אפגעשטופט' : 'צוריק קאלן';
 function bulkBar(k) {
   const n = selSet(k).size, tot = ((window._bulk || {})[k] || []).length;
-  if (!n) return `<div id="bulk-${k}" class="bulkbar off"><span class="dim">☑ קלייבט אויס כדי צו טון עפעס פאר אסאך אויף איינמאל</span>${tot ? `<button class="btn ghost sm" onclick="selAll('${k}',true)">☑ אלע ${tot.toLocaleString()}</button>` : ''}</div>`;
+  if (!n) return `<div id="bulk-${k}" class="bulkbar off"><span class="dim">☑ קלייבט אויס כדי צו טון עפעס פאר אסאך אויף איינמאל</span>${tot ? `<button class="btn ghost sm" onclick="selAll('${k}',true)">☑ All ${tot.toLocaleString()}</button>` : ''}</div>`;
   return `<div id="bulk-${k}" class="bulkbar"><b>☑ ${n.toLocaleString()} אויסגעקליבן</b>
-   <button class="btn ghost sm" onclick="selAll('${k}',true)">אלע ${tot.toLocaleString()}</button><button class="btn ghost sm" onclick="ui.sel['${k}']=new Set();render()">✕ אויסמעקן</button><span class="bsep"></span>
-   <button class="btn sm" onclick="bulkCb('${k}',1)">🔁 ${cbWord()}: מארגן</button><button class="btn ghost sm" onclick="bulkCbForm('${k}')">🔁 אום א טאג…</button>
+   <button class="btn ghost sm" onclick="selAll('${k}',true)">All ${tot.toLocaleString()}</button><button class="btn ghost sm" onclick="ui.sel['${k}']=new Set();render()">✕ Clear</button><span class="bsep"></span>
+   <button class="btn sm" onclick="bulkCb('${k}',1)">🔁 Tomorrow</button><button class="btn ghost sm" onclick="bulkCbForm('${k}')">🔁 On a date…</button>
    <button class="btn ghost sm" onclick="bulkIgn('${k}',true)" title="מער נישט ארויפקומען צו קאלן">🚫 Ignore</button><button class="btn ghost sm" onclick="bulkIgn('${k}',false)">↩ Un-ignore</button>
-   <button class="btn ghost sm" onclick="bulkHold('${k}',true)">⏸ On hold</button><button class="btn ghost sm" onclick="bulkHold('${k}',false)">▶ נישט On hold</button>
+   <button class="btn ghost sm" onclick="bulkHold('${k}',true)">⏸ On hold</button><button class="btn ghost sm" onclick="bulkHold('${k}',false)">▶ Off hold</button>
    <select class="mini" onchange="if(this.value!=='-')bulkWho('${k}',this.value)"><option value="-">👤 ווער קאלט…</option><option value="">נישט צוגעטיילט</option>${USERS().map(u => `<option>${esc(u)}</option>`).join('')}</select>
-   <button class="btn ghost sm" onclick="bulkNoteForm('${k}')">📝 נאטיץ פאר אלע</button><button class="btn gold sm" onclick="bulkCall('${k}')">▶ Calling mode</button></div>`;
+   <button class="btn ghost sm" onclick="bulkNoteForm('${k}')">📝 Note for all</button><button class="btn gold sm" onclick="bulkCall('${k}')">▶ Calling mode</button></div>`;
 }
 async function bulkEmit(rows, msg) {   // [{k, eid, p}] in batches of 500
   try {
@@ -396,5 +396,5 @@ function vDone() {
    <div class="tiles"><div class="tile t2"><i>🗂️</i><h3>אפיס ארבעט געענדיגט</h3><b>${nT}</b><span>היינט און נעכטן</span></div><div class="tile t1"><i>☑️</i><h3>אקאונטס געענדיגט</h3><b>${nA}</b><span>רופן, בעטן, סטעיטמענטס</span></div></div>
    <div class="collist">${L.map(x => { const d = String(x.ts).slice(0, 10), hd = d !== cur ? (cur = d, `<h3 style="margin:14px 0 4px">${day(d)} · ${fmtDual(d)}</h3>`) : '';
      return hd + `<div class="colrow done0" style="border-right:6px solid ${userColor(x.who)}"><span style="font-size:20px">${x.icon}</span><div class="cr1"><b>${esc(x.text)}</b> ${x.code ? '· ' + name(x.code) : ''}
-       <div class="cr2">${String(x.ts).length > 10 ? new Date(x.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' · ' : ''}${userChip(x.who)}</div></div>${x.kind === 'task' ? `<button class="btn ghost sm" onclick="taskUndo('${x.id}')">↩ צוריק</button>` : ''}</div>`; }).join('') || '<div class="empty">נאך גארנישט פארטיג היינט אדער נעכטן</div>'}</div>`;
+       <div class="cr2">${String(x.ts).length > 10 ? new Date(x.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' · ' : ''}${userChip(x.who)}</div></div>${x.kind === 'task' ? `<button class="btn ghost sm" onclick="taskUndo('${x.id}')">↩ Undo</button>` : ''}</div>`; }).join('') || '<div class="empty">נאך גארנישט פארטיג היינט אדער נעכטן</div>'}</div>`;
 }

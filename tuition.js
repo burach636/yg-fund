@@ -137,10 +137,10 @@ function vTuition() {
      <td style="font-size:13px" class="ltr">${a.ph.slice(0, 2).map(p => callBtn(p[1], f.code) + ' ' + esc(p[1])).join('<br>')}</td>
      <td class="num">${tuBal(f.due, true)}</td><td class="num">${tuBal(f.bal)}</td>
      <td style="font-size:13px">${f.last ? fmtD(f.last) : '—'}</td>
-     <td><div class="acts">${whoSel(`tuAssign(${f.code},this.value)`, st.tuWho || '')}<button class="btn ghost sm" onclick="noteForm(${f.code})">📝 נאטיץ</button></div></td></tr>`;
+     <td><div class="acts">${whoSel(`tuAssign(${f.code},this.value)`, st.tuWho || '')}<button class="btn ghost sm" onclick="noteForm(${f.code})">📝 Note</button></div></td></tr>`;
   }).join('') || '<tr><td colspan="8" class="empty">—</td></tr>'}
    </tbody></table>
-   ${R.length > ui.tuN ? `<div style="text-align:center;margin:12px"><button class="btn ghost" onclick="ui.tuN+=200;vTuition()">ווייז מער (${(R.length - ui.tuN).toLocaleString()})</button></div>` : ''}`;
+   ${R.length > ui.tuN ? `<div style="text-align:center;margin:12px"><button class="btn ghost" onclick="ui.tuN+=200;vTuition()">Show more (${(R.length - ui.tuN).toLocaleString()})</button></div>` : ''}`;
 }
 
 async function tuAssign(code, v) { await emit('acct', code, { tuWho: v }); toast(v ? '✓ ' + v + ' – שכר לימוד ' + acctName(+code) : 'נישט צוגעטיילט'); }
@@ -151,7 +151,7 @@ function tuFamily(code) {
   const ch = f.ch.slice().sort((x, y) => (y[2] || '').localeCompare(x[2] || '')), pay = f.pay.slice().sort((x, y) => (y[2] || '').localeCompare(x[2] || ''));
   const hist = Object.values(S.hist).filter(h => +h.code === +code).sort((x, y) => (y.at || '').localeCompare(x.at || '')).slice(0, 10);
   modal(`<div class="row"><h2 style="margin:0">🎓 ${tuFamName(code)} <small class="dim">#${code}</small></h2><div class="spacer"></div>
-     <button class="btn ghost sm" onclick="tuStOpen([${+code}],false)">📄 סטעיטמענט</button><button class="btn ghost sm" onclick="tuMailForm(${+code})">✉️ אימעיל</button><button class="btn ghost sm" onclick="taskForm(null,${+code})">+ אפיס ארבעט</button><button class="btn ghost sm" onclick="tuFamXls(${+code})">⬇ Excel</button><button class="btn ghost sm" onclick="openAcct(${+code})">👤 אקאונט</button><button class="btn ghost sm" onclick="closeM()">Back</button></div>
+     <button class="btn ghost sm" onclick="tuStOpen([${+code}],false)">📄 Statement</button><button class="btn ghost sm" onclick="tuMailForm(${+code})">✉️ Email</button><button class="btn ghost sm" onclick="taskForm(null,${+code})">+ New task</button><button class="btn ghost sm" onclick="tuFamXls(${+code})">⬇ Excel</button><button class="btn ghost sm" onclick="openAcct(${+code})">👤 Account</button><button class="btn ghost sm" onclick="closeM()">Back</button></div>
    <p class="sub">${tuStChip(f)}<br>${esc(a.a || '')}<br>${a.ph.slice(0, 3).map(p => callBtn(p[1], code) + ' ' + esc(p[0] + ' ' + p[1])).join(' · ')}</p>
    <div class="tiles" style="margin:8px 0;grid-template-columns:repeat(4,1fr)"><div class="tile t7"><h3>שולדיג יעצט</h3><b>${tuBal(f.due)}</b></div><div class="tile t3"><h3>באלאנס</h3><b>${tuBal(f.bal)}</b></div>
     <div class="tile t6"><h3>געטשארדזשט דאס יאר</h3><b>${money(f.yrBilled)}</b></div><div class="tile t5"><h3>באצאלט דאס יאר</h3><b class="zero">${money(f.yrPaid)}</b></div></div>
@@ -164,7 +164,7 @@ function tuFamily(code) {
       <td class="num">${money(c[3])}</td><td class="num">${money(c[4])}</td><td class="num ${c[5] > 0.5 && c[2] <= todayS() && !c[7] ? 'bal' : ''}">${money(c[5])}</td></tr>`).join('') || '<tr><td colspan="6" class="empty">—</td></tr>'}</tbody></table></div>
    <h3>💵 באצאלונגען</h3><div class="scroll" style="max-height:240px"><table><thead><tr><th>דאטום</th><th class="num">סכום</th><th>ווי</th><th>שעק #</th><th>נאטיץ</th></tr></thead><tbody>
     ${pay.map(p => `<tr style="${p[7] ? 'opacity:.5;text-decoration:line-through' : ''}"><td>${fmtD(p[2])}</td><td class="num">${money(p[3])}</td><td>${esc(p[4])}</td><td class="ltr">${esc(p[5])}</td><td style="font-size:13px">${esc(p[6])}</td></tr>`).join('') || '<tr><td colspan="5" class="empty">—</td></tr>'}</tbody></table></div>
-   <div class="row"><h3>📝 היסטאריע</h3><div class="spacer"></div><button class="btn ghost sm" onclick="noteForm(${+code})">📝 נאטיץ</button></div>
+   <div class="row"><h3>📝 היסטאריע</h3><div class="spacer"></div><button class="btn ghost sm" onclick="noteForm(${+code})">📝 Note</button></div>
    ${hist.map(h => `<div style="font-size:14px;margin:4px 0">💬 ${esc(h.text)} <small class="dim">– ${esc(h.by || '')}, ${fmtD((h.at || '').slice(0, 10))}</small></div>`).join('') || '<p class="dim">—</p>'}`);
 }
 
@@ -222,7 +222,7 @@ function vTuBill() {
     <div class="mgrid" style="--n:${HEB.monthsOf(y.y).length + 1}">${HEB.monthsOf(y.y).map(m => { const v = y.m[m], cur = now && now.y === y.y && now.m === m;
       return `<div class="mbox${v ? ' click' : ' empty0'}${cur ? ' cur' : ''}"${v ? ` onclick="tuMonth(${y.y},'${m}')"` : ''}><span>${HEB.MONTHS[m]}</span><b>${v ? money(v.b) : '—'}</b>${v ? `<small>💵 ${money(v.p)}</small>${v.o > 0.5 ? `<small class="bal">אפן ${money(v.o)}</small>` : ''}` : ''}</div>`; }).join('')}
      <div class="mbox tot click" onclick="tuMonth(${y.y},'')"><span>ס"ה ${HEB.gem(y.y)}</span><b>${money(y.b)}</b><small>💵 ${money(y.p)}</small>${y.o > 0.5 ? `<small class="bal">אפן ${money(y.o)}</small>` : ''}</div></div></div>`).join('') || '<div class="empty">קיין בילס</div>'}
-   ${Y.length > shown.length ? `<div class="more"><button class="btn ghost" onclick="ui.tuBN=(ui.tuBN||4)+6;vTuBill()">ווייז נאך יארן (${Y.length - shown.length})</button></div>` : ''}`;
+   ${Y.length > shown.length ? `<div class="more"><button class="btn ghost" onclick="ui.tuBN=(ui.tuBN||4)+6;vTuBill()">Show more years (${Y.length - shown.length})</button></div>` : ''}`;
 }
 function tuMonthRows(hy, m) {
   const inM = d => { const h = HEB.parts(d); return h && h.y === hy && (!m || h.m === m); }, F = new Map();
@@ -304,7 +304,7 @@ function vTuStmt() {
     <label style="font-size:13px">מינימום חוב $<input type="number" value="${ui.tuSt.min}" style="width:80px" onchange="ui.tuSt.min=+this.value||0;vTuStmt()"></label>
     <label style="font-size:13px;display:flex;gap:6px;align-items:center"><input type="checkbox" ${ui.tuSt.all ? 'checked' : ''} onchange="ui.tuSt.all=this.checked;vTuStmt()"> אויך די וואס זענען אויסגעגליכן</label>
     <div class="spacer"></div><span class="dim">${sel.length} אויסגעקליבן · ${money(sel.reduce((s, r) => s + r.bal, 0))}</span>
-    <button class="btn" onclick="tuStPrint()">🖨️ דרוק (${sel.length})</button><button class="btn gold" onclick="tuStMailAll()">✉️ שיק אימעיל (${withMail.length})</button><button class="btn ghost" onclick="tuStXls()">⬇ Excel</button></div>
+    <button class="btn" onclick="tuStPrint()">🖨️ Print (${sel.length})</button><button class="btn gold" onclick="tuStMailAll()">✉️ Send email (${withMail.length})</button><button class="btn ghost" onclick="tuStXls()">⬇ Excel</button></div>
    <table><thead><tr><th><input type="checkbox" ${sel.length === R.length && R.length ? 'checked' : ''} onchange="tuStAll(this.checked)"></th><th>פאמיליע</th><th>אדרעס</th><th>אימעיל</th><th class="num">חוב ישן</th><th class="num">${esc(HEB.MONTHS[M.m])}</th><th class="num">נשאר חוב</th><th>לעצטע מאל געשיקט</th><th></th></tr></thead><tbody>
    ${R.map(r => `<tr><td><input type="checkbox" ${tuStIsSel(r) ? 'checked' : ''} onchange="ui.tuSt.sel[${r.c}]=this.checked;vTuStmt()"></td>
     <td><a class="name" onclick="tuFamily(${r.c})">${tuFamName(r.c)}</a> <small class="dim">#${r.c}</small></td>
@@ -376,7 +376,7 @@ function tuStPrint() {
   window._tuStMark = sel;
   modal(`<h2>🖨️ ${sel.length} סטעיטמענטס</h2><p>זיי האבן זיך געעפנט אין א נייעם פענצטער. ווען עס האט גוט געדרוקט, דריקט דא כדי זיי זאלן אנגעמערקט ווערן אלס געשיקט.</p>
    <p class="sub">💡 Margins = <b>None</b>, Scale = <b>100%</b>.</p>
-   <div class="row" style="justify-content:flex-end"><button class="btn ghost" onclick="closeM()">נאך נישט</button><button class="btn" onclick="tuStMark()">✓ געדרוקט – מערק אן</button></div>`, 'narrow');
+   <div class="row" style="justify-content:flex-end"><button class="btn ghost" onclick="closeM()">Not yet</button><button class="btn" onclick="tuStMark()">✓ Printed – mark</button></div>`, 'narrow');
 }
 async function tuStMark(list, how) {
   const L = list || window._tuStMark || [], t = todayS();
@@ -420,7 +420,7 @@ function tuMailForm(code) {
    <label class="f" style="grid-column:1/-1">דער בריוו<textarea id="tmb2" dir="auto" rows="7">${esc(tuFill(s.tuMailBody || TU_MAIL_BODY, r))}</textarea></label></div>
    <label style="display:flex;gap:8px;align-items:center;font-size:13px;margin-top:8px"><input type="checkbox" id="tmpdf" checked> 📎 לייג צו דעם סטעיטמענט פון חודש ${esc(r.M.name)} (PDF) – נשאר חוב ${money(r.bal)}</label>
    <div id="tmerr" class="bal" style="font-size:13px;margin-top:6px"></div>
-   <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn ghost" onclick="closeM()">Back</button><button class="btn" id="tmgo" onclick="tuMailGo(${+code})">✉️ שיק</button></div>`, 'narrow');
+   <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn ghost" onclick="closeM()">Back</button><button class="btn" id="tmgo" onclick="tuMailGo(${+code})">✉️ Send</button></div>`, 'narrow');
 }
 async function tuMailOne(r, to, subject, body, cc, withPdf) {
   const pdf = withPdf ? await docPdf(tuStDoc([r], false)) : null;

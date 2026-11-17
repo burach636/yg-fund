@@ -64,13 +64,13 @@ function vJrep() {
   });
   window._jrL = L; ui.jrN = ui.jrN || 200;
   const X = jrIndex(), T = cur ? (cur.udf || '').toUpperCase() : '';
-  $('#main').innerHTML = `<div class="row"><div><h2>📑 רופארטס</h2><p class="sub">ליסטעס פון JLS צו קאלן. קליקט אויף א רופארט, און עס ווייזט ווער עס פאסט.</p></div><div class="spacer"></div><button class="btn gold" onclick="jrForm()">+ נייער רופארט</button></div>
+  $('#main').innerHTML = `<div class="row"><div><h2>📑 רופארטס</h2><p class="sub">ליסטעס פון JLS צו קאלן. קליקט אויף א רופארט, און עס ווייזט ווער עס פאסט.</p></div><div class="spacer"></div><button class="btn gold" onclick="jrForm()">+ New report</button></div>
   <div class="chips" style="margin-bottom:12px">${D.map(d => `<button class="chip ${cur && d.id === cur.id ? 'on' : ''}" onclick="ui.jr='${d.id}';ui.jrN=200;vJrep()">${esc(d.name)}</button>`).join('')}</div>
   ${cur ? `<div class="box" style="margin-bottom:12px"><div class="row" style="margin:0"><div><b style="font-size:17px;color:var(--navy)">${esc(cur.name)}</b><div class="sub" style="margin:2px 0 0">
     ${T ? `<b>${esc(T)}</b> = ${cur.vals && cur.vals.length ? cur.vals.map(esc).join(', ') : 'יעדער ווערט'}` : 'אלע אקאונטס'}
     ${cur.camp ? ` · <b>נישט</b> געגעבן און נישט צוגעזאגט צו: <b>${esc(JD.campaigns[cur.camp] || '')}</b> #${cur.camp}` : ''}${cur.tag ? ` · 🏷️ ${esc(cur.tag)}` : ''}${cur.active ? ' · נאר אקטיווע' : ''}</div></div>
     <div class="spacer"></div><b style="font-size:22px;color:var(--navy)">${L.length.toLocaleString()}</b><span class="sub" style="margin:0">מענטשן${L.length !== all.length ? ' (פון ' + all.length.toLocaleString() + ')' : ''}</span>
-    <button class="btn ghost sm" onclick="jrForm('${cur.id}')">✏️ טויש</button><button class="btn ghost sm" onclick="jrExcel()">⬇ Excel</button><button class="btn gold sm" onclick="colStart('jr:${cur.id}')">▶ Calling mode</button>${fltBar('jr', 'vJrep()')}</div></div>
+    <button class="btn ghost sm" onclick="jrForm('${cur.id}')">✏️ Edit</button><button class="btn ghost sm" onclick="jrExcel()">⬇ Excel</button><button class="btn gold sm" onclick="colStart('jr:${cur.id}')">▶ Calling mode</button>${fltBar('jr', 'vJrep()')}</div></div>
   <div class="row"><input id="jrq" placeholder="🔍 Search: name, phone, address, #code..." value="${esc(ui.jrQ || '')}" style="flex:1;min-width:240px;font-size:15px">
    <div class="chips">${[['', 'אלע'], ['__me', '👤 נאר מיינע'], ['__none', 'נישט צוגעטיילט']].map(([k, l]) => `<button class="chip ${who === k ? 'on' : ''}" onclick="ui.jrWho='${k}';ui.jrN=200;vJrep()">${l}</button>`).join('')}</div>
    <select class="mini" onchange="ui.jrWho=this.value;ui.jrN=200;vJrep()"><option value="">👤 ווער קאלט...</option>${USERS().map(u => `<option value="${esc(u)}" ${who === u ? 'selected' : ''}>👤 ${esc(u)}</option>`).join('')}</select></div>
@@ -83,7 +83,7 @@ function vJrep() {
    <td class="num">${g ? money(g.total) : ''}</td><td class="num" style="font-size:13px">${g && g.last ? fmtD(g.last) : ''}</td>
    <td style="font-size:13px">${whoSel(`assign(${a.c},this.value)`, st.assigned || '')}${lastNoteHTML(a.c, true)}</td>
    <td><button class="btn ghost sm" onclick="noteForm(${a.c})">📝</button></td></tr>`; }).join('') || '<tr><td colspan="10" class="empty">קיינער פאסט נישט</td></tr>'}
-  </tbody></table>${L.length > ui.jrN ? `<div class="more"><button class="btn ghost" onclick="ui.jrN+=300;vJrep()">ווייז נאך (${L.length - ui.jrN})</button></div>` : ''}` : '<div class="empty">נאך קיין רופארטס</div>'}`;
+  </tbody></table>${L.length > ui.jrN ? `<div class="more"><button class="btn ghost" onclick="ui.jrN+=300;vJrep()">Show more (${L.length - ui.jrN})</button></div>` : ''}` : '<div class="empty">נאך קיין רופארטס</div>'}`;
   const qi = $('#jrq');
   if (qi) { if (ui._jrFocus) { qi.focus(); qi.setSelectionRange(qi.value.length, qi.value.length); ui._jrFocus = false; } let tm; qi.oninput = () => { clearTimeout(tm); tm = setTimeout(() => { ui.jrQ = qi.value; ui.jrN = 200; ui._jrFocus = true; vJrep(); }, 300); }; }
 }
@@ -99,7 +99,7 @@ function jrForm(id) {
    <div style="grid-column:1/-1"><div class="sub" style="margin:4px 0">ווערטן (ליידיג = יעדער ווערט):</div><div id="jv" class="chips"></div></div>
    <label class="f">🏷️ נאר מיט דעם פלאג (אפציאנאל)<select id="jt"><option value="">—</option>${tags.map(t => `<option ${t === d.tag ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>
    <label style="display:flex;gap:8px;align-items:center;font-size:14px"><input type="checkbox" id="ja" ${d.active ? 'checked' : ''}> נאר אקטיווע אקאונטס</label></div>
-   <div class="row" style="justify-content:flex-end;margin-top:14px">${id ? `<button class="btn red" onclick="jrDel('${id}')">אויסמעקן</button><div class="spacer"></div>` : ''}<button class="btn ghost" onclick="closeM()">Back</button><button class="btn" onclick="jrSave('${id || ''}')">Save</button></div>`, 'narrow');
+   <div class="row" style="justify-content:flex-end;margin-top:14px">${id ? `<button class="btn red" onclick="jrDel('${id}')">Delete</button><div class="spacer"></div>` : ''}<button class="btn ghost" onclick="closeM()">Back</button><button class="btn" onclick="jrSave('${id || ''}')">Save</button></div>`, 'narrow');
   window._jrSel = new Set((d.vals || []).map(String));
   jrVals();
 }
@@ -141,7 +141,7 @@ function tagEditor(code) {
   return `<div id="tged"><div class="chips" style="margin-bottom:8px">${PRESET_TAGS.map(t => `<button type="button" class="chip ${T.includes(t) ? 'on' : ''}" style="font-size:12px;padding:3px 10px" onclick="tagToggle(${code},'${jsq(t)}')">${T.includes(t) ? '✓ ' : ''}${esc(t)}</button>`).join('')}</div>
    <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">${T.filter(t => !PRESET_TAGS.includes(t)).map(t => tagChip(t, ` <a style="cursor:pointer" title="אראפנעמען" onclick="tagDel(${code},'${esc(t).replace(/'/g, '&#39;')}')">✕</a>`)).join('')}
    <input id="tgin" list="tglist" placeholder="+ אן אנדער פלאג..." style="flex:1;min-width:170px" onkeydown="if(event.key==='Enter'){event.preventDefault();tagAdd(${code})}"><datalist id="tglist">${allTags().map(t => `<option value="${esc(t)}">`).join('')}</datalist>
-   <button class="btn ghost sm" onclick="tagAdd(${code})">צולייגן</button></div></div>`;
+   <button class="btn ghost sm" onclick="tagAdd(${code})">Add</button></div></div>`;
 }
 async function tagToggle(code, t) {
   const T = tagsOf(code);

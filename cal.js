@@ -118,7 +118,7 @@ function calOpen(w, value, set, clearable) {
      <div class="cpg">${CAL_WD.map(([h, e]) => `<div class="cpw">${h}<small>${e}</small></div>`).join('')}${'<div></div>'.repeat(first)}${D.map(d => { const p = HEB.parts(d), [y, m, dd] = d.split('-').map(Number);
       const big = st.mode === 'heb' ? HEB.gem(p.d) : dd, small = st.mode === 'heb' ? (dd === 1 || d === a ? CAL_EN[m - 1].slice(0, 3) + ' ' : '') + dd : (p.d === 1 || d === a ? HEB.MONTHS[p.m] + ' ' : '') + HEB.gem(p.d);
       return `<button type="button" class="cpd${d === value ? ' sel' : ''}${d === t ? ' today' : ''}${new Date(y, m - 1, dd).getDay() === 6 ? ' sh' : ''}" data-d="${d}"><b>${big}</b><small>${small}</small></button>`; }).join('')}</div>
-     <div class="cpf"><button type="button" class="btn ghost sm" data-d="${t}">היינט</button>${clearable ? '<button type="button" class="btn ghost sm" data-d="">✕ ליידיג</button>' : ''}<div class="spacer"></div><button type="button" class="btn ghost sm" data-x="1">Close</button></div>`;
+     <div class="cpf"><button type="button" class="btn ghost sm" data-d="${t}">Today</button>${clearable ? '<button type="button" class="btn ghost sm" data-d="">✕ Clear</button>' : ''}<div class="spacer"></div><button type="button" class="btn ghost sm" data-x="1">Close</button></div>`;
     pop.querySelectorAll('.cpn').forEach(b => b.onclick = () => move(+b.dataset.k));
     pop.querySelectorAll('[data-m]').forEach(b => b.onclick = () => {
       const ref = D[Math.min(14, D.length - 1)];

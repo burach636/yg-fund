@@ -81,7 +81,7 @@ async function pullLog() {
   }
   return changed;
 }
-// Download a JLS data file always fresh (v1.36.1): the files used to be saved with Supabase's default 1-hour cache, so
+// Download a JLS data file always fresh (v1.37.1): the files used to be saved with Supabase's default 1-hour cache, so
 // another user's browser could show the old numbers for up to an hour after an import.
 async function jlsFile(path) {
   try {
@@ -110,7 +110,7 @@ function hebLast(a) {
   const lh = a.lh || (a.h ? a.h.trim().split(/\s+/).pop() : '');
   return lh ? '0' + lh + ' ' + (a.h || '') : '1' + (a.ln || a.n || '').toLowerCase() + ' ' + (a.n || '').toLowerCase();
 }
-// 🔍 Search that understands both keyboards (v1.36, owner): text typed with the keyboard on Hebrew/Yiddish while
+// 🔍 Search that understands both keyboards (v1.37, owner): text typed with the keyboard on Hebrew/Yiddish while
 // meaning English letters ("יקךךם" = "hello"), or English letters while meaning Yiddish ("nav" = "מאה"), is also tried through the other layout (standard Israeli layout). Niqqud and Yiddish ligatures
 // (ײ װ ױ) are ignored. qVars(raw) = the normalised text + its swapped twin; every search box tries both.
 const KB_PAIRS = "q/w'eקrרtאyטuוiןoםpפaשsדdגfכgעhיjחkלlךzזxסcבvהbנmצ;ף,ת.ץnמ";
@@ -206,9 +206,9 @@ function vSetupHelp(err) {
       : `<p>אלעס איז אויפגעשטעלט, נאר אייער אימעיל <b dir="ltr">${esc(myEmail)}</b> איז נאך נישט אויף דער ליסטע פון ערלויבטע באניצער.</p>
    <p>גייט אין Supabase אויף <b>SQL Editor</b> > <b>New query</b>, פעיסט אריין די 3 שורות, און דריקט <b>Run</b>:</p>
    <pre id="sqlbox" style="direction:ltr;text-align:left;background:#faf7f0;border:1px solid var(--line);border-radius:8px;padding:10px;white-space:pre-wrap;font-size:13px">${esc(sql)}</pre>
-   <button class="btn ghost sm" onclick="navigator.clipboard.writeText(document.getElementById('sqlbox').textContent).then(()=>toast('✓ קאפירט'))">📋 קאפיר</button>`}
+   <button class="btn ghost sm" onclick="navigator.clipboard.writeText(document.getElementById('sqlbox').textContent).then(()=>toast('✓ Copied'))">📋 Copy</button>`}
    ${msg ? `<p class="sub" style="direction:ltr;text-align:left;margin-top:10px">${esc(msg)}</p>` : ''}
-   <div class="row" style="margin-top:14px"><button class="btn" onclick="location.reload()">⟳ פרוביר נאכאמאל</button><button class="btn ghost" onclick="logout()">ארויסגיין</button></div></div>`);
+   <div class="row" style="margin-top:14px"><button class="btn" onclick="location.reload()">⟳ Try again</button><button class="btn ghost" onclick="logout()">Log out</button></div></div>`);
 }
 let started = false;
 async function start() {
@@ -291,7 +291,7 @@ function vLogin(mode) {
    <label class="f" style="margin:10px 0">Email<input id="le" type="email" autocomplete="username" style="direction:ltr"></label>
    <label class="f" style="margin:10px 0">Password<input id="lp" type="password" autocomplete="${signup ? 'new-password' : 'current-password'}"></label>
    <div id="lerr" class="bal" style="min-height:20px;font-size:13px"></div>
-   <button class="btn" style="width:100%;padding:10px;font-size:15px" id="lbtn">${signup ? 'מאך דעם אקאונט' : 'Log in'}</button>
+   <button class="btn" style="width:100%;padding:10px;font-size:15px" id="lbtn">${signup ? 'Create account' : 'Log in'}</button>
    <div class="row" style="justify-content:space-between;margin:12px 0 0">
     ${signup ? '<a class="name" onclick="vLogin()">איך האב שוין א פאסווארט</a>' : '<a class="name" onclick="vLogin(\'signup\')">ערשטע מאל דא?</a><a class="name" onclick="forgotPw()">פארגעסן דעם פאסווארט?</a>'}
    </div></div>`);
@@ -448,7 +448,7 @@ function importDialog() {
   <p class="sub">לייגט אריין א פרישע <b>Tuition.mdb</b> (אדער א ZIP מיט איר). עס ווערט דערהיינטיגט ביי <b>אלע באניצער</b>. אייערע To-Do'ס, נאטיצן און רימיינדערס ווערן <b>נישט</b> אויסגעמעקט.</p>
   <p class="sub">💡 די MDB פייל אליין ווערט נישט ארויפגעלייגט. די פראגראם נעמט פון איר נאר וואס מ'דארף (נעמען, אדרעסן, טעלעפאנען, YG Fund באצאלונגען און פלעדזשעס). פון די אנגעשטעלטע קרעדיט קארדס נאר ווער, וויפיל און ווען – קיינמאל נישט קיין קארטל נומער אדער באנק אינפארמאציע.</p>
   <label class="drop" id="dz">⬇️ לאזט די פייל אראפ דא, אדער קליקט צו אויסוועלן<input type="file" accept=".mdb,.zip" id="fpick" hidden></label>
-  <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn ghost" onclick="closeM()">צומאכן</button></div>`, 'narrow');
+  <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn ghost" onclick="closeM()">Close</button></div>`, 'narrow');
   $('#fpick').onchange = e => { const f = e.target.files[0]; if (f) { closeM(); importFile(f); } };
 }
 
@@ -467,7 +467,7 @@ function wire() {
 function setArea(a, keepView) {
   AREA = a; try { sessionStorage.setItem('yg_area', a); } catch (e) { }
   document.body.classList.toggle('area-tu', a === 'tu');
-  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.36</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.36</small>';
+  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.37</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.37</small>';
   $('#btnArea').style.display = canFund() && canView('tuition') ? '' : 'none';
   $('#btnArea').textContent = a === 'tu' ? '⇄ צו פאנדרעיזינג' : '⇄ צו שכר לימוד';
   setupUser();
@@ -559,9 +559,9 @@ function vToday() {
   </div>
   <div class="row"><div><h2>היינט צו טון</h2><p class="sub">ווער מ'דארף בעטן (לויט ווען לעצטנס געגעבן/געבעטן) + אייערע ארבעטן. דרינגענד און VIP ערשט, דערנאך די גרעסטע נדבנים.</p></div><div class="spacer"></div>
     <div class="chips">${[['mine', 'מיינע (' + mine + ')'], ['none', 'נישט צוגעטיילט (' + un + ')'], ['all', 'אלע (' + all + ')']].map(([k, l]) => `<button class="chip ${ui.todayF === k ? 'on' : ''}" onclick="ui.todayF='${k}';ui.todayN=50;render()">${l}</button>`).join('')}</div>
-    <button class="btn gold" onclick="taskForm()">+ נייע ארבעט</button></div>
-  ${items.length ? items.slice(0, ui.todayN).map(taskRow).join('') + (items.length > ui.todayN ? `<div class="more"><button class="btn ghost" onclick="ui.todayN+=50;render()">ווייז נאך (${items.length - ui.todayN} פארבליבן)</button></div>` : '') : '<div class="empty">🎉 גארנישט פאר היינט!</div>'}
-  ${upcoming.length ? `<h3>קומענדיגע ארבעטן (2 וואכן)</h3>${upcoming.map(([id, x]) => `<div class="task"><span>📅</span><div><div class="t">${esc(x.title)}</div><div class="m"><span>📅 ${fmtDual(x.due)}</span><span>👤 ${esc(taskWho(x))}</span>${x.code ? `<a class="name" onclick="openAcct(${x.code})">${esc(acctName(+x.code))}</a>` : ''}</div></div><div class="acts"><button class="btn ghost sm" onclick="taskForm('${id}')">ענדער</button></div></div>`).join('')}` : ''}`;
+    <button class="btn gold" onclick="taskForm()">+ New task</button></div>
+  ${items.length ? items.slice(0, ui.todayN).map(taskRow).join('') + (items.length > ui.todayN ? `<div class="more"><button class="btn ghost" onclick="ui.todayN+=50;render()">Show more (${items.length - ui.todayN} left)</button></div>` : '') : '<div class="empty">🎉 גארנישט פאר היינט!</div>'}
+  ${upcoming.length ? `<h3>קומענדיגע ארבעטן (2 וואכן)</h3>${upcoming.map(([id, x]) => `<div class="task"><span>📅</span><div><div class="t">${esc(x.title)}</div><div class="m"><span>📅 ${fmtDual(x.due)}</span><span>👤 ${esc(taskWho(x))}</span>${x.code ? `<a class="name" onclick="openAcct(${x.code})">${esc(acctName(+x.code))}</a>` : ''}</div></div><div class="acts"><button class="btn ghost sm" onclick="taskForm('${id}')">Edit</button></div></div>`).join('')}` : ''}`;
 }
 function taskRow(x) {
   const late = x.due < todayS() ? daysBetween(x.due, todayS()) : 0;
@@ -571,8 +571,8 @@ function taskRow(x) {
   return `<div class="task"><div class="chk" title="געטון" onclick="${x.kind === 'ask' ? `askForm(${x.code})` : `taskDone('${x.id}')`}"></div>
   <div><div class="t">${title} ${x.vip ? '<span class="tag hi">⭐ VIP</span>' : ''} ${x.hi ? '<span class="tag hi">דרינגענד</span>' : ''} ${late ? `<span class="tag late">שפעט ${late > 365 ? Math.floor(late / 365) + ' יאר' : late + ' טעג'}</span>` : ''}</div>
   <div class="m">${a && a.ph[0] ? `<span>${callBtn(a.ph[0][1], x.code)} <span class="num">${esc(a.ph[0][1])}</span></span>` : ''}${g ? `<span>לעצטע מתנה: ${money(g.lastAmt)} · ${fmtD(g.last)}</span><span>סך הכל: ${money(g.total)}</span>` : ''}${p && p.open > 0.009 ? `<span class="bal">באלאנס ${money(p.open)}</span>` : ''}${x.kind === 'ask' ? `<span>${FREQ[x.freq] ? FREQ[x.freq][0] : ''}</span>` : ''}${x.task && x.task.note ? `<span>📝 ${esc(x.task.note)}</span>` : ''}${whoSel(x.kind === 'ask' ? `assign(${x.code},this.value)` : `assignTask('${x.id}',this.value)`, x.who)}${lastNoteHTML(x.code)}</div></div>
-  <div class="acts">${x.code ? `<button class="btn ghost sm" onclick="noteForm(${x.code})">📝 נאטיץ</button>` : ''}${x.kind === 'ask' ? `<button class="btn sm" onclick="askForm(${x.code})">✓ געבעטן</button>` : `${x.task.rc ? `<button class="btn gold sm" onclick="rcOpenTask('${x.id}')">🖨️ רעסיטס</button>` : ''}${x.task.fm ? `<button class="btn gold sm" onclick="frMailTask('${x.id}')">✉️ שיק צום אפיס</button>` : ''}<button class="btn sm" onclick="taskDone('${x.id}')">✓ געטון</button><button class="btn ghost sm" onclick="taskForm('${x.id}')">ענדער</button>`}
-  ${x.kind === 'ask' ? `<button class="btn ghost sm" title="איינמאליגע נדבה – נישט בעטן ווייטער" onclick="markOnce(${x.code})">🚫 איינמאליג</button>` : ''}<button class="btn ghost sm" onclick="snooze('${x.kind}','${x.kind === 'ask' ? x.code : x.id}',7)">אין א וואך</button><button class="btn ghost sm" onclick="snooze('${x.kind}','${x.kind === 'ask' ? x.code : x.id}',30)">אין א חודש</button></div></div>`;
+  <div class="acts">${x.code ? `<button class="btn ghost sm" onclick="noteForm(${x.code})">📝 Note</button>` : ''}${x.kind === 'ask' ? `<button class="btn sm" onclick="askForm(${x.code})">✓ Asked</button>` : `${x.task.rc ? `<button class="btn gold sm" onclick="rcOpenTask('${x.id}')">🖨️ Receipts</button>` : ''}${x.task.fm ? `<button class="btn gold sm" onclick="frMailTask('${x.id}')">✉️ Send to office</button>` : ''}<button class="btn sm" onclick="taskDone('${x.id}')">✓ Done</button><button class="btn ghost sm" onclick="taskForm('${x.id}')">Edit</button>`}
+  ${x.kind === 'ask' ? `<button class="btn ghost sm" title="איינמאליגע נדבה – נישט בעטן ווייטער" onclick="markOnce(${x.code})">🚫 One-time</button>` : ''}<button class="btn ghost sm" onclick="snooze('${x.kind}','${x.kind === 'ask' ? x.code : x.id}',7)">In a week</button><button class="btn ghost sm" onclick="snooze('${x.kind}','${x.kind === 'ask' ? x.code : x.id}',30)">In a month</button></div></div>`;
 }
 function go(v) { if (!canView(v)) { toast('🔒 No access'); return; } view = v; document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x.dataset.v === v)); render(); }
 async function snooze(kind, id, n) {
@@ -628,7 +628,7 @@ function taskForm(id, code) {
   <label class="f">וויכטיגקייט<select id="tp"><option value="norm">נארמאל</option><option value="hi" ${x.pri === 'hi' ? 'selected' : ''}>דרינגענד</option></select></label>
   <label class="f">איבערחזרן<select id="tr"><option value="">נישט</option>${['m1', 'm3', 'm6', 'm12', 'yt'].map(k => `<option value="${k}" ${x.repeat === k ? 'selected' : ''}>${FREQ[k][0]}</option>`).join('')}</select></label>
   <label class="f" style="grid-column:1/-1">נאטיץ<input id="tn" value="${esc(x.note || '')}"></label></div>
-  <div class="row" style="justify-content:flex-end;margin-top:14px">${id ? `<button class="btn red" onclick="delTask('${id}')">אויסמעקן</button><div class="spacer"></div>` : ''}<button class="btn ghost" onclick="closeM()">Back</button><button class="btn" onclick="saveTask('${id || ''}')">Save</button></div>`, 'narrow');
+  <div class="row" style="justify-content:flex-end;margin-top:14px">${id ? `<button class="btn red" onclick="delTask('${id}')">Delete</button><div class="spacer"></div>` : ''}<button class="btn ghost" onclick="closeM()">Back</button><button class="btn" onclick="saveTask('${id || ''}')">Save</button></div>`, 'narrow');
   setTimeout(() => $('#tt').focus(), 50);
 }
 async function saveTask(id) {
@@ -668,7 +668,7 @@ function vPledges() {
    <td class="num bal">${money(r.g.dueNow)}</td><td class="num">${money(r.g.open)}</td>
    <td class="num" style="font-size:13px">${r.y && r.y.last ? money(r.y.lastAmt) + '<br>' + fmtD(r.y.last) : '—'}</td>
    <td style="font-size:13px">${r.g.sol ? esc(r.g.sol) + '<br>' : ''}${whoSel(`assign(${r.c},this.value)`, r.st.assigned || '')}${lastNoteHTML(r.c, true)}</td>
-   <td><div class="acts" style="justify-content:flex-start">${r.called ? `<button class="btn ghost sm" onclick="setCalled(${r.c},false)">Undo</button>` : `<button class="btn sm" onclick="callForm(${r.c})">✓ געקאלט</button>`}<button class="btn ghost sm" onclick="noteForm(${r.c})">📝</button></div></td></tr>`).join('') || '<tr><td colspan="8" class="empty">קיין אפענע פלעדזשעס</td></tr>'}
+   <td><div class="acts" style="justify-content:flex-start">${r.called ? `<button class="btn ghost sm" onclick="setCalled(${r.c},false)">Undo</button>` : `<button class="btn sm" onclick="callForm(${r.c})">✓ Called</button>`}<button class="btn ghost sm" onclick="noteForm(${r.c})">📝</button></div></td></tr>`).join('') || '<tr><td colspan="8" class="empty">קיין אפענע פלעדזשעס</td></tr>'}
   </tbody></table>`;
 }
 function callForm(c) {
@@ -727,7 +727,7 @@ function vAccounts() {
    <td class="num">${g ? money(g.total) : ''}</td><td class="num" style="font-size:13px">${g && g.last ? fmtD(g.last) : ''}</td>
    <td class="num ${p && p.open > 0.009 ? 'bal' : ''}">${p && p.open > 0.009 ? money(p.open) : ''}</td>
    <td style="font-size:13px">${k.next ? (k.next <= todayS() ? '<span class="tag late">היינט</span>' : fmtDual(k.next)) : ''}</td><td style="font-size:13px">${esc(shulName(st.shul))}</td></tr>`; }).join('') || '<tr><td colspan="10" class="empty">נישט געפונען</td></tr>'}
-  </tbody></table>${L.length > ui.accN ? `<div class="more"><button class="btn ghost" onclick="ui.accN+=200;vAccounts()">ווייז נאך</button></div>` : ''}`;
+  </tbody></table>${L.length > ui.accN ? `<div class="more"><button class="btn ghost" onclick="ui.accN+=200;vAccounts()">Show more</button></div>` : ''}`;
   const qi = $('#q'); qi.focus(); qi.setSelectionRange(qi.value.length, qi.value.length);
   let tm; qi.oninput = () => { clearTimeout(tm); tm = setTimeout(() => { ui.accQ = qi.value; ui.accN = 100; vAccounts(); }, 250); };
 }
@@ -756,10 +756,10 @@ function openAcct(code) {
   const tabBody = {
     pay: g ? `<table><thead><tr><th>טאג</th><th>סכום</th><th>קאמפעין</th><th>סארט</th><th>טשעק</th><th>סאליסיטאר</th><th>רעסיט</th></tr></thead><tbody>${g.list.map(x => `<tr><td class="num">${fmtD(x[2])}</td><td class="num">${money(x[3])}${x[9] ? ' <span class="tag late">ריפאנד</span>' : ''}</td><td>${esc(camp(x[6]))}</td><td>${esc(x[4])}</td><td class="num">${esc(x[5])}</td><td style="font-size:12px">${esc(x[7])}</td><td>${x[9] ? '' : `<button class="btn ghost sm" title="פרינט א רעסיט פאר די באצאלונג" onclick="rcPrintPay('${esc(String(x[0]))}')">🖨️</button>${rcPrinted(x) ? ` <small class="dim">✓ ${fmtD(rcPrinted(x))}</small>` : ''}`}</td></tr>`).join('')}</tbody></table>` : '<div class="empty">קיין באצאלונגען צו ' + esc(JD.companyName) + '</div>',
     pl: p ? `<table><thead><tr><th>פעליג</th><th>סכום</th><th>באצאלט</th><th>באלאנס</th><th>קאמפעין</th><th>באשרייבונג</th></tr></thead><tbody>${p.list.map(x => `<tr style="${x[9] ? 'opacity:.5' : ''}"><td class="num">${fmtD(x[2])}</td><td class="num">${money(x[3])}</td><td class="num">${money(x[4])}</td><td class="num ${x[5] > 0.009 ? 'bal' : 'zero'}">${money(x[5])}</td><td>${esc(camp(x[6]))}</td><td style="font-size:12px">${esc(x[7])}${x[9] ? ' (Hold)' : ''}</td></tr>`).join('')}</tbody></table>` : '<div class="empty">קיין פלעדזשעס</div>',
-    hist: `<div class="row"><input id="hn" placeholder="שרייבט א נאטיץ..." style="flex:1"><button class="btn" onclick="addNote(${code})">צולייגן</button></div><div class="hist">${hist.map(h => `<div><small>${fmtD(h.d)} · ${esc(h.by || '')} ${h.src === 'JLS' ? '<span class="tag gray">JLS</span>' : ''}</small><br>${esc(h.t)}</div>`).join('') || '<div class="sub">נאך קיין היסטאריע</div>'}</div>`,
-    tasks: `<div class="row"><button class="btn gold sm" onclick="taskForm(null,${code})">+ נייע ארבעט</button></div>${tasks.map(([id, x]) => `<div class="ph"><span>${x.done ? '✅' : '⬜'} ${esc(x.title)} <small class="heb">${fmtD(x.due)} · ${esc(x.who || '')}</small></span><button class="btn ghost sm" onclick="taskForm('${id}')">ענדער</button></div>`).join('') || '<div class="sub">קיין ארבעטן</div>'}`
+    hist: `<div class="row"><input id="hn" placeholder="שרייבט א נאטיץ..." style="flex:1"><button class="btn" onclick="addNote(${code})">Add</button></div><div class="hist">${hist.map(h => `<div><small>${fmtD(h.d)} · ${esc(h.by || '')} ${h.src === 'JLS' ? '<span class="tag gray">JLS</span>' : ''}</small><br>${esc(h.t)}</div>`).join('') || '<div class="sub">נאך קיין היסטאריע</div>'}</div>`,
+    tasks: `<div class="row"><button class="btn gold sm" onclick="taskForm(null,${code})">+ New task</button></div>${tasks.map(([id, x]) => `<div class="ph"><span>${x.done ? '✅' : '⬜'} ${esc(x.title)} <small class="heb">${fmtD(x.due)} · ${esc(x.who || '')}</small></span><button class="btn ghost sm" onclick="taskForm('${id}')">Edit</button></div>`).join('') || '<div class="sub">קיין ארבעטן</div>'}`
   };
-  modal(`<div class="row" style="margin:0"><div><h2 style="margin:0">${esc(a.h || a.n)} ${st.vip ? '⭐' : ''}</h2><div class="heb" style="margin:0;font-size:16px">${esc(a.h ? a.n : '')}</div></div><div class="spacer"></div><span class="num" style="color:var(--muted)">#${code}</span><button class="btn ghost sm" onclick="acctMail(${code})">✉️ אימעיל</button><button class="btn ghost sm" onclick="xlsAcct(${code})">⬇ Excel</button><button class="btn ghost sm" onclick="closeM()">✕</button></div>
+  modal(`<div class="row" style="margin:0"><div><h2 style="margin:0">${esc(a.h || a.n)} ${st.vip ? '⭐' : ''}</h2><div class="heb" style="margin:0;font-size:16px">${esc(a.h ? a.n : '')}</div></div><div class="spacer"></div><span class="num" style="color:var(--muted)">#${code}</span><button class="btn ghost sm" onclick="acctMail(${code})">✉️ Email</button><button class="btn ghost sm" onclick="xlsAcct(${code})">⬇ Excel</button><button class="btn ghost sm" onclick="closeM()">✕</button></div>
   <div class="stats" style="margin:14px 0">
    <div class="stat"><b>${g ? money(g.total) : '$0'}</b><span>${esc(JD.companyName)} סך הכל (${g ? g.count : 0})</span></div>
    <div class="stat"><b>${g && g.last ? money(g.lastAmt) : '—'}</b><span>לעצטע: ${g ? fmtD(g.last) : '—'}</span></div>
@@ -781,7 +781,7 @@ function openAcct(code) {
    <label class="f">🕍 געטראפן אין שול${shulSel('ash', st.shul || '')}</label>
    <label class="f">VIP<select id="av"><option value="">ניין</option><option value="1" ${st.vip ? 'selected' : ''}>⭐ יא</option></select></label>
    <label class="f" style="grid-column:1/-1">נאטיצן<textarea id="ao" rows="2">${esc(st.notes || '')}</textarea></label></div>
-   <div class="row" style="margin:8px 0 0;justify-content:flex-end"><button class="btn gold sm" onclick="askForm(${code})">✓ געבעטן</button><button class="btn sm" onclick="saveAcct(${code})">Save</button></div></div></div>
+   <div class="row" style="margin:8px 0 0;justify-content:flex-end"><button class="btn gold sm" onclick="askForm(${code})">✓ Asked</button><button class="btn sm" onclick="saveAcct(${code})">Save</button></div></div></div>
   <div class="tabs2">${[['pay', 'באצאלונגען'], ['pl', 'פלעדזשעס'], ['hist', 'היסטאריע (' + hist.length + ')'], ['tasks', 'ארבעטן (' + tasks.filter(t => !t[1].done).length + ')']].map(([kk, l]) => `<button class="${acctTab === kk ? 'on' : ''}" onclick="acctTab='${kk}';openAcct(${code})">${l}</button>`).join('')}</div>
   <div class="scroll">${tabBody[acctTab]}</div>`);
 }
@@ -796,7 +796,7 @@ async function addNote(code) {
 
 // ---------- REPORTS ----------
 // Payments by Jewish year and month (refunds left out)
-// Years are shown only up to the current Jewish year (owner, v1.36): no next year from post-dated payments,
+// Years are shown only up to the current Jewish year (owner, v1.37): no next year from post-dated payments,
 // scheduled credit-card charges or bills already entered for later.
 const curHY = () => (HEB.parts(todayS()) || {}).y || 9999;
 function hebYears() {
@@ -877,7 +877,7 @@ function vReports() {
   ${shown.map(y => { const e = ex(y); return `<div class="yrcard"><div class="row" style="margin:0 0 8px"><b class="yr">${HEB.gem(y.y)}</b><div class="bar" style="flex:1;height:12px;margin:0;display:flex"><i style="width:${y.t / max * 100}%"></i><i class="expbar" style="width:${e.t / max * 100}%"></i></div><b class="num">${money(y.t)}</b>${e.t ? `<b class="num" style="color:var(--green)">+${money(e.t)}</b>` : ''}<span class="sub" style="margin:0">${y.n.toLocaleString()} נדבות</span></div>
    <div class="mgrid" style="--n:${HEB.monthsOf(y.y).length + 1}">${HEB.monthsOf(y.y).map(m => { const v = y.m[m], w = e.m[m]; const cur = now && now.y === y.y && now.m === m; return `<div class="mbox${v || w ? ' click' : ' empty0'}${!v && w ? ' exp' : ''}${cur ? ' cur' : ''}"${v || w ? ` onclick="monthDonors(${y.y},'${m}')" title="ווייז די נדבנים"` : ''}><span>${HEB.MONTHS[m]}</span><b>${v ? money(v.t) : w ? money(w.t) : '—'}</b><small>${v ? v.n + ' נדבות' : w ? w.n + ' אנגעשטעלט' : ''}</small>${v && w ? `<small class="expl">+${money(w.t)} אנגעשטעלט</small>` : ''}</div>`; }).join('')}
     <div class="mbox tot click" onclick="monthDonors(${y.y},'')" title="ווייז די נדבנים פון גאנצן יאר"><span>ס"ה ${HEB.gem(y.y)}</span><b>${money(y.t + e.t)}</b><small>${e.t ? money(y.t) + ' + ' + money(e.t) + ' אנגעשטעלט' : y.n + ' נדבות'}</small></div></div></div>`; }).join('') || '<div class="empty">קיין באצאלונגען</div>'}
-  ${HY.length > shown.length ? `<div class="more"><button class="btn ghost" onclick="ui.repN=(ui.repN||6)+6;vReports()">ווייז נאך יארן (${HY.length - shown.length})</button></div>` : ''}
+  ${HY.length > shown.length ? `<div class="more"><button class="btn ghost" onclick="ui.repN=(ui.repN||6)+6;vReports()">Show more years (${HY.length - shown.length})</button></div>` : ''}
   <div class="cols"><div>
   <h3>קאמפעינס (לעצטע)</h3><table><thead><tr><th>קאמפעין</th><th>באצאלונגען</th><th>סך הכל</th></tr></thead><tbody>${camps.map(([k, v]) => `<tr><td>${esc(+k ? (JD.campaigns[k] || '#' + k) : 'אן קאמפעין')}</td><td class="num">${v.n}</td><td class="num">${money(v.t)}</td></tr>`).join('')}</tbody></table>
   <h3>האבן אויפגעהערט געבן (1–3 יאר)</h3><table><thead><tr><th>נאמען</th><th>סך הכל</th><th>לעצטע</th></tr></thead><tbody>${lapsed.map(([c, g]) => `<tr><td><a class="name" onclick="openAcct(${c})">${esc(acctName(c))}</a></td><td class="num">${money(g.total)}</td><td class="num">${fmtD(g.last)}</td></tr>`).join('') || '<tr><td colspan="3" class="sub">קיינער</td></tr>'}</tbody></table></div>
@@ -1062,7 +1062,7 @@ async function jlsSchema(file) {
     const hot = t => /cc|credit|card|recur|sched|auto|charge|plan|install/i.test(t.name + ' ' + t.cols.join(' '));
     const txt = L.map(t => (hot(t) ? '* ' : '') + t.name + ' (' + t.rows + '): ' + t.cols.join(', ')).join('\n');
     window._schemaTxt = txt;
-    modal(`<div class="row"><h2 style="margin:0">🔍 JLS טאבעלעס (${L.length})</h2><div class="spacer"></div><button class="btn sm" onclick="navigator.clipboard.writeText(window._schemaTxt).then(()=>toast('✓ קאפירט'))">📋 קאפיר אלעס</button><button class="btn ghost sm" onclick="closeM()">✕</button></div>
+    modal(`<div class="row"><h2 style="margin:0">🔍 JLS טאבעלעס (${L.length})</h2><div class="spacer"></div><button class="btn sm" onclick="navigator.clipboard.writeText(window._schemaTxt).then(()=>toast('✓ Copied'))">📋 Copy all</button><button class="btn ghost sm" onclick="closeM()">✕</button></div>
      <p class="sub">נאר נעמען פון טאבעלעס און קאלומס, און וויפיל שורות. ★ = מעגליך שייך צו קרעדיט קארדס / פלאנען.</p>
      <div class="scroll" style="max-height:65vh"><table><thead><tr><th>טאבעלע</th><th>שורות</th><th>קאלומס</th></tr></thead><tbody>${L.map(t => `<tr style="${hot(t) ? 'background:#fff8e6' : ''}"><td class="ltr"><b>${hot(t) ? '★ ' : ''}${esc(t.name)}</b></td><td class="num">${t.rows}</td><td class="ltr" style="font-size:12px;white-space:normal">${esc(t.cols.join(', '))}</td></tr>`).join('')}</tbody></table></div>`);
   } catch (e) { busy(false); toast('⚠️ ' + errMsg(e)); }
@@ -1080,7 +1080,7 @@ function closeM() { $('#ov').classList.remove('on'); }
 
 const setHH = () => document.documentElement.style.setProperty('--hh', document.querySelector('header').offsetHeight + 'px');
 window.addEventListener('resize', setHH); window.addEventListener('load', setHH); setHH();
-// ---------- 🔄 new version on the website: update by itself (v1.36) ----------
+// ---------- 🔄 new version on the website: update by itself (v1.37) ----------
 // Every minute the page asks the server for index.html and compares <meta name="app-version">. When it changed:
 // if nobody is in the middle of something (no window open, not typing, no mouse/keys for 20 s) the page reloads by
 // itself and comes back to the same page; otherwise a small "🔄 נייע ווערסיע" button waits for a click.
@@ -1108,7 +1108,7 @@ function appReload() { try { sessionStorage.setItem('yg_view', view); } catch (e
 const NEW_HOME = 'https://yeshivasmaharitdsatmar.github.io/';
 if (/netlify\.app$/i.test(location.hostname)) document.addEventListener('DOMContentLoaded', () => {
   const d = document.createElement('div'); d.id = 'moved';
-  d.innerHTML = `📢 די פראגראם איז אריבער צו א נייע אדרעס: <b dir="ltr">${NEW_HOME}</b> <a class="btn gold sm" href="${NEW_HOME}">➜ גיי צו דער נייער אדרעס</a>`;
+  d.innerHTML = `📢 די פראגראם איז אריבער צו א נייע אדרעס: <b dir="ltr">${NEW_HOME}</b> <a class="btn gold sm" href="${NEW_HOME}">➜ Go to the new address</a>`;
   document.body.prepend(d);
 });
 // Install as an app (pin to the taskbar): service worker + the browser's install prompt

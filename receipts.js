@@ -70,16 +70,16 @@ function vRcpt() {
    <button class="btn ghost" onclick="rcSettings()">⚙️ Settings</button><button class="btn ghost" onclick="rcExcel()">⬇ Excel</button></div>
   <div class="box" style="margin-bottom:14px"><div class="row" style="margin:0;align-items:flex-end">
    <label class="f">פון${dateField('rcf', r.from)}</label><label class="f">ביז${dateField('rct', r.to)}</label>
-   <button class="btn" onclick="ui.rc.from=$('#rcf').value||ui.rc.from;ui.rc.to=$('#rct').value||ui.rc.to;ui.rc.sel={};vRcpt()">ווייז</button>
+   <button class="btn" onclick="ui.rc.from=$('#rcf').value||ui.rc.from;ui.rc.to=$('#rct').value||ui.rc.to;ui.rc.sel={};vRcpt()">Show</button>
    <div class="chips">${prev ? `<button class="chip" onclick="rcRange('${prev.from}','${prev.to}')">די לעצטע 2 וואכן</button>` : ''}${cur ? `<button class="chip" onclick="rcRange('${cur.from}','${todayS()}')">די יעצטיגע 2 וואכן</button>` : ''}<button class="chip" onclick="rcRange('${addMonths(todayS(), -12)}','${todayS()}');ui.rc.hide=false;vRcpt()">די לעצטע יאר</button><button class="chip" onclick="rcRange('1990-01-01','${todayS()}');ui.rc.hide=false;vRcpt()">אלע יארן</button><button class="chip" onclick="rcRange('${F.start}','${todayS()}')">אלע וואס זענען נאך נישט געדרוקט (${unprintedAll})</button></div></div>
    <div class="row" style="margin:10px 0 0"><input id="rcq" placeholder="🔍 Search receipts: name, phone, #code or amount..." value="${esc(r.q || '')}" style="flex:1;min-width:260px;font-size:15px">
     <label style="font-size:13px;display:flex;gap:6px;align-items:center"><input type="checkbox" ${r.all !== false ? 'checked' : ''} onchange="ui.rc.all=this.checked;vRcpt()"> Search all years</label></div>
    <div class="row" style="margin:10px 0 0"><label style="font-size:13px;display:flex;gap:6px;align-items:center"><input type="checkbox" ${r.hide ? 'checked' : ''} onchange="ui.rc.hide=this.checked;vRcpt()"> באהאלט וואס איז שוין געדרוקט</label>
    <label style="font-size:13px;display:flex;gap:6px;align-items:center"><input type="checkbox" ${r.bg ? 'checked' : ''} onchange="ui.rc.bg=this.checked"> דרוק מיט דעם הינטערגרונט (אראפנעמען אויב איר דרוקט אויף פארגעדרוקטע פאפיר)</label></div></div>
   <div class="row"><b>${sel.length} רעסיטס אויסגעקליבן · ${money(total)}</b><div class="spacer"></div>
-   <button class="btn ghost sm" onclick="rcAll(true)">קלייב אלע</button><button class="btn ghost sm" onclick="rcAll(false)">קיינער</button>
-   <button class="btn" ${sel.some(p => emailOf(p[1])) ? '' : 'disabled'} onclick="rcMailSel()">✉️ שיק אימעיל (${sel.filter(p => emailOf(p[1])).length})</button>
-   <button class="btn gold" ${sel.length ? '' : 'disabled'} onclick="rcPrint()">🖨️ פרינט ${sel.length} רעסיטס</button></div>
+   <button class="btn ghost sm" onclick="rcAll(true)">Select all</button><button class="btn ghost sm" onclick="rcAll(false)">None</button>
+   <button class="btn" ${sel.some(p => emailOf(p[1])) ? '' : 'disabled'} onclick="rcMailSel()">✉️ Send email (${sel.filter(p => emailOf(p[1])).length})</button>
+   <button class="btn gold" ${sel.length ? '' : 'disabled'} onclick="rcPrint()">🖨️ Print ${sel.length} receipts</button></div>
   <table><thead><tr><th></th><th>טאג</th><th>נאמען</th><th>סכום</th><th>אדרעס</th><th>Received by</th><th></th></tr></thead><tbody>
   ${L.map((p, i) => { const d = rcData(p), a = IDX.by.get(p[1]); return `<tr style="${rcIsSel(p) ? '' : 'opacity:.5'}"><td><input type="checkbox" ${rcIsSel(p) ? 'checked' : ''} onchange="ui.rc.sel['${d.key}']=this.checked;vRcpt()"></td>
    <td class="num" style="font-size:13px">${fmtD(p[2])}</td><td><a class="name" onclick="openAcct(${p[1]})">${esc(a.h || a.n)}</a><div class="heb">${esc(a.h ? a.n : '')}</div></td>
@@ -153,7 +153,7 @@ function rcPrint() {
   window._rcToMark = sel;
   modal(`<h2>🖨️ ${sel.length} רעסיטס</h2><p>די רעסיטס האבן זיך געעפנט אין א נייעם פענצטער. ווען עס האט גוט געדרוקט, דריקט דא אונטן כדי זיי זאלן אנגעמערקט ווערן אלס געדרוקט.</p>
    <p class="sub">💡 אין פרינט פענצטער: Margins = <b>None</b>, Scale = <b>100%</b>, "Background graphics" = אן.</p>
-   <div class="row" style="justify-content:flex-end"><button class="btn ghost" onclick="closeM()">נאך נישט</button><button class="btn" onclick="rcMark()">✓ ס'איז געדרוקט – מערק אן</button></div>`, 'narrow');
+   <div class="row" style="justify-content:flex-end"><button class="btn ghost" onclick="closeM()">Not yet</button><button class="btn" onclick="rcMark()">✓ Printed – mark</button></div>`, 'narrow');
 }
 async function rcMark() {
   const L = window._rcToMark || [], t = todayS();
@@ -259,8 +259,8 @@ function vStmt() {
    <label class="f">מינימום באלאנס $<input type="number" value="${esc(st.min || '')}" style="width:110px" onchange="ui.st.min=+this.value||0;ui.st.sel={};vStmt()"></label>
    <label style="font-size:13px;display:flex;gap:6px;align-items:center"><input type="checkbox" ${st.hide ? 'checked' : ''} onchange="ui.st.hide=this.checked;vStmt()"> באהאלט וואס איז שוין געשיקט</label></div></div>
   <div class="row"><b>${sel.length} סטעיטמענטס אויסגעקליבן · ${money(tot)}</b><div class="spacer"></div>
-   <button class="btn ghost sm" onclick="stAll(true)">קלייב אלע</button><button class="btn ghost sm" onclick="stAll(false)">קיינער</button>
-   <button class="btn gold" ${sel.length ? '' : 'disabled'} onclick="stPrint()">🖨️ פרינט ${sel.length} סטעיטמענטס</button></div>
+   <button class="btn ghost sm" onclick="stAll(true)">Select all</button><button class="btn ghost sm" onclick="stAll(false)">None</button>
+   <button class="btn gold" ${sel.length ? '' : 'disabled'} onclick="stPrint()">🖨️ Print ${sel.length} statements</button></div>
   <table><thead><tr><th></th><th>נאמען</th><th>אדרעס</th><th>פלעדזשעס</th><th>באלאנס</th><th>לעצטע מאל געשיקט</th><th></th></tr></thead><tbody>
   ${R.map((r, i) => `<tr style="${stIsSel(r) ? '' : 'opacity:.5'}"><td><input type="checkbox" ${stIsSel(r) ? 'checked' : ''} onchange="ui.st.sel[${r.c}]=this.checked;vStmt()"></td>
    <td><a class="name" onclick="openAcct(${r.c})">${esc(r.a.h || r.a.n)}</a><div class="heb">${esc(r.a.h ? r.a.n : '')}</div></td>
@@ -328,7 +328,7 @@ function stPrint() {
   window._stToMark = sel;
   modal(`<h2>🖨️ ${sel.length} סטעיטמענטס</h2><p>זיי האבן זיך געעפנט אין א נייעם פענצטער. ווען עס האט גוט געדרוקט, דריקט דא כדי זיי זאלן אנגעמערקט ווערן אלס געשיקט.</p>
    <p class="sub">💡 Margins = <b>None</b>, Scale = <b>100%</b>.</p>
-   <div class="row" style="justify-content:flex-end"><button class="btn ghost" onclick="closeM()">נאך נישט</button><button class="btn" onclick="stMark()">✓ געדרוקט – מערק אן</button></div>`, 'narrow');
+   <div class="row" style="justify-content:flex-end"><button class="btn ghost" onclick="closeM()">Not yet</button><button class="btn" onclick="stMark()">✓ Printed – mark</button></div>`, 'narrow');
 }
 async function stMark() {
   const L = window._stToMark || [], t = todayS();
@@ -437,7 +437,7 @@ function rcMailOne(i) {
   modal(`<h2>✉️ שיק די רעסיט אין אימעיל</h2><p class="sub">${esc(d.top || d.eng)} · <b>$${rcMoney(d.amt)}</b> · ${fmtD(d.date)}</p>
    <label class="f">צו וועלכן אימעיל<input id="mto" type="email" style="direction:ltr" value="${esc(to)}" placeholder="name@example.com"></label>
    <label style="display:flex;gap:8px;align-items:center;font-size:13px;margin-top:8px"><input type="checkbox" id="msave" ${to ? '' : 'checked'}> Save this e-mail on the donor</label>
-   <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn ghost" onclick="closeM()">Back</button><button class="btn" id="msend" onclick="rcMailGo(${i})">✉️ שיק</button></div>`, 'narrow');
+   <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn ghost" onclick="closeM()">Back</button><button class="btn" id="msend" onclick="rcMailGo(${i})">✉️ Send</button></div>`, 'narrow');
 }
 async function rcMailGo(i) {
   const p = window._rcL[i], to = $('#mto').value.trim().toLowerCase();
@@ -451,7 +451,7 @@ async function rcMailGo(i) {
     rcMailErr(e);
     modal(`<h2>⚠️ דער אימעיל איז נישט אוועקגעגאנגען</h2><p>דאס האט דער סערווער געענטפערט:</p>
      <pre id="merr" style="direction:ltr;text-align:left;background:#faf7f0;border:1px solid var(--line);border-radius:8px;padding:10px;white-space:pre-wrap;font-size:13px">${esc(e.message || String(e))}</pre>
-     <div class="row" style="justify-content:flex-end"><button class="btn ghost sm" onclick="navigator.clipboard.writeText(document.getElementById('merr').textContent).then(()=>toast('✓ קאפירט'))">📋 קאפיר</button><button class="btn" onclick="closeM()">גוט</button></div>`, 'narrow');
+     <div class="row" style="justify-content:flex-end"><button class="btn ghost sm" onclick="navigator.clipboard.writeText(document.getElementById('merr').textContent).then(()=>toast('✓ Copied'))">📋 Copy</button><button class="btn" onclick="closeM()">OK</button></div>`, 'narrow');
   }
 }
 async function rcMailSel() {
@@ -463,7 +463,7 @@ async function rcMailSel() {
     try { await rcSendMail(L[k]); ok++; } catch (e) { rcMailErr(e); bad.push(acctName(L[k][1]) + ': ' + (e.message || e)); if (/provider|not set|not allowed|logged|function|fetch/i.test(e.message || '')) break; }
   }
   busy(false); render();
-  if (bad.length) modal(`<h2>✉️ ${ok} געשיקט, ${bad.length} נישט</h2><div class="scroll" style="max-height:50vh;font-size:13px">${bad.map(esc).join('<br>')}</div><div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn" onclick="closeM()">גוט</button></div>`, 'narrow');
+  if (bad.length) modal(`<h2>✉️ ${ok} געשיקט, ${bad.length} נישט</h2><div class="scroll" style="max-height:50vh;font-size:13px">${bad.map(esc).join('<br>')}</div><div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn" onclick="closeM()">OK</button></div>`, 'narrow');
   else toast('✓ ' + ok + ' רעסיטס געשיקט');
 }
 // Keep the last e-mail error on the page (and on this computer) until it is closed
@@ -471,7 +471,7 @@ function rcMailErr(e) { const t = new Date().toLocaleString() + '\n' + (e && e.m
 function rcMailErrBox() {
   let t = ''; try { t = localStorage.getItem('yg_mailerr') || ''; } catch (x) { }
   return t ? `<div class="box" style="border-color:#e9c4c0;background:var(--redbg);margin-bottom:12px"><div class="row" style="margin:0"><b style="color:var(--red)">⚠️ דער לעצטער אימעיל טעות:</b><div class="spacer"></div>
-    <button class="btn ghost sm" onclick="navigator.clipboard.writeText(document.getElementById('merrb').textContent).then(()=>toast('✓ קאפירט'))">📋 קאפיר</button><button class="btn ghost sm" onclick="try{localStorage.removeItem('yg_mailerr')}catch(e){};render()">✕</button></div>
+    <button class="btn ghost sm" onclick="navigator.clipboard.writeText(document.getElementById('merrb').textContent).then(()=>toast('✓ Copied'))">📋 Copy</button><button class="btn ghost sm" onclick="try{localStorage.removeItem('yg_mailerr')}catch(e){};render()">✕</button></div>
     <pre id="merrb" style="direction:ltr;text-align:left;white-space:pre-wrap;font-size:13px;margin:6px 0 0">${esc(t)}</pre></div>` : '';
 }
 function mailSettingsHTML() {
@@ -490,7 +490,7 @@ function acctMail(code) {
    <label class="f" style="grid-column:1/-1">סאבדזשעקט<input id="ams" dir="auto" value="${esc(d.subject || '')}"></label>
    <label class="f" style="grid-column:1/-1">דער בריוו<textarea id="amb" dir="auto" rows="9">${esc(d.body || ('לכבוד ' + (a.h || a.n) + ',\n\n'))}</textarea></label></div>
    <label style="display:flex;gap:8px;align-items:center;font-size:13px;margin-top:8px"><input type="checkbox" id="amsave" ${to ? '' : 'checked'}> Save this e-mail on the donor</label>
-   <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn ghost" onclick="openAcct(${+code})">Back</button><button class="btn" id="amgo" onclick="acctMailGo(${+code})">✉️ שיק</button></div>`, 'narrow');
+   <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn ghost" onclick="openAcct(${+code})">Back</button><button class="btn" id="amgo" onclick="acctMailGo(${+code})">✉️ Send</button></div>`, 'narrow');
   setTimeout(() => $(to ? '#ams' : '#amt').focus(), 50);
 }
 async function acctMailGo(code) {

@@ -72,7 +72,7 @@ function fltLabel(k) {
 function fltBar(k, after) {
   window._fltAfter = window._fltAfter || {}; window._fltAfter[k] = after;
   const L = fltLabel(k);
-  return `<span class="fltbar"><button class="btn ${L.length ? 'gold' : 'ghost'} sm" onclick="fltForm('${k}')">🔎 פילטער${L.length ? ' (' + L.length + ')' : ''}${fltOf(k)._keep ? ' 📌' : ''}</button>${L.map(t => `<span class="fltchip">${esc(t)}</span>`).join('')}${L.length ? `<button class="btn ghost sm" onclick="fltClear('${k}')">✕</button>` : ''}</span>`;
+  return `<span class="fltbar"><button class="btn ${L.length ? 'gold' : 'ghost'} sm" onclick="fltForm('${k}')">🔎 Filter${L.length ? ' (' + L.length + ')' : ''}${fltOf(k)._keep ? ' 📌' : ''}</button>${L.map(t => `<span class="fltchip">${esc(t)}</span>`).join('')}${L.length ? `<button class="btn ghost sm" onclick="fltClear('${k}')">✕</button>` : ''}</span>`;
 }
 function fltRun(k) { const a = (window._fltAfter || {})[k]; try { if (a) new Function(a)(); else render(); } catch (e) { render(); } }
 function fltClear(k) { ui.flt = ui.flt || {}; ui.flt[k] = {}; fltPersist(k, null); fltRun(k); }
@@ -83,7 +83,7 @@ function fltForm(k) {
   const allCamps = X ? [...X.campN.keys()].sort((a, b) => b - a) : [];
   const cOpt = (L, cur) => '<option value="">—</option>' + L.map(n => `<option value="${n}" ${+cur === +n ? 'selected' : ''}>#${n} ${esc((JD.campaigns || {})[n] || '')}</option>`).join('');
   const tags = typeof allTags === 'function' ? allTags() : (typeof PRESET_TAGS !== 'undefined' ? PRESET_TAGS : []);
-  modal(`<h2>🔎 פילטער</h2><p class="sub">אלעס וואס איר פילט אויס מוז שטימען. ליידיג = נישט קיין חילוק.</p>
+  modal(`<h2>🔎 Filter</h2><p class="sub">אלעס וואס איר פילט אויס מוז שטימען. ליידיג = נישט קיין חילוק.</p>
    <div class="grid2">
     ${X ? `<label class="f">JLS פעלד (UDF)<select id="fu"><option value="">—</option>${types.map(t => `<option ${t === f.udf ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>
     <label class="f">ווערט(ן), מיט קאמעס (למשל 1,2,3)<input id="fv" value="${esc((f.vals || []).join(','))}" placeholder="ליידיג = סיי וועלכע"></label>
@@ -100,8 +100,8 @@ function fltForm(k) {
     <label class="f">🏷️ פלאג<select id="ftg"><option value="">—</option>${tags.map(t => `<option ${t === f.tag ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>
     <label class="f">👤 ווער קאלט<select id="fwh"><option value="">—</option><option value="__me" ${f.who === '__me' ? 'selected' : ''}>מיינע</option><option value="__none" ${f.who === '__none' ? 'selected' : ''}>נישט צוגעטיילט</option>${USERS().map(u => `<option ${f.who === u ? 'selected' : ''}>${esc(u)}</option>`).join('')}</select></label>
    </div>
-   <label class="fltkeep"><input type="checkbox" id="fkeep" ${f._keep ? 'checked' : ''}> 📌 היט אפ דעם פילטער – ער בלייבט (אויך ווען מ'מאכט צו די פראגראם) ביז איך נעם אראפ דעם ✓</label>
-   <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn ghost" onclick="closeM()">Back</button><button class="btn ghost" onclick="closeM();fltClear('${k}')">✕ אויסמעקן</button><button class="btn" onclick="fltSave('${k}')">🔎 פילטער</button></div>`);
+   <label class="fltkeep"><input type="checkbox" id="fkeep" ${f._keep ? 'checked' : ''}> 📌 Keep this filter – it stays (also after closing the program) until this box is unchecked</label>
+   <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn ghost" onclick="closeM()">Back</button><button class="btn ghost" onclick="closeM();fltClear('${k}')">✕ Clear</button><button class="btn" onclick="fltSave('${k}')">🔎 Filter</button></div>`);
 }
 function fltSave(k) {
   const v = id => { const e = document.getElementById(id); return e ? (e.type === 'checkbox' ? e.checked : e.value.trim()) : ''; };
