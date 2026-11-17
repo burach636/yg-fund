@@ -51,7 +51,7 @@ function vJrep() {
   if (!S.jrep.r983) { jrEnsureDefault().then(render); }
   const D = jrDefs(), cur = D.find(d => d.id === ui.jr) || D[0];
   window._ln = lastNotes();
-  const all = cur ? fltRows('jr', jrRun(cur), a => a.c) : [];   // + the extra 🔎 filter
+  const all = cur ? fltRows('jr', jrRun(cur), a => a.c).filter(a => !colSt(a.c).ign) : [];   // + the extra 🔎 filter; 🚫 ignored accounts are not on call lists
   // search box + "who calls" filter (mine / not assigned / a user)
   const q = (ui.jrQ || '').trim().toLowerCase(), words = q.split(/\s+/).filter(Boolean), qd = q.replace(/\D/g, ''), who = ui.jrWho || '';
   const L = all.filter(a => {

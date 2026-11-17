@@ -6,10 +6,13 @@
 // outAt, outBy, pin (note everybody sees)}; every outcome also writes a `hist` note.
 const COL_OUT = [['noans', '📵 קיין ענטפער'], ['msg', '💬 מעסעדזש געלאזט'], ['prom', '🤝 צוגעזאגט'], ['paid', '✅ באצאלט'], ['check', '🗓️ שעק דעיטעד'],
   ['plan', '📋 וויל א פלאן'], ['ref', '⛔ אפגעזאגט'], ['wrong', '☎️ פאלשער נאמבער'], ['note', '📝 נאר א נאטיץ']];
-const COL_TABS = [['today', '📞 קאלן היינט'], ['ask', '📋 היינט צו בעטן'], ['pl', '💳 פלעדזשעס'], ['cb', '🔁 היינט צוריק קאלן'], ['hold', '⏸ ON HOLD'], ['all', '📚 אלע אקאונטס']];
+const COL_TABS = [['today', '📞 קאלן היינט'], ['ask', '📋 היינט צו בעטן'], ['pl', '💳 פלעדזשעס'], ['cb', '🔁 היינט צוריק קאלן'], ['hold', '⏸ ON HOLD'], ['all', '📚 אלע אקאונטס'], ['every', '👥 אלע אקאונטס'], ['ign', '🚫 Ignored']];
+// v1.30: "every" (fund) = every JLS account, so a 🔎 filter can find people who never gave to YG (the other fund lists hold
+// only YG donors and pledges); "ign" = accounts put on 🚫 Ignore (col.ign): never in a call list or Calling mode, but still
+// in the "all" lists.
 // fundraising only: "היינט צו בעטן" and "פלעדזשעס" (the old separate pages moved in here, owner 2026-11-16) and "all" is
 // called "ישיבה נדבנים"; in tuition "call back" is called "אפגעשטופט" (owner)
-const colTabs = () => COL_TABS.filter(([k]) => colArea() === 'fund' || (k !== 'ask' && k !== 'pl'))
+const colTabs = () => COL_TABS.filter(([k]) => colArea() === 'fund' || (k !== 'ask' && k !== 'pl' && k !== 'every'))
   .map(([k, l]) => [k, k === 'cb' && colArea() === 'tu' ? '🔁 אפגעשטופט' : k === 'all' && colArea() === 'fund' ? '📚 ישיבה נדבנים' : l]);
 const COL_GAP = 7;   // a family/donor reached in the last 7 days does not come back on "today" (unless a call-back is set)
 const colArea = () => AREA === 'tu' ? 'tu' : 'fund';
@@ -30,13 +33,22 @@ function colAll() {
   }
   return out;
 }
+// every JLS account (fund), as collection rows – only built when that list is opened
+function colEvery() {
+  if (window._colEv && window._colEv.jd === JD) return window._colEv.rows;
+  const rows = JD.accounts.filter(a => !a.x).map(a => { const g = IDX.yg.get(a.c) || {}, p = IDX.pl.get(a.c) || {}; return { code: a.c, amt: p.dueNow || 0, bal: p.open || 0, last: g.last || '' }; });
+  rows.sort((a, b) => ((IDX.yg.get(b.code) || {}).total || 0) - ((IDX.yg.get(a.code) || {}).total || 0) || ((IDX.by.get(a.code) || {})._k || '').localeCompare((IDX.by.get(b.code) || {})._k || '', 'he'));
+  window._colEv = { jd: JD, rows }; return rows;
+}
+const colTabRows = (tab, L) => tab === 'every' ? colEvery().map(r => Object.assign(r, { s: colSt(r.code), done: (colSt(r.code).outAt || '').slice(0, 10) === todayS() })) : (L || colLists())[tab] || [];
 function colLists() {
   const t = todayS(), all = colAll(), gap = addDays(t, -COL_GAP);
   const askToday = colArea() === 'fund' ? new Set(todayItems('all').filter(x => x.kind === 'ask').map(x => x.code)) : new Set();
-  const L = { all, today: [], cb: [], hold: [], ask: [], pl: [] };
+  const L = { all, today: [], cb: [], hold: [], ask: [], pl: [], ign: [] };
   all.forEach(r => {
     const s = colSt(r.code), outD = (s.outAt || '').slice(0, 10);
     r.done = outD === t; r.s = s;
+    if (s.ign) { L.ign.push(r); return; }   // 🚫 ignored: only in "all" and "ignored"
     if (s.hold) { L.hold.push(r); return; }
     if (askToday.has(r.code)) L.ask.push(r);
     if (colArea() === 'fund' && r.bal > 0.009 && !plHidden(r.code)) L.pl.push(Object.assign({}, r, { amt: r.bal, due: r.amt }));   // all open pledges, every year
@@ -67,7 +79,7 @@ function colNav() {
   const inCol = view === 'col' || view === 'calling';
   nav.classList.toggle('incol', inCol);
   if (!inCol) { box.innerHTML = ''; return; }
-  let n = {}; try { const L = colLists(); colTabs().forEach(([k]) => { n[k] = k === 'today' || k === 'cb' || k === 'ask' ? L[k].filter(r => !r.done).length : L[k].length; }); } catch (e) { }
+  let n = {}; try { const L = colLists(); colTabs().forEach(([k]) => { n[k] = k === 'every' ? '' : k === 'today' || k === 'cb' || k === 'ask' ? L[k].filter(r => !r.done).length : L[k].length; }); } catch (e) { }
   const tab = ui.colTab || 'today';
   box.innerHTML = `<button data-v="${colArea() === 'tu' ? 'thome' : 'home'}" class="colback">← ${colArea() === 'tu' ? 'שכר לימוד' : 'פאנדרעיזינג'}</button>
    <div class="navsec">${esc(colTitle())}</div>
@@ -111,7 +123,8 @@ function vCol() {
   if (!colReady()) return;
   const tab = ui.colTab || 'today', L = colLists(), t = todayS();
   const qs = (ui.colQ || '').trim().toLowerCase();
-  let R = fltRows('col-' + tab, L[tab] || [], r => r.code);
+  const needFlt = tab === 'every' && !fltActive('col-every');   // 21,000 accounts: show them only through a 🔎 filter
+  let R = needFlt ? [] : fltRows('col-' + tab, colTabRows(tab, L), r => r.code);
   if (qs) R = R.filter(r => { const a = IDX.by.get(r.code) || {}; return ((a._s || '') + ' ' + (r.f ? r.f.kids.map(k => k.slice(2, 6).join(' ')).join(' ') : '')).includes(qs) || ('#' + r.code) === qs; });
   window._colR = R;
   const out = L.all.reduce((s, r) => s + (r.amt > 0 ? r.amt : 0), 0), done = L.today.filter(r => r.done).length;
@@ -126,7 +139,7 @@ function vCol() {
    </div>
    <div class="row" style="margin:8px 0;flex-wrap:wrap;gap:8px">${colArea() === 'tu' ? tuScopeChips('ui.cm=null;render()') : ''}${fltBar('col-' + tab, 'vCol()')}${tab === 'pl' ? colPlChips() : ''}<input id="colq" placeholder="🔍 נאמען, טעלעפאן, #קאוד" value="${esc(ui.colQ || '')}" style="max-width:280px" oninput="ui.colQ=this.value;clearTimeout(window._colT);window._colT=setTimeout(()=>{vCol();const e=$('#colq');e.focus();e.setSelectionRange(e.value.length,e.value.length)},300)"></div>
    ${(bulkList('col-' + tab, R.map(r => r.code)), bulkBar('col-' + tab))}
-   <div class="collist">${R.slice(0, ui.colN).map((r, i) => colRow(r, i, tab)).join('') || '<div class="empty">🎉 גארנישט דא</div>'}</div>
+   <div class="collist">${R.slice(0, ui.colN).map((r, i) => colRow(r, i, tab)).join('') || (needFlt ? `<div class="empty">👥 דא זענען אלע ${JD.accounts.length.toLocaleString()} אקאונטס פון JLS (אויך די וואס האבן קיינמאל נישט געגעבן צו YG).<br>דריקט <b>🔎 פילטער</b> אויבן, למשל UDF4 = 1,2,3 און נאך נישט געגעבן צו דעם דינער.</div>` : '<div class="empty">🎉 גארנישט דא</div>')}</div>
    ${R.length > ui.colN ? `<div class="more"><button class="btn ghost" onclick="ui.colN+=300;vCol()">ווייז מער (${(R.length - ui.colN).toLocaleString()})</button></div>` : ''}`;
 }
 const colWho = c => { const w = (S.acct[c] || {})[colArea() === 'tu' ? 'tuWho' : 'assigned']; return w ? ' ' + userChip(w) : ''; };
@@ -136,7 +149,7 @@ function colRow(r, i, tab) {
   return `<div class="colrow${r.done ? ' done' : ''}" style="border-right:6px solid ${col}">
    ${selBox('col-' + tab, r.code)}
    <div class="cr1"><a class="name" onclick="colStart('${tab}',${i})">${colName(r.code)}</a> <small class="dim">#${r.code}</small> <button class="nbtn" title="📝 נאטיץ" onclick="noteForm(${r.code})">📝</button>
-    ${r.f ? tuStChip(r.f) : ''}${s.hold ? ' <span class="tag purple">⏸ On hold</span>' : ''}${s.cb ? ` <span class="tag orange">🔁 ${fmtD(s.cb)}</span>` : ''}${colWho(r.code)}${r.done ? ' <span class="tag ok">✓ היינט</span>' : ''}
+    ${r.f ? tuStChip(r.f) : ''}${s.hold ? ' <span class="tag purple">⏸ On hold</span>' : ''}${s.ign ? ' <span class="tag gray">🚫 Ignored</span>' : ''}${s.cb ? ` <span class="tag orange">🔁 ${fmtD(s.cb)}</span>` : ''}${colWho(r.code)}${r.done ? ' <span class="tag ok">✓ היינט</span>' : ''}
     ${tab === 'pl' || tab === 'today' ? colPlLine(r.code) : ''}<div class="cr2">${h ? `💬 "${esc(h.text.length > 80 ? h.text.slice(0, 80) + '…' : h.text)}" · ${fmtD((h.at || '').slice(0, 10))} · ${userChip(h.by || '')}` : '<span class="dim">נאך קיין נאטיץ</span>'}${o ? ` · <b>${o[1]}</b>` : ''}</div></div>
    <div class="cr3"><b class="${r.amt > 0.5 ? 'bal' : ''}">${r.amt < -0.005 ? `<span class="credit">קרעדיט ${money(-r.amt)}</span>` : money(r.amt)}</b>${r.bal > r.amt + 0.5 ? `<small class="dim">${money(r.bal)} באלאנס</small>` : ''}</div></div>`;
 }
@@ -158,10 +171,11 @@ function colCm(tab) {
   const t = todayS();
   if (String(tab).startsWith('jr:')) {   // a report: everybody on it, those reached today at the end
     const d = jrDefs().find(x => 'jr:' + x.id === tab); if (!d) return null;
-    const C = fltCodes('jr', jrRun(d).map(a => a.c)), done = c => (colSt(c).outAt || '').slice(0, 10) === t;
+    const C = fltCodes('jr', jrRun(d).map(a => a.c)).filter(c => !colSt(c).ign), done = c => (colSt(c).outAt || '').slice(0, 10) === t;
     return { tab, codes: C.filter(c => !done(c)).concat(C.filter(done)), i: 0 };
   }
-  const L = fltRows('col-' + tab, colLists()[tab] || [], r => r.code);
+  if (tab === 'every' && !fltActive('col-every')) { toast('🔎 שטעלט ערשט א פילטער – עס זענען ' + JD.accounts.length.toLocaleString() + ' אקאונטס'); return { tab, codes: [], i: 0 }; }
+  const L = fltRows('col-' + tab, colTabRows(tab), r => r.code).filter(r => tab === 'ign' || !(r.s || colSt(r.code)).ign);
   return { tab, codes: L.map(r => r.code), i: Math.max(0, L.findIndex(r => !r.done)) };
 }
 const cmTabKey = () => 'yg_cmtab_' + colArea();
@@ -268,6 +282,7 @@ function bulkBar(k) {
   return `<div id="bulk-${k}" class="bulkbar"><b>☑ ${n.toLocaleString()} אויסגעקליבן</b>
    <button class="btn ghost sm" onclick="selAll('${k}',true)">אלע ${tot.toLocaleString()}</button><button class="btn ghost sm" onclick="ui.sel['${k}']=new Set();render()">✕ אויסמעקן</button><span class="bsep"></span>
    <button class="btn sm" onclick="bulkCb('${k}',1)">🔁 ${cbWord()}: מארגן</button><button class="btn ghost sm" onclick="bulkCbForm('${k}')">🔁 אום א טאג…</button>
+   <button class="btn ghost sm" onclick="bulkIgn('${k}',true)" title="מער נישט ארויפקומען צו קאלן">🚫 Ignore</button><button class="btn ghost sm" onclick="bulkIgn('${k}',false)">↩ Un-ignore</button>
    <button class="btn ghost sm" onclick="bulkHold('${k}',true)">⏸ On hold</button><button class="btn ghost sm" onclick="bulkHold('${k}',false)">▶ נישט On hold</button>
    <select class="mini" onchange="if(this.value!=='-')bulkWho('${k}',this.value)"><option value="-">👤 ווער קאלט…</option><option value="">נישט צוגעטיילט</option>${USERS().map(u => `<option>${esc(u)}</option>`).join('')}</select>
    <button class="btn ghost sm" onclick="bulkNoteForm('${k}')">📝 נאטיץ פאר אלע</button><button class="btn gold sm" onclick="bulkCall('${k}')">▶ Calling mode</button></div>`;
@@ -289,6 +304,7 @@ function bulkCbForm(k) {
   modal(`<h2>🔁 ${cbWord()} – ${selSet(k).size} אקאונטס</h2><label class="f">אום וועלכן טאג${dateField('bkd', addDays(todayS(), 1))}</label>
    <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn ghost" onclick="closeM()">Back</button><button class="btn" onclick="bulkCb('${k}',0,$('#bkd').value)">OK</button></div>`, 'narrow');
 }
+function bulkIgn(k, on) { const C = selCodes(k); return bulkEmit(C.map(c => ({ k: 'col', eid: colKey(c), p: { ign: on } })), C.length + (on ? ' – 🚫 Ignored (מער נישט צו קאלן)' : ' – ↩ צוריק צו קאלן')); }
 function bulkHold(k, on) { const C = selCodes(k); return bulkEmit(C.map(c => ({ k: 'col', eid: colKey(c), p: { hold: on } })), C.length + (on ? ' – On hold' : ' – נישט מער On hold')); }
 function bulkWho(k, who) {
   const C = selCodes(k), f = colArea() === 'tu' ? 'tuWho' : 'assigned';
