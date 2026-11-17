@@ -1,5 +1,5 @@
 // YG Fund – 📞 Collection ("קאלעקשען") for both areas + Calling mode. Loaded before app.js; functions only.
-//   💵 fundraising: "פאנדרעיזינג קאלעקשען" – open pledges that are due + donors due to be asked again
+//   💵 fundraising: "פאנדרעיזינג קאלעקשען" – open pledges with no payment in a month, "every month" donors, donors due to be asked
 //   🎓 tuition:     "שכר לימוד קאלעקשען"   – families that owe now
 // Sub-lists (the sidebar turns into them): today = calls for today, cb = call back today, hold = on hold, all.
 // Per-account state: event kind `col`, id `<area>|<code>`: {hold, holdNote, cb (date), cbNote, out (last outcome),
@@ -29,7 +29,9 @@ function colAll() {
   } else {
     const seen = new Set();
     IDX.pl.forEach((g, c) => { if (g.open > 0.009 && IDX.by.has(c)) { seen.add(c); out.push({ code: c, amt: g.dueNow, bal: g.open, last: (IDX.yg.get(c) || {}).last || '' }); } });
-    IDX.yg.forEach((g, c) => { if (!seen.has(c) && IDX.by.has(c)) out.push({ code: c, amt: 0, bal: 0, last: g.last }); });
+    IDX.yg.forEach((g, c) => { if (!seen.has(c) && IDX.by.has(c)) { seen.add(c); out.push({ code: c, amt: 0, bal: 0, last: g.last }); } });
+    // set to "ask again: every month" but never gave to YG – they belong on the lists too (v1.38)
+    Object.entries(S.acct).forEach(([c, a]) => { c = +c; if (a && a.freq === 'm1' && !seen.has(c) && IDX.by.has(c)) out.push({ code: c, amt: 0, bal: 0, last: '' }); });
   }
   return out;
 }
@@ -42,7 +44,7 @@ function colEvery() {
 }
 const colTabRows = (tab, L) => tab === 'every' ? colEvery().map(r => Object.assign(r, { s: colSt(r.code), done: (colSt(r.code).outAt || '').slice(0, 10) === todayS() })) : (L || colLists())[tab] || [];
 function colLists() {
-  const t = todayS(), all = colAll(), gap = addDays(t, -COL_GAP);
+  const t = todayS(), all = colAll(), gap = addDays(t, -COL_GAP), monthAgo = addMonths(t, -1);
   const askToday = colArea() === 'fund' ? new Set(todayItems('all').filter(x => x.kind === 'ask').map(x => x.code)) : new Set();
   const L = { all, today: [], cb: [], hold: [], ask: [], pl: [], ign: [] };
   all.forEach(r => {
@@ -53,10 +55,15 @@ function colLists() {
     if (askToday.has(r.code)) L.ask.push(r);
     if (colArea() === 'fund' && r.bal > 0.009 && !plHidden(r.code)) L.pl.push(Object.assign({}, r, { amt: r.bal, due: r.amt }));   // all open pledges, every year
     if (s.cb && s.cb <= t) L.cb.push(r);
-    const need = colArea() === 'tu' ? r.amt > 0.5 : ((r.amt > 0.009 && !plHidden(r.code)) || askToday.has(r.code));
+    // fund (owner, v1.38): everybody with an open pledge (not already paid by credit card / held check) who never paid,
+    // or whose last YG payment is more than a month ago; also everybody set to "every month" with no payment in a month;
+    // and, as before, donors due to be asked again
+    const stale = !r.last || r.last < monthAgo;
+    const plNeed = colArea() === 'fund' && r.bal > 0.009 && !plHidden(r.code) && stale;
+    const need = colArea() === 'tu' ? r.amt > 0.5 : (plNeed || (stale && ask(r.code).freq === 'm1') || askToday.has(r.code));
     if (!need || (s.cb && s.cb > t)) return;
     if (outD && outD >= gap && !r.done) return;
-    L.today.push(r);
+    L.today.push(plNeed && !(r.amt > 0.009) ? Object.assign({}, r, { amt: r.bal }) : r);
   });
   const srt = (a, b) => (a.done - b.done) || b.amt - a.amt;
   L.today.sort(srt); L.cb.sort((a, b) => (a.done - b.done) || (a.s.cb || '').localeCompare(b.s.cb || ''));
