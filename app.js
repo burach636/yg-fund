@@ -10,7 +10,7 @@ const todayS = () => iso(new Date());
 const addDays = (s, n) => { const d = parse(s); d.setDate(d.getDate() + n); return iso(d); };
 const addMonths = (s, n) => { const d = parse(s); const day = d.getDate(); d.setDate(1); d.setMonth(d.getMonth() + n); const last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate(); d.setDate(Math.min(day, last)); return iso(d); };
 const monthKey = () => todayS().slice(0, 7);
-const fmtD = s => { if (!s) return '—'; if (calPref() === 'heb' && s >= '1900') return HEB.fmtHeb(s); const [y, m, d] = s.split('-'); return +d + '/' + +m + '/' + y; };
+const fmtD = s => { if (!s) return '—'; if (calPref() === 'heb' && s >= '1900') return HEB.fmtHeb(s); return engD(s); };
 const validD = s => s && s >= '1990-01-01' && s <= '2100-01-01';
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const daysBetween = (a, b) => Math.round((parse(b) - parse(a)) / 864e5);
@@ -81,7 +81,7 @@ async function pullLog() {
   }
   return changed;
 }
-// Download a JLS data file always fresh (v1.47.1): the files used to be saved with Supabase's default 1-hour cache, so
+// Download a JLS data file always fresh (v1.48.1): the files used to be saved with Supabase's default 1-hour cache, so
 // another user's browser could show the old numbers for up to an hour after an import.
 async function jlsFile(path) {
   try {
@@ -110,7 +110,7 @@ function hebLast(a) {
   const lh = a.lh || (a.h ? a.h.trim().split(/\s+/).pop() : '');
   return lh ? '0' + lh + ' ' + (a.h || '') : '1' + (a.ln || a.n || '').toLowerCase() + ' ' + (a.n || '').toLowerCase();
 }
-// 🔍 Search that understands both keyboards (v1.47, owner): text typed with the keyboard on Hebrew/Yiddish while
+// 🔍 Search that understands both keyboards (v1.48, owner): text typed with the keyboard on Hebrew/Yiddish while
 // meaning English letters ("יקךךם" = "hello"), or English letters while meaning Yiddish ("nav" = "מאה"), is also tried through the other layout (standard Israeli layout). Niqqud and Yiddish ligatures
 // (ײ װ ױ) are ignored. qVars(raw) = the normalised text + its swapped twin; every search box tries both.
 const KB_PAIRS = "q/w'eקrרtאyטuוiןoםpפaשsדdגfכgעhיjחkלlךzזxסcבvהbנmצ;ף,ת.ץnמ";
@@ -467,7 +467,7 @@ function wire() {
 function setArea(a, keepView) {
   AREA = a; try { sessionStorage.setItem('yg_area', a); } catch (e) { }
   document.body.classList.toggle('area-tu', a === 'tu');
-  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.47</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.47</small>';
+  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.48</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.48</small>';
   $('#btnArea').style.display = canFund() && canView('tuition') ? '' : 'none';
   $('#btnArea').textContent = a === 'tu' ? '⇄ צו פאנדרעיזינג' : '⇄ צו שכר לימוד';
   setupUser();
@@ -510,7 +510,7 @@ function applyPerms() {
   if (!canView('shuls')) document.querySelectorAll('.hcol.t4').forEach(e => e.remove());
 }
 function impInfo() {
-  $('#impInfo').innerHTML = JD ? `JLS: ${new Date(JD.importedAt).toLocaleString()}<br>${JD.accounts.length.toLocaleString()} אקאונטס · ${esc(JD.companyName || 'Company ' + JD.company)}` : '';
+  $('#impInfo').innerHTML = JD ? `JLS: ${engDT(JD.importedAt)}<br>${JD.accounts.length.toLocaleString()} אקאונטס · ${esc(JD.companyName || 'Company ' + JD.company)}` : '';
 }
 function vWelcome() {
   $('#main').innerHTML = `<div class="welcome"><div class="logo3d big"><div class="in"><img src="logo.png" alt=""><i class="shine"></i></div></div><h1>ברוך הבא!</h1>
@@ -786,7 +786,7 @@ function openAcct(code) {
   <div class="tabs2">${[['pay', 'באצאלונגען'], ['pl', 'פלעדזשעס'], ['hist', 'היסטאריע (' + hist.length + ')'], ['tasks', 'ארבעטן (' + tasks.filter(t => !t[1].done).length + ')']].map(([kk, l]) => `<button class="${acctTab === kk ? 'on' : ''}" onclick="acctTab='${kk}';openAcct(${code})">${l}</button>`).join('')}</div>
   <div class="scroll">${tabBody[acctTab]}</div>`);
 }
-// 💳 On the account (owner, v1.47): active credit-card plans (JD.ccplans, schedule columns only) and held /
+// 💳 On the account (owner, v1.48): active credit-card plans (JD.ccplans, schedule columns only) and held /
 // post-dated checks (YG payments whose check date is still ahead) – the same things plCovered() looks at.
 function acctFuture(code) {
   const t = todayS(), camp = n => (JD.campaigns || {})[n] || (n ? '#' + n : '');
@@ -817,7 +817,7 @@ async function addNote(code) {
 
 // ---------- REPORTS ----------
 // Payments by Jewish year and month (refunds left out)
-// Years are shown only up to the current Jewish year (owner, v1.47): no next year from post-dated payments,
+// Years are shown only up to the current Jewish year (owner, v1.48): no next year from post-dated payments,
 // scheduled credit-card charges or bills already entered for later.
 const curHY = () => (HEB.parts(todayS()) || {}).y || 9999;
 function hebYears() {
@@ -891,7 +891,7 @@ function vReports() {
   const camps = Object.entries(byCamp).sort((a, b) => b[1].last.localeCompare(a[1].last)).slice(0, 15);
   const top = [...IDX.yg.entries()].sort((a, b) => b[1].total - a[1].total).slice(0, 25);
   const lapsed = [...IDX.yg.entries()].filter(([, g]) => g.last && g.last < addMonths(todayS(), -12) && g.last >= addMonths(todayS(), -36)).sort((a, b) => b[1].total - a[1].total).slice(0, 25);
-  $('#main').innerHTML = `<div class="row"><div><h2>באריכטן – ${esc(JD.companyName)}</h2><p class="sub">באזירט אויף דער לעצטער JLS דאטא (${new Date(JD.importedAt).toLocaleDateString()}). ריפאנדס זענען נישט גערעכנט.</p></div><div class="spacer"></div><button class="btn ghost" onclick="xlsReports()">⬇ Excel</button></div>
+  $('#main').innerHTML = `<div class="row"><div><h2>באריכטן – ${esc(JD.companyName)}</h2><p class="sub">באזירט אויף דער לעצטער JLS דאטא (${engD(calIso(new Date(JD.importedAt)))}). ריפאנדס זענען נישט גערעכנט.</p></div><div class="spacer"></div><button class="btn ghost" onclick="xlsReports()">⬇ Excel</button></div>
   <div class="row" style="margin:18px 0 8px"><h3 style="margin:0">לויט אידישע יארן</h3><div class="spacer"></div>
    <label style="font-size:13px;display:flex;gap:6px;align-items:center"><input type="checkbox" ${useExp ? 'checked' : ''} onchange="ui.repExp=this.checked;vReports()"> רעכן אויך וואס איז שוין אנגעשטעלט אויף די קומענדיגע חדשים (קרעדיט קארד / פלעדזשעס אין JLS)${expAll ? ' – <b class="num" style="color:var(--green)">' + money(expAll) + '</b>' : ''}</label></div>
   ${useExp ? (JD.ccplans ? (() => { const F = ccFreqs(), n = JD.ccplans.length, odd = Object.keys(F).filter(k => (ccStep(k) || {}).guess); return `<p class="sub">💳 ${n} קרעדיט קארד פלאנען פון JLS (${Object.entries(F).map(([k, v]) => esc(k) + ': ' + v).join(' · ')}), גערעכנט ${CC_HORIZON} חדשים פאראויס.${odd.length ? ' ⚠️ נישט באקאנט ווי אפט (גערעכנט ווי יעדן חודש): ' + odd.map(esc).join(', ') : ''}</p>`; })() : '<p class="sub">💳 צו זען די קרעדיט קארדס: דריקט <b>"⟳ דערהיינטיג פון JLS"</b> איינמאל.</p>') : ''}
@@ -974,7 +974,7 @@ function vSettings() {
    <label class="f" style="margin-bottom:8px">JLS tuition company number (0 = off)<input id="stc" type="number" value="${s.tuitionCompany === 0 ? 0 : (s.tuitionCompany || 15)}"></label>
    <label style="display:flex;gap:8px;align-items:flex-start;font-size:14px;margin:6px 0 10px"><input type="checkbox" id="smu" ${s.mailFromUser ? 'checked' : ''} style="margin-top:3px"> <span>✉️ E-mails go out from the sender's own address (the e-mail they log in with). Answers always come back to them; their address shows as the sender once it is added in Gmail as "Send mail as".</span></label>
    <button class="btn" onclick="saveSettings()">Save</button></div>
-  <div class="box"><h3 style="margin-top:0">Last JLS update</h3><p class="sub">${new Date(JD.importedAt).toLocaleString()} · ${esc(JD.importedBy || '')} · ${esc((JD.source || {}).name || '')}<br>${JD.accounts.length.toLocaleString()} accounts · ${JD.payments.length.toLocaleString()} payments · ${JD.pledges.length.toLocaleString()} pledges · ${esc(JD.companyName)}</p>
+  <div class="box"><h3 style="margin-top:0">Last JLS update</h3><p class="sub">${engDT(JD.importedAt)} · ${esc(JD.importedBy || '')} · ${esc((JD.source || {}).name || '')}<br>${JD.accounts.length.toLocaleString()} accounts · ${JD.payments.length.toLocaleString()} payments · ${JD.pledges.length.toLocaleString()} pledges · ${esc(JD.companyName)}</p>
    <h3>Import from the desktop version</h3>
    <p class="sub">If you worked with the desktop version: choose the file <span class="path">data\\log.jsonl</span>, and all to-dos, notes and reminders from there are copied over.</p>
    <label class="btn ghost sm">📥 Choose log.jsonl<input type="file" accept=".jsonl,.txt" hidden onchange="importDesktopLog(this.files[0])"></label>
@@ -1101,7 +1101,7 @@ function closeM() { $('#ov').classList.remove('on'); }
 
 const setHH = () => document.documentElement.style.setProperty('--hh', document.querySelector('header').offsetHeight + 'px');
 window.addEventListener('resize', setHH); window.addEventListener('load', setHH); setHH();
-// ---------- 🔄 new version on the website: update by itself (v1.47) ----------
+// ---------- 🔄 new version on the website: update by itself (v1.48) ----------
 // Every minute the page asks the server for index.html and compares <meta name="app-version">. When it changed:
 // if nobody is in the middle of something (no window open, not typing, no mouse/keys for 20 s) the page reloads by
 // itself and comes back to the same page; otherwise a small "🔄 נייע ווערסיע" button waits for a click.

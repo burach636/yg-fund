@@ -115,7 +115,7 @@ function vFund() {
    <div class="stat"><b>${money(F.totOwed)}</b><span>${F.pct}% קומט די פאנדרעיזערס</span></div>
    <div class="stat"><b>${money(F.totPaid)}</b><span>שוין באצאלט (${F.paid.length} מאל)</span></div>
    <div class="stat"><b class="${F.balance > 0.009 ? 'bal' : 'zero'}">${money(F.balance)}</b><span>${F.balance >= 0 ? 'נאך שולדיג' : 'איבערבאצאלט'}</span></div></div>
-  <p class="sub">💡 די JLS באצאלונגען זענען ביז דער לעצטער דערהיינטיגונג (${new Date(JD.importedAt).toLocaleDateString()}). דערהיינטיגט פון JLS כדי עס זאל זיין גענוי.</p>
+  <p class="sub">💡 די JLS באצאלונגען זענען ביז דער לעצטער דערהיינטיגונג (${engD(calIso(new Date(JD.importedAt)))}). דערהיינטיגט פון JLS כדי עס זאל זיין גענוי.</p>
   <div class="cols"><div><h3>יעדע 2 וואכן</h3>
    <table><thead><tr><th>תקופה</th><th>באצאל.</th><th>אריינגעקומען</th>${F.totEx ? '<th>אן %</th>' : ''}${F.totExp ? '<th>🍽️ עקספענסעס</th>' : ''}<th>${F.pct}%</th><th>באצאלט</th><th>באלאנס</th><th></th></tr></thead><tbody>
    ${F.periods.slice().reverse().map(p => `<tr><td style="font-size:13px;white-space:nowrap">${fmtD(p.from)} –<br>${fmtD(p.to)}${p === F.cur ? ' <span class="tag ask">יעצט</span>' : ''}</td><td class="num">${p.count}</td><td class="num">${money(p.income)}</td>${F.totEx ? `<td class="num">${p.ex ? '−' + money(p.ex) : ''}</td>` : ''}${F.totExp ? `<td class="num">${p.exp ? '−' + money(p.exp) : ''}</td>` : ''}<td class="num"><b>${money(p.owed)}</b></td><td class="num">${p.paid ? money(p.paid) : ''}</td><td class="num ${p.bal > 0.009 ? 'bal' : 'zero'}">${money(p.bal)}</td><td><button class="btn ghost sm" onclick="frPeriod(${p.k})">Show</button> <button class="btn ghost sm" title="שיק אימעיל צום אפיס" onclick="frMailForm(${p.k})">✉️</button>${(S.frmail[p.from] || {}).sent ? `<br><span class="tag ok">✉️ ${fmtD(S.frmail[p.from].sent)}</span>` : ''}</td></tr>`).join('') || `<tr><td colspan="9" class="empty">הייבט זיך אן ${fmtD(F.start)}</td></tr>`}
@@ -197,7 +197,7 @@ function incomeRows(F, list) {
 function xlsFund() {
   const F = fundCalc();
   xlsx([
-    { name: 'סך הכל', rows: [['', 'סכום'], ['אריינגעקומען זינט ' + F.start, r2(F.totIn)], ['אן פראצענט', r2(F.totEx)], ['דינער עקספענסעס', r2(F.totExp)], [F.pct + '% פאר די פאנדרעיזערס', r2(F.totOwed)], ['שוין באצאלט', r2(F.totPaid)], ['נאך שולדיג', r2(F.balance)], ['דערהיינטיגט פון JLS', new Date(JD.importedAt).toLocaleString()]], widths: [34, 20] },
+    { name: 'סך הכל', rows: [['', 'סכום'], ['אריינגעקומען זינט ' + F.start, r2(F.totIn)], ['אן פראצענט', r2(F.totEx)], ['דינער עקספענסעס', r2(F.totExp)], [F.pct + '% פאר די פאנדרעיזערס', r2(F.totOwed)], ['שוין באצאלט', r2(F.totPaid)], ['נאך שולדיג', r2(F.balance)], ['דערהיינטיגט פון JLS', engDT(JD.importedAt)]], widths: [34, 20] },
     { name: 'יעדע 2 וואכן', rows: [['פון', 'ביז', 'פון (אידיש)', 'ביז (אידיש)', 'באצאלונגען', 'אריינגעקומען', 'אן פראצענט', F.pct + '%', 'באצאלט', 'באלאנס']].concat(F.periods.map(p => [p.from, p.to, hebD(p.from), hebD(p.to), p.count, r2(p.income), r2(p.ex), r2(p.owed), r2(p.paid), r2(p.bal)])) },
     { name: 'באצאלט פאנדרעיזערס', rows: [['טאג', 'טאג (אידיש)', 'סכום', 'צו וועמען', 'נאטיץ', 'ארייןגעלייגט דורך']].concat(F.paid.map(x => [x.date, hebD(x.date), r2(x.amt), x.to || '', x.note || '', x.by || ''])) },
     { name: 'אן פראצענט', rows: [['טאג', 'טאג (אידיש)', 'סכום', 'נאטיץ']].concat(F.exempt.map(x => [x.date, hebD(x.date), r2(x.amt), x.note || ''])) },
@@ -509,7 +509,7 @@ async function callSave() {
 const FR_SUBJ_DEF = 'טשעקס פאר די פאנדרעיזערס – {from} ביז {to}: {amount}';
 const FR_BODY_DEF = 'שלום,\n\nביטע מאכט טשעקס פאר די פאנדרעיזערס פאר די 2 וואכן {from} ביז {to}:\n\nאריינגעקומען: {income} ({count} באצאלונגען)\nאן פראצענט: {exempt}\nדינער עקספענסעס: {expenses}\n{pct}% פאר די פאנדרעיזערס: {amount}\n\nשוין באצאלט פאר די 2 וואכן: {paid}\nסך הכל נאך שולדיג ביז היינט: {balance}\n\nבייגעלייגט איז אן Excel מיט די נדבנים און זייערע נדבות פון די 2 וואכן.\n\nא דאנק,\nYG Fund';
 const frMailWho = () => SET().frMailWho || ((TEAM.find(t => t.is_admin) || TEAM[0] || {}).name) || me;
-const frDay = s => { const [y, m, d] = s.split('-'); return HEB.fmtHeb(s) + ' (' + +m + '/' + +d + '/' + y + ')'; };
+const frDay = s => HEB.fmtHeb(s) + ' (' + engD(s) + ')';
 function frFill(t, F, p) {
   const v = { from: frDay(p.from), to: frDay(p.to), count: p.count, income: money(p.income), exempt: money(p.ex), expenses: money(p.exp || 0), pct: F.pct, amount: money(p.owed), paid: money(p.paid), balance: money(F.balance) };
   return t.replace(/\{(\w+)\}/g, (m, k) => v[k] != null ? v[k] : m);
@@ -690,7 +690,7 @@ function homeHero(years, sub) {
     <div class="pushke"><div class="slot"></div><div class="face"><img src="logo.png" alt=""><span>ישיבת מהרי"ט ד'סאטמאר</span></div><div class="shine2"></div></div>
     <div class="glow"></div>
    </div>
-   <div class="hero-sum"><small>${esc(sub)} ${HEB.gem(hy)}</small><b id="heroN" data-n="${cur}">$0</b><span>${fmtDual(todayS())}</span><span class="dim" style="font-size:11px">JLS דאטא פון ${JD && JD.importedAt ? new Date(JD.importedAt).toLocaleString() : '—'}</span></div>
+   <div class="hero-sum"><small>${esc(sub)} ${HEB.gem(hy)}</small><b id="heroN" data-n="${cur}">$0</b><span>${fmtDual(todayS())}</span><span class="dim" style="font-size:11px">JLS דאטא פון ${JD && JD.importedAt ? engDT(JD.importedAt) : '—'}</span></div>
    ${years.length ? `<table class="hero-yrs"><thead><tr>${years.slice(0, 10).map(y => `<th>${HEB.gem(y.y)}</th>`).join('')}</tr></thead><tbody><tr>${years.slice(0, 10).map(y => `<td>${money(y.t)}</td>`).join('')}</tr></tbody></table>` : ''}
   </div>`;
   const el = $('#heroN'), end = +el.dataset.n, t0 = performance.now(), dur = 1800;

@@ -86,7 +86,7 @@ function colNav() {
   const inCol = view === 'col' || view === 'calling';
   nav.classList.toggle('incol', inCol);
   if (!inCol) { box.innerHTML = ''; return; }
-  let n = {}; try { const L = colLists(); colTabs().forEach(([k]) => { n[k] = k === 'every' ? '' : k === 'today' || k === 'cb' || k === 'ask' ? L[k].filter(r => !r.done).length : L[k].length; }); } catch (e) { }
+  let n = {}; try { const L = colLists(); colTabs().forEach(([k]) => { n[k] = k === 'every' ? JD.accounts.filter(a => !a.x).length.toLocaleString() : k === 'today' || k === 'cb' || k === 'ask' ? L[k].filter(r => !r.done).length : L[k].length; }); } catch (e) { }
   const tab = ui.colTab || 'today';
   box.innerHTML = `<button data-v="${colArea() === 'tu' ? 'thome' : 'home'}" class="colback">← ${colArea() === 'tu' ? 'שכר לימוד' : 'פאנדרעיזינג'}</button>
    <div class="navsec">${esc(colTitle())}</div>
@@ -130,7 +130,7 @@ function vCol() {
   if (!colReady()) return;
   const tab = ui.colTab || 'today', L = colLists(), t = todayS();
   const qs = (ui.colQ || '').trim().toLowerCase(), QV = qVars(qs);
-  const needFlt = tab === 'every' && !fltActive('col-every');   // 21,000 accounts: show them only through a 🔎 filter
+  const needFlt = false;   // v1.48 (owner): "אלע אקאונטס" lists every account right away (150 at a time); only Calling mode on it still needs a 🔎 filter
   let R = needFlt ? [] : fltRows('col-' + tab, colTabRows(tab, L), r => r.code);
   const qHitR = r => { const a = IDX.by.get(r.code) || {}; return qHit(QV, (a._s || '') + ' ' + (r.f ? r.f.kids.map(k => k.slice(2, 6).join(' ')).join(' ') : '')) || ('#' + r.code) === qs; };
   if (qs) R = R.filter(qHitR);

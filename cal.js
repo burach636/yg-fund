@@ -139,6 +139,9 @@ const HEBEV = (() => {
   return { events, year };
 })();
 
+// ---- English dates everywhere (owner, v1.48): month/day/2-digit year, e.g. 11/18/26 ----
+const engD = iso => { if (!iso) return ''; const [y, m, d] = String(iso).slice(0, 10).split('-'); return +m + '/' + +d + '/' + String(y).slice(-2); };
+const engDT = v => { const d = new Date(v); if (isNaN(d)) return ''; return (d.getMonth() + 1) + '/' + d.getDate() + '/' + String(d.getFullYear()).slice(-2) + ' ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); };
 // ---- date display preference: 'heb' | 'eng' (per computer) ----
 function calPref() { try { return localStorage.getItem('yg_cal') || 'heb'; } catch (e) { return 'heb'; } }
 function setCalPref(v) { try { localStorage.setItem('yg_cal', v); } catch (e) { } }
@@ -146,7 +149,7 @@ function setCalPref(v) { try { localStorage.setItem('yg_cal', v); } catch (e) { 
 // Due-date style display: main calendar first, the other one small
 function fmtDual(iso) {
   if (!iso) return '—';
-  const [y, m, d] = iso.split('-'), eng = +d + '/' + +m + '/' + y, heb = HEB.fmtHeb(iso);
+  const eng = engD(iso), heb = HEB.fmtHeb(iso);
   return calPref() === 'heb' ? `${heb} <small class="dim">${eng}</small>` : `${eng} <small class="dim">${heb}</small>`;
 }
 
@@ -163,7 +166,7 @@ const calToday = () => calIso(new Date());
 function calText(v, clearable) {
   if (!v) return clearable ? '<span class="dim">ליידיג – דריקט צו קלייבן</span>' : '—';
   const [y, m, d] = v.split('-'), dt = new Date(+y, +m - 1, +d);
-  return `<b>${CAL_WD[dt.getDay()][0]} ${HEB.fmtHeb(v)}</b> <small class="dim">${CAL_WD[dt.getDay()][1]} ${+m}/${+d}/${y}</small>`;
+  return `<b>${CAL_WD[dt.getDay()][0]} ${HEB.fmtHeb(v)}</b> <small class="dim">${CAL_WD[dt.getDay()][1]} ${engD(v)}</small>`;
 }
 function initDateFields(root) {
   (root || document).querySelectorAll('.dfield').forEach(w => {

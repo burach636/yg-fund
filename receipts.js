@@ -86,7 +86,7 @@ function vRcpt() {
    <td class="num"><b>${money(d.amt)}</b>${p[10] ? `<br><span class="tag custom">פלעדזש</span> <small class="dim">באצאלט ${money(p[10][4])}</small>` : ''}</td><td style="font-size:13px">${a.a ? `<span class="ltr">${esc(a.a)}</span>` : '<span class="tag late">⚠️ קיין אדרעס</span>'}</td><td style="font-size:12px">${esc(d.by)}${emailOf(p[1]) ? `<br><span class="ltr dim">✉️ ${esc(emailOf(p[1]))}</span>` : ''}</td>
    <td>${rcPrinted(p) ? `<span class="tag ok">✓ געדרוקט ${fmtD(rcPrinted(p))}</span>` : ''} ${d.edited ? '<span class="tag ask">✏️ געטוישט</span> ' : ''}${rcEmailed(p) ? `<span class="tag ok">✉️ ${fmtD(rcEmailed(p))}</span> ` : ''}<button class="btn ghost sm" title="שיק אין אימעיל" onclick="rcMailOne(${i})">✉️</button><button class="btn ghost sm" title="פרינט נאר די רעסיט (אויך אן אלטע)" onclick="rcPrintOne(${i})">🖨️</button><button class="btn ghost sm" title="טויש דעם טעקסט" onclick="rcEdit(${i})">✏️</button><button class="btn ghost sm" title="קוק אן" onclick="rcPreview(${i})">👁</button></td></tr>`; }).join('') || '<tr><td colspan="7" class="empty">קיין נדבות אין די טעג</td></tr>'}
   </tbody></table>
-  <p class="sub" style="margin-top:10px">💡 נאר וואס איז אין JLS (ביז ${new Date(JD.importedAt).toLocaleDateString()}). ביים דרוקן: Margins = None, Scale = 100%.</p>`;
+  <p class="sub" style="margin-top:10px">💡 נאר וואס איז אין JLS (ביז ${engD(calIso(new Date(JD.importedAt)))}). ביים דרוקן: Margins = None, Scale = 100%.</p>`;
   initDateFields($('#main'));
   const qi = $('#rcq');
   if (ui.rc._focus) { qi.focus(); qi.setSelectionRange(qi.value.length, qi.value.length); ui.rc._focus = false; }
