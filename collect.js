@@ -96,7 +96,7 @@ function colNav() {
 
 // Accounts whose pledge is already being paid off (owner, v1.25): an active credit-card plan (JD.ccplans: no end date
 // or ending today or later) or a held check (a YG payment whose check date is still ahead, payment [10]).
-// They do not show in the pledge lists unless "💳 אויך מיט קרעדיט קארד / העלד טשעקס" is on (ui.plCovered).
+// They do not show in the pledge lists unless "💳 אויך מיט Credit card / Held checks" is on (ui.plCovered).
 function plCovered() {
   if (window._plCov && window._plCov.jd === JD && window._plCov.d === todayS()) return window._plCov.s;
   const t = todayS(), s = new Set();
@@ -113,7 +113,7 @@ function colPlChips() {
   const setF = js => `ui.flt=ui.flt||{};ui.flt['col-pl']=Object.assign({},ui.flt['col-pl']||{});${js};fltPersist('col-pl',ui.flt['col-pl']);vCol()`;
   return `<span class="scope"><button class="chip ${!f.plMonth ? 'on' : ''}" onclick="${setF("delete ui.flt['col-pl'].plMonth")}">אלע יארן</button><button class="chip ${f.plMonth ? 'on' : ''}" onclick="${setF("ui.flt['col-pl'].plMonth=true")}">📅 דעם חודש</button></span>
    <select class="mini" onchange="${setF("if(this.value)ui.flt['col-pl'].plCamp=this.value;else delete ui.flt['col-pl'].plCamp")}"><option value="">💳 אלע קאמפעינס</option>${camps.map(n => `<option value="${n}" ${+f.plCamp === n ? 'selected' : ''}>#${n} ${esc((JD.campaigns || {})[n] || '')} (${used.get(n)})</option>`).join('')}</select>
-   <label style="font-size:13px;display:flex;gap:5px;align-items:center"><input type="checkbox" ${ui.plCovered ? 'checked' : ''} onchange="ui.plCovered=this.checked;vCol()"> 💳 אויך מיט קרעדיט קארד / העלד טשעקס (${plCovered().size})</label>
+   <label style="font-size:13px;display:flex;gap:5px;align-items:center"><input type="checkbox" ${ui.plCovered ? 'checked' : ''} onchange="ui.plCovered=this.checked;vCol()"> 💳 אויך מיט Credit card / Held checks (${plCovered().size})</label>
    <select class="mini" onchange="ui.plSort=this.value;vCol()"><option value="amt">סארטיר: סכום</option><option value="due" ${ui.plSort === 'due' ? 'selected' : ''}>סארטיר: ווען פעליג</option><option value="abc" ${ui.plSort === 'abc' ? 'selected' : ''}>סארטיר: א-ב</option></select>`;
 }
 function colPlLine(code) {
