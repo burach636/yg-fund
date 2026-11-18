@@ -42,11 +42,13 @@ export function due(S: any, team: any[], now = Date.now()) {
   const cut = new Date(now - HOURS * 3600e3).toISOString(), out = new Map<string, any>();
   for (const [id, x] of Object.entries<any>(S.task)) {
     if (!x || !x.title || x.del || x.done || x.priv || !x.from || !x.created) continue;
-    if (x.created < START || x.created > cut) continue;
+    // owner (v1.52): a task counts from its day (due date, New York midnight ≈ 05:00 UTC) if that is after it was made
+    const arr = x.due && x.due + 'T05:00:00.000Z' > x.created ? x.due + 'T05:00:00.000Z' : x.created;
+    if (x.created < START || arr > cut) continue;
     for (const n of [x.who, x.who2]) {
       if (!n || n === x.from || !byName.has(n)) continue;
       const email = byName.get(n)!, seen = (S.seen[email + '|' + (x.area || 'fund')] || {}).at || '';
-      if (seen >= x.created || S.remind[id + '|' + n]) continue;
+      if (seen >= arr || S.remind[id + '|' + n]) continue;
       if (!out.has(n)) out.set(n, { name: n, email, tasks: [] });
       out.get(n).tasks.push([id, x]);
     }

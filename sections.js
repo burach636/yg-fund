@@ -7,6 +7,10 @@ const myKey = () => (myEmail || '').toLowerCase();
 // A private task is seen only by the person who made it (UI filter + RLS on events, see SETUP.sql).
 const taskVisible = x => x && x.title && !x.del && (!x.priv || (x.owner || '').toLowerCase() === myKey()) && (x.area || 'fund') === (AREA || 'fund');   // tuition tasks (area 'tu') only in the tuition area
 const taskMine = x => x.who === me || x.who2 === me;
+// owner (v1.52): office work shows a task only once its day has come (no date = right away)
+const taskDue = x => !x.due || x.due <= todayS();
+// when a task "arrives" for the 🔔 popup / seen marks: created, or the start of its day if that is later
+const taskArr = x => { const d = x.due ? new Date(x.due + 'T00:00:00').toISOString() : ''; return (x.created || '') > d ? (x.created || '') : d; };
 const taskWho = x => [x.who, x.who2].filter(Boolean).join(' + ') || 'נישט צוגעטיילט';
 // Every event on a private task carries priv+owner, so the database never shows it to others.
 // Each team member has a colour (order of the team list); a task shows the colour of the one who asked for it.
@@ -42,7 +46,8 @@ function todoRow(id, x) {
 function vTodo() {
   markSeen(); seenServer();
   const all = Object.entries(S.task).filter(([, x]) => taskVisible(x));
-  const open = all.filter(([, x]) => !x.done);
+  const later = all.filter(([, x]) => !x.done && !taskDue(x));
+  const open = all.filter(([, x]) => !x.done && (ui.todoLater || taskDue(x)));
   const F = {
     mine: ['מיינע', x => taskMine(x)],
     only: ['נאר איך', x => x.who === me && !x.who2],
@@ -60,7 +65,7 @@ function vTodo() {
   <div class="chips" style="margin-bottom:8px">${[['', '🗂️ אלעס'], ['call', '📞 קאלן'], ['proj', '📋 פראיעקטן']].map(([k, l]) => `<button class="chip big ${C === k ? 'on' : ''}" onclick="ui.todoC='${k}';vTodo()">${l} (${open.filter(([, x]) => F[f][1](x) && (!k || taskCat(x) === k)).length})</button>`).join('')}
    <span class="dim" style="font-size:12px;margin-inline-start:10px">${USERS().map(userChip).join(' ')}</span></div>
   <div class="row"><div class="chips">${Object.entries(F).map(([k, [l, fn]]) => `<button class="chip ${f === k ? 'on' : ''}" onclick="ui.todoF='${k}';vTodo()">${l} (${open.filter(([, x]) => fn(x)).length})</button>`).join('')}</div>
-   <div class="spacer"></div><label style="font-size:13px;display:flex;gap:6px;align-items:center"><input type="checkbox" ${ui.todoDone ? 'checked' : ''} onchange="ui.todoDone=this.checked;vTodo()"> ווייז וואס איז שוין געטון</label></div>
+   <div class="spacer"></div><label style="font-size:13px;display:flex;gap:6px;align-items:center"><input type="checkbox" ${ui.todoLater ? 'checked' : ''} onchange="ui.todoLater=this.checked;vTodo()"> 📅 ווייז אויך שפעטערדיגע (${later.length})</label><label style="font-size:13px;display:flex;gap:6px;align-items:center"><input type="checkbox" ${ui.todoDone ? 'checked' : ''} onchange="ui.todoDone=this.checked;vTodo()"> ווייז וואס איז שוין געטון</label></div>
   ${L.slice(0, 300).map(([id, x]) => todoRow(id, x)).join('') || `<div class="empty">${ui.todoDone ? 'גארנישט' : '🎉 אלעס געטון!'}</div>`}`;
 }
 async function taskUndo(id) { await emitTask(id, { done: false }); render(); }
@@ -648,10 +653,10 @@ function markSeen() { try { localStorage.setItem(seenKey(), new Date().toISOStri
 function seenServer() {
   if (!me || !myKey()) return;
   const id = myKey() + '|' + (AREA || 'fund'), at = (S.seen[id] || {}).at || '';
-  if (Object.values(S.task).some(x => taskVisible(x) && !x.done && taskMine(x) && x.from && x.from !== me && x.created && x.created > at))
+  if (Object.values(S.task).some(x => taskVisible(x) && !x.done && taskMine(x) && x.from && x.from !== me && x.created && taskDue(x) && taskArr(x) > at))
     emit('seen', id, { at: new Date().toISOString() });
 }
-const newForMe = () => { const s = seenAt(); return Object.entries(S.task).filter(([, x]) => taskVisible(x) && !x.done && taskMine(x) && x.from && x.from !== me && x.created && x.created > s); };
+const newForMe = () => { const s = seenAt(); return Object.entries(S.task).filter(([, x]) => taskVisible(x) && !x.done && taskMine(x) && x.from && x.from !== me && x.created && taskDue(x) && taskArr(x) > s); };
 let _lastNew = -1;
 function ding() {
   try {
