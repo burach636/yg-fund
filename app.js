@@ -81,7 +81,7 @@ async function pullLog() {
   }
   return changed;
 }
-// Download a JLS data file always fresh (v1.45.1): the files used to be saved with Supabase's default 1-hour cache, so
+// Download a JLS data file always fresh (v1.46.1): the files used to be saved with Supabase's default 1-hour cache, so
 // another user's browser could show the old numbers for up to an hour after an import.
 async function jlsFile(path) {
   try {
@@ -110,7 +110,7 @@ function hebLast(a) {
   const lh = a.lh || (a.h ? a.h.trim().split(/\s+/).pop() : '');
   return lh ? '0' + lh + ' ' + (a.h || '') : '1' + (a.ln || a.n || '').toLowerCase() + ' ' + (a.n || '').toLowerCase();
 }
-// 🔍 Search that understands both keyboards (v1.45, owner): text typed with the keyboard on Hebrew/Yiddish while
+// 🔍 Search that understands both keyboards (v1.46, owner): text typed with the keyboard on Hebrew/Yiddish while
 // meaning English letters ("יקךךם" = "hello"), or English letters while meaning Yiddish ("nav" = "מאה"), is also tried through the other layout (standard Israeli layout). Niqqud and Yiddish ligatures
 // (ײ װ ױ) are ignored. qVars(raw) = the normalised text + its swapped twin; every search box tries both.
 const KB_PAIRS = "q/w'eקrרtאyטuוiןoםpפaשsדdגfכgעhיjחkלlךzזxסcבvהbנmצ;ף,ת.ץnמ";
@@ -467,7 +467,7 @@ function wire() {
 function setArea(a, keepView) {
   AREA = a; try { sessionStorage.setItem('yg_area', a); } catch (e) { }
   document.body.classList.toggle('area-tu', a === 'tu');
-  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.45</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.45</small>';
+  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.46</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.46</small>';
   $('#btnArea').style.display = canFund() && canView('tuition') ? '' : 'none';
   $('#btnArea').textContent = a === 'tu' ? '⇄ צו פאנדרעיזינג' : '⇄ צו שכר לימוד';
   setupUser();
@@ -765,6 +765,7 @@ function openAcct(code) {
    <div class="stat"><b>${g && g.last ? money(g.lastAmt) : '—'}</b><span>לעצטע: ${g ? fmtD(g.last) : '—'}</span></div>
    <div class="stat"><b class="${p && p.open > 0.009 ? 'bal' : ''}">${money(p ? p.open : 0)}</b><span>אפענער פלעדזש</span></div>
    <div class="stat"><b style="font-size:19px">${k.next ? fmtDual(k.next) : '—'}</b><span>ווייטער בעטן</span></div></div>
+  ${acctFuture(code)}
   <div class="cols"><div class="box"><div class="k">פון JLS</div>
    ${a.w || a.wh ? `<div style="margin:4px 0">👩 <b>${esc(a.wh || a.w)}</b> <span class="heb">${esc(a.wh ? a.w : '')}</span></div>` : ''}
    <div style="margin:6px 0">🏠 <span class="ltr">${esc(a.a || '—')}</span></div>
@@ -785,6 +786,26 @@ function openAcct(code) {
   <div class="tabs2">${[['pay', 'באצאלונגען'], ['pl', 'פלעדזשעס'], ['hist', 'היסטאריע (' + hist.length + ')'], ['tasks', 'ארבעטן (' + tasks.filter(t => !t[1].done).length + ')']].map(([kk, l]) => `<button class="${acctTab === kk ? 'on' : ''}" onclick="acctTab='${kk}';openAcct(${code})">${l}</button>`).join('')}</div>
   <div class="scroll">${tabBody[acctTab]}</div>`);
 }
+// 💳 On the account (owner, v1.46): active credit-card plans (JD.ccplans, schedule columns only) and held /
+// post-dated checks (YG payments whose check date is still ahead) – the same things plCovered() looks at.
+function acctFuture(code) {
+  const t = todayS(), camp = n => (JD.campaigns || {})[n] || (n ? '#' + n : '');
+  const plans = (JD.ccplans || []).filter(p => +p[0] === code && (!validD(p[3]) || p[3] >= t)).map(p => {
+    const [, freq, start, end, amt, cp] = p, st = ccStep(freq);
+    let next = '', left = null;
+    if (validD(start)) {
+      if (!st) next = start >= t ? start : '';
+      else for (let k = 0, d = start; k < 5000; k++) { d = st.m ? addMonths(start, k * st.m) : addDays(start, k * st.d); if (d >= t) { next = d; break; } }
+      if (st && next && validD(end)) { let n = 0; for (let k = 0, d = next; k < 5000 && d <= end; k++) { n++; d = st.m ? addMonths(next, (k + 1) * st.m) : addDays(next, (k + 1) * st.d); } left = n * amt; }
+    }
+    return `<tr><td>💳 ${esc(freq || 'קרעדיט קארד')}</td><td class="num"><b>${money(amt)}</b></td><td>${esc(camp(cp))}</td><td class="num">${validD(start) ? fmtD(start) : '—'}</td><td class="num">${validD(end) ? fmtD(end) : 'אן א סוף'}</td><td class="num">${next ? fmtD(next) : '—'}</td><td class="num">${left != null ? money(left) : '—'}</td></tr>`;
+  });
+  const checks = JD.payments.filter(p => +p[1] === code && p[10] && p[10] > t && !p[9]).sort((a, b) => a[10].localeCompare(b[10]))
+    .map(p => `<tr><td>🧾 העלד טשעק${p[5] ? ' #' + esc(p[5]) : ''}</td><td class="num"><b>${money(p[3])}</b></td><td>${esc(camp(p[6]))}</td><td class="num">${fmtD(p[2])}</td><td class="num">—</td><td class="num">${fmtD(p[10])}</td><td class="num">${money(p[3])}</td></tr>`);
+  if (!plans.length && !checks.length) return '';
+  return `<div class="box" style="margin:0 0 14px;border-color:#2e9d5b"><div class="k" style="color:#2e9d5b">💳 קומענדיגע באצאלונגען – קרעדיט קארד / העלד טשעקס</div>
+   <table style="font-size:13px;margin-top:6px"><thead><tr><th>וואס</th><th>סכום</th><th>קאמפעין</th><th>אנגעהויבן / אריינגעלייגט</th><th>ביז</th><th>קומענדיגע</th><th>נאך צו קומען</th></tr></thead><tbody>${plans.join('')}${checks.join('')}</tbody></table></div>`;
+}
 async function saveAcct(code) {
   await emit('acct', code, { freq: $('#af').value, nextAsk: $('#an').value, assigned: $('#aa').value, vip: !!$('#av').value, notes: $('#ao').value, shul: $('#ash').value, email: $('#aem').value.trim().toLowerCase() === ((IDX.by.get(code) || {}).em || [])[0] ? '' : $('#aem').value.trim().toLowerCase() });
   openAcct(code); render(); toast('✓ אפגעהיטן');
@@ -796,7 +817,7 @@ async function addNote(code) {
 
 // ---------- REPORTS ----------
 // Payments by Jewish year and month (refunds left out)
-// Years are shown only up to the current Jewish year (owner, v1.45): no next year from post-dated payments,
+// Years are shown only up to the current Jewish year (owner, v1.46): no next year from post-dated payments,
 // scheduled credit-card charges or bills already entered for later.
 const curHY = () => (HEB.parts(todayS()) || {}).y || 9999;
 function hebYears() {
@@ -1080,7 +1101,7 @@ function closeM() { $('#ov').classList.remove('on'); }
 
 const setHH = () => document.documentElement.style.setProperty('--hh', document.querySelector('header').offsetHeight + 'px');
 window.addEventListener('resize', setHH); window.addEventListener('load', setHH); setHH();
-// ---------- 🔄 new version on the website: update by itself (v1.45) ----------
+// ---------- 🔄 new version on the website: update by itself (v1.46) ----------
 // Every minute the page asks the server for index.html and compares <meta name="app-version">. When it changed:
 // if nobody is in the middle of something (no window open, not typing, no mouse/keys for 20 s) the page reloads by
 // itself and comes back to the same page; otherwise a small "🔄 נייע ווערסיע" button waits for a click.
