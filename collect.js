@@ -253,7 +253,7 @@ function vCalling() {
       <div class="cmtop"><div><div class="cmname">${esc(a.h || a.n)}</div><div class="cmeng">${esc(a.h ? a.n : '')}</div><div class="cmaddr">📍 ${esc(a.a || '—')}</div>
         <div class="cmaddr">לעצטע באצאלונג: ${last ? fmtD(last) : '—'}${r.f && r.f.st && r.f.st.mo != null ? ` (לפני ${r.f.st.mo} חדשים)` : ''}</div></div>
        <div class="cmbal">${isJr && !(r.amt > 0.009) ? `<small>לעצטע נדבה</small><b style="color:#9fe0b4">${money((IDX.yg.get(code) || {}).lastAmt || 0)}</b><small>YG ס"ה ${money((IDX.yg.get(code) || {}).total || 0)}</small>` : `<small>${r.f ? 'שולדיג יעצט' : 'פעליג'}</small><b>${money(r.amt)}</b>`}${r.bal > r.amt + 0.5 ? `<small>${money(r.bal)} באלאנס</small>` : ''}</div></div>
-      <div class="cmphones">${a.ph.slice(0, 4).map(p => { const d = callNum(p[1]); return `<a class="cmcall" href="tel:+${d}" data-n="${d}" onclick="return dial(this,${code})">📞 ${esc(p[0] || 'Phone')}<br><b>${esc(p[1])}</b></a>`; }).join('') || '<span class="dim">קיין טעלעפאן</span>'}</div>
+      <div class="cmphones">${a.ph.slice(0, 4).map(p => { const d = callNum(p[1]); return `<a class="cmcall" href="tel:+${d}" data-n="${d}" onclick="return dial(this,${code})">📞 ${esc(p[0] || 'Phone')}<br><b dir="ltr" class="phn">${esc(p[1])}</b></a>`; }).join('') || '<span class="dim">קיין טעלעפאן</span>'}</div>
      </div>
      <div class="cmpin" onclick="colPin(${code})">📌 ${s.pin ? `<b>${esc(s.pin)}</b>` : '<span class="dim">Pin א נאטיץ וואס אלע זען, למשל "באצאלט צוויי מאל א יאר: אדר און תשרי"</span>'}</div>
      ${info}
@@ -290,7 +290,7 @@ function cmSearchInit() {
   let tm;
   const show = () => {
     const L = cmSearchList(qi.value);
-    box.innerHTML = !qi.value.trim() ? '' : L.length ? L.map(x => `<div class="cmqi" onmousedown="cmPick(${x.c})"><b>${esc(x.a.h || x.a.n)}</b> <small>${esc(x.a.h ? x.a.n : '')} · #${x.c}${x.a.ph && x.a.ph[0] ? ' · ' + esc(x.a.ph[0][1]) : ''}</small>${x.on ? ' <span class="tag custom">אין דער ליסטע</span>' : ''}</div>`).join('') : '<div class="cmqi dim">גארנישט געטראפן</div>';
+    box.innerHTML = !qi.value.trim() ? '' : L.length ? L.map(x => `<div class="cmqi" onmousedown="cmPick(${x.c})"><b>${esc(x.a.h || x.a.n)}</b> <small>${esc(x.a.h ? x.a.n : '')} · #${x.c}${x.a.ph && x.a.ph[0] ? ' · <span dir="ltr" class="phn">' + esc(x.a.ph[0][1]) + '</span>' : ''}</small>${x.on ? ' <span class="tag custom">אין דער ליסטע</span>' : ''}</div>`).join('') : '<div class="cmqi dim">גארנישט געטראפן</div>';
     box.classList.toggle('on', !!qi.value.trim());
   };
   qi.oninput = () => { clearTimeout(tm); tm = setTimeout(show, 200); };
