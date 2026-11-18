@@ -192,7 +192,7 @@ async function rcEditSave(key, reset, preview) {
   if (amt && !(+amt > 0)) { toast('⚠️ סכום איז נישט ריכטיג'); return; }
   if (date && !validD(date)) { toast('⚠️ טאג: למשל 2026-11-12'); return; }
   await emit('rcpt', key, { ed: { top: $('#ret').value, amt, date: date || null, heb: $('#reh').value, eng: $('#ree').value, a1: $('#re1').value, a2: $('#re2').value, by: $('#reb').value } });
-  closeM(); render(); toast('✓ אפגעהיטן');
+  closeM(); render(); toast('✓ Saved');
   if (preview != null) rcPreview(preview);
 }
 function rcSettings() {

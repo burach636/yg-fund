@@ -81,7 +81,7 @@ async function pullLog() {
   }
   return changed;
 }
-// Download a JLS data file always fresh (v1.49.1): the files used to be saved with Supabase's default 1-hour cache, so
+// Download a JLS data file always fresh (v1.50.1): the files used to be saved with Supabase's default 1-hour cache, so
 // another user's browser could show the old numbers for up to an hour after an import.
 async function jlsFile(path) {
   try {
@@ -110,7 +110,7 @@ function hebLast(a) {
   const lh = a.lh || (a.h ? a.h.trim().split(/\s+/).pop() : '');
   return lh ? '0' + lh + ' ' + (a.h || '') : '1' + (a.ln || a.n || '').toLowerCase() + ' ' + (a.n || '').toLowerCase();
 }
-// 🔍 Search that understands both keyboards (v1.49, owner): text typed with the keyboard on Hebrew/Yiddish while
+// 🔍 Search that understands both keyboards (v1.50, owner): text typed with the keyboard on Hebrew/Yiddish while
 // meaning English letters ("יקךךם" = "hello"), or English letters while meaning Yiddish ("nav" = "מאה"), is also tried through the other layout (standard Israeli layout). Niqqud and Yiddish ligatures
 // (ײ װ ױ) are ignored. qVars(raw) = the normalised text + its swapped twin; every search box tries both.
 const KB_PAIRS = "q/w'eקrרtאyטuוiןoםpפaשsדdגfכgעhיjחkלlךzזxסcבvהbנmצ;ף,ת.ץnמ";
@@ -338,7 +338,7 @@ async function saveNewPw(fromRecovery) {
   if (a !== b) { err.textContent = fromRecovery ? 'די צוויי זענען נישט גלייך' : 'The two passwords are not the same'; return; }
   const r = await sb.auth.updateUser({ password: a });
   if (r.error) { err.textContent = r.error.message; return; }
-  if (fromRecovery) { history.replaceState(null, '', location.pathname); const { data } = await sb.auth.getSession(); toast('✓ נייער פאסווארט אפגעהיטן'); await afterLogin(data.session); }
+  if (fromRecovery) { history.replaceState(null, '', location.pathname); const { data } = await sb.auth.getSession(); toast('✓ New password saved'); await afterLogin(data.session); }
   else { closeM(); toast('✓ Password changed'); }
 }
 function pwForm() {
@@ -372,7 +372,7 @@ async function saveNote(code) {
   if (t) await emit('hist', uid(), { code, text: t });
   if (w !== (st.assigned || '')) await emit('acct', code, { assigned: w });
   if (d) await emitTask(uid(), { title: 'קאלן ' + acctName(code), due: d, who: w || me, code, pri: 'norm', note: t });
-  closeM(); render(); toast('✓ אפגעהיטן');
+  closeM(); render(); toast('✓ Saved');
 }
 async function poll() {
   try {
@@ -467,7 +467,7 @@ function wire() {
 function setArea(a, keepView) {
   AREA = a; try { sessionStorage.setItem('yg_area', a); } catch (e) { }
   document.body.classList.toggle('area-tu', a === 'tu');
-  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.49</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.49</small>';
+  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.50</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.50</small>';
   $('#btnArea').style.display = canFund() && canView('tuition') ? '' : 'none';
   $('#btnArea').textContent = a === 'tu' ? '⇄ צו פאנדרעיזינג' : '⇄ צו שכר לימוד';
   setupUser();
@@ -592,7 +592,7 @@ async function taskDone(id) {
   await emitTask(id, { done: true, doneAt: todayS(), doneBy: me, doneTs: new Date().toISOString() });
   if (x.code && !x.priv) await emit('hist', uid(), { code: +x.code, text: '✓ ' + x.title });
   if (x.repeat && FREQ[x.repeat]) { const nid = uid(); await emitTask(nid, { title: x.title, due: addFreq(x.due && x.due > todayS() ? x.due : todayS(), x.repeat), who: x.who, who2: x.who2 || '', code: x.code, pri: x.pri, note: x.note, repeat: x.repeat, priv: !!x.priv, owner: x.owner || '' }); }
-  render(); toast('✓ אפגעמארקירט');
+  render(); toast('✓ Marked');
 }
 function askForm(code) {
   const a = IDX.by.get(code), k = ask(code);
@@ -612,7 +612,7 @@ async function saveAsk(code) {
   if (fq === 'once' && !$('#nx').value && !(res === RESULTS[2] || res === RESULTS[3])) next = '';
   await emit('acct', code, { freq: fq, nextAsk: next, lastAsk: t });
   await emit('hist', uid(), { code, text: res + (amt ? ' – ' + money(amt) : '') + (nt ? ' · ' + nt : ''), res, amt });
-  closeM(); render(); toast('✓ אפגעהיטן. ווייטער בעטן: ' + (next ? fmtD(next) : '—'));
+  closeM(); render(); toast('✓ Saved. ווייטער בעטן: ' + (next ? fmtD(next) : '—'));
 }
 function taskForm(id, code) {
   const x = id ? S.task[id] : { title: '', due: todayS(), who: me, who2: '', code: code || '', pri: 'norm', note: '', repeat: '', priv: false };
@@ -643,7 +643,7 @@ async function saveTask(id) {
   if (!id && AREA === 'tu') p.area = 'tu';
   if (priv) p.owner = myEmail.toLowerCase();
   await emitTask(id || uid(), p);
-  closeM(); render(); toast('✓ אפגעהיטן');
+  closeM(); render(); toast('✓ Saved');
 }
 async function delTask(id) { await emitTask(id, { del: true }); closeM(); render(); }
 
@@ -684,7 +684,7 @@ async function saveCall(c) {
     await emitTask(uid(), { title: 'קאלן צוריק פאר פלעדזש – ' + acctName(c), due: addDays(todayS(), 3), who: me, code: c, pri: 'norm', note: n });
   } else await setCalled(c, true, true);
   await emit('hist', uid(), { code: c, text: 'פלעדזש קאל: ' + r + (n ? ' · ' + n : '') });
-  closeM(); render(); toast('✓ אפגעהיטן');
+  closeM(); render(); toast('✓ Saved');
 }
 async function setCalled(c, v, quiet) { await emit('call', c + '|' + monthKey(), { v }); if (!quiet) render(); }
 const r2 = n => Math.round((+n || 0) * 100) / 100;
@@ -786,7 +786,7 @@ function openAcct(code) {
   <div class="tabs2">${[['pay', 'באצאלונגען'], ['pl', 'פלעדזשעס'], ['hist', 'היסטאריע (' + hist.length + ')'], ['tasks', 'ארבעטן (' + tasks.filter(t => !t[1].done).length + ')']].map(([kk, l]) => `<button class="${acctTab === kk ? 'on' : ''}" onclick="acctTab='${kk}';openAcct(${code})">${l}</button>`).join('')}</div>
   <div class="scroll">${tabBody[acctTab]}</div>`);
 }
-// 💳 On the account (owner, v1.49): active credit-card plans (JD.ccplans, schedule columns only) and held /
+// 💳 On the account (owner, v1.50): active credit-card plans (JD.ccplans, schedule columns only) and held /
 // post-dated checks (YG payments whose check date is still ahead) – the same things plCovered() looks at.
 function acctFuture(code) {
   const t = todayS(), camp = n => (JD.campaigns || {})[n] || (n ? '#' + n : '');
@@ -808,7 +808,7 @@ function acctFuture(code) {
 }
 async function saveAcct(code) {
   await emit('acct', code, { freq: $('#af').value, nextAsk: $('#an').value, assigned: $('#aa').value, vip: !!$('#av').value, notes: $('#ao').value, shul: $('#ash').value, email: $('#aem').value.trim().toLowerCase() === ((IDX.by.get(code) || {}).em || [])[0] ? '' : $('#aem').value.trim().toLowerCase() });
-  closeM(); render(); toast('✓ אפגעהיטן');   // owner (v1.49): Save closes the account window
+  closeM(); render(); toast('✓ Saved');   // owner (v1.50): Save closes the account window
 }
 async function addNote(code) {
   const t = $('#hn').value.trim(); if (!t) return;
@@ -817,7 +817,7 @@ async function addNote(code) {
 
 // ---------- REPORTS ----------
 // Payments by Jewish year and month (refunds left out)
-// Years are shown only up to the current Jewish year (owner, v1.49): no next year from post-dated payments,
+// Years are shown only up to the current Jewish year (owner, v1.50): no next year from post-dated payments,
 // scheduled credit-card charges or bills already entered for later.
 const curHY = () => (HEB.parts(todayS()) || {}).y || 9999;
 function hebYears() {
@@ -1058,7 +1058,7 @@ async function saveUsers() {
     }
     const uc = {}; rows.forEach(r => { const n = r.querySelector('.un').value.trim(), c = r.querySelector('.ucl'); if (n && c) uc[n] = c.value; });
     await emit('settings', 's', { ucol: uc });
-    await loadTeam(); setupUser(); render(); toast('✓ באניצער אפגעהיטן');
+    await loadTeam(); setupUser(); render(); toast('✓ Users saved');
   } catch (e) { err(e.message || String(e)); }
 }
 async function importDesktopLog(file) {
@@ -1101,7 +1101,7 @@ function closeM() { $('#ov').classList.remove('on'); }
 
 const setHH = () => document.documentElement.style.setProperty('--hh', document.querySelector('header').offsetHeight + 'px');
 window.addEventListener('resize', setHH); window.addEventListener('load', setHH); setHH();
-// ---------- 🔄 new version on the website: update by itself (v1.49) ----------
+// ---------- 🔄 new version on the website: update by itself (v1.50) ----------
 // Every minute the page asks the server for index.html and compares <meta name="app-version">. When it changed:
 // if nobody is in the middle of something (no window open, not typing, no mouse/keys for 20 s) the page reloads by
 // itself and comes back to the same page; otherwise a small "🔄 נייע ווערסיע" button waits for a click.

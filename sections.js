@@ -155,7 +155,7 @@ function frForm(id) {
 async function frSave(id) {
   const amt = +$('#fa').value; if (!amt) { $('#fa').focus(); return; }
   await emit('fr', id || uid(), { date: $('#fd').value || todayS(), amt, to: $('#ft').value.trim(), note: $('#fn').value.trim(), by: me, del: false });
-  closeM(); render(); toast('✓ אפגעהיטן – אראפגערעכנט');
+  closeM(); render(); toast('✓ Saved – deducted');
 }
 function frInForm(id) {
   const x = id ? S.frin[id] : { date: todayS(), amt: '', note: '' };
@@ -168,7 +168,7 @@ function frInForm(id) {
 async function frInSave(id) {
   const amt = +$('#ia').value; if (!amt) { $('#ia').focus(); return; }
   await emit('frin', id || uid(), { date: $('#id_').value || todayS(), amt, note: $('#in_').value.trim(), del: false });
-  closeM(); render(); toast('✓ אפגעהיטן');
+  closeM(); render(); toast('✓ Saved');
 }
 function frExForm(id) {
   const x = id ? S.frex[id] : { date: todayS(), amt: '', note: '' };
@@ -182,7 +182,7 @@ function frExForm(id) {
 async function frExSave(id) {
   const amt = +$('#xa').value; if (!amt) { $('#xa').focus(); return; }
   await emit('frex', id || uid(), { date: $('#xd').value || todayS(), amt, note: $('#xn').value.trim(), del: false });
-  closeM(); render(); toast('✓ אפגעהיטן');
+  closeM(); render(); toast('✓ Saved');
 }
 // ---------- Excel downloads (fundraisers, shul) ----------
 // One row per donor: how many gifts, total, and the fundraisers' share
@@ -280,7 +280,7 @@ async function shulSave(id) {
   const p = { name, addr: $('#sa').value.trim(), notes: $('#snt').value.trim(), paused: $('#sp').checked, del: false };
   if (!id) { p.ord = Math.max(0, ...shulList().map(s => s.ord || 0)) + 1; if (!SET().shulStart) await emit('settings', 's', { shulStart: shulStart() }); }
   await emit('shul', id || uid(), p);
-  closeM(); render(); toast('✓ אפגעהיטן');
+  closeM(); render(); toast('✓ Saved');
 }
 async function shulDel(id) { if (!confirm('אויסמעקן די שול?')) return; await emit('shul', id, { del: true }); closeM(); render(); }
 async function shulMove(id, dir) {
@@ -298,7 +298,7 @@ function shulStartForm() {
 async function shulStartSave() {
   const v = $('#ss').value; if (!v) return;
   if (parse(v).getDay() !== 3) { toast('⚠️ דאס איז נישט קיין מיטוואך'); return; }
-  await emit('settings', 's', { shulStart: v }); closeM(); render(); toast('✓ אפגעהיטן');
+  await emit('settings', 's', { shulStart: v }); closeM(); render(); toast('✓ Saved');
 }
 function shulDonors(id) {
   const s = S.shul[id], L = Object.entries(S.acct).filter(([, st]) => st.shul === id).map(([c]) => +c).filter(c => IDX.by.has(c))
@@ -548,7 +548,7 @@ async function frMailGo(k) {
     await emit('frmail', p.from, { sent: todayS(), to, cc, amount: r2(p.owed), by: me });
     if (to !== (SET().frOffice || '') || cc !== (SET().frCc || '')) await emit('settings', 's', { frOffice: to, frCc: cc });
     for (const [id, x] of Object.entries(S.task)) if (x.fm && x.fm.from === p.from && !x.done) await emitTask(id, { done: true, doneAt: todayS() });
-    busy(false); closeM(); render(); toast('✓ געשיקט צום אפיס');
+    busy(false); closeM(); render(); toast('✓ Sent to the office');
   } catch (e) { busy(false); $('#fmgo').disabled = false; rcMailErr(e); toast('⚠️ ' + (e.message || e)); }
 }
 // Every 2 weeks a to-do to send the office the e-mail for the 2 weeks that just ended (fixed id per period)
@@ -622,7 +622,7 @@ async function expSave(id) {
       p.file = { path, name: f.name, type: f.type || 'application/octet-stream', size: f.size };
     } else if ($('#xfr') && $('#xfr').checked) p.file = null;
     await emit('frexp', nid, p);
-    closeM(); render(); toast('✓ אפגעהיטן');
+    closeM(); render(); toast('✓ Saved');
   } catch (e) { busy(false); $('#xgo').disabled = false; toast('⚠️ ' + (e.message || e)); }
 }
 async function expDel(id) { if (!confirm('אויסמעקן די עקספענס?')) return; await emit('frexp', id, { del: true }); closeM(); render(); }

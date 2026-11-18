@@ -321,7 +321,7 @@ async function colSave(code) {
     const t = todayS(), A = ask(code);
     if (A.next && A.next <= t && k) await emit('acct', code, { lastAsk: t, nextAsk: cb || (k === 'noans' || k === 'msg' ? addDays(t, 3) : (addFreq(t, A.freq) || '')) });
   }
-  toast('✓ אפגעהיטן');
+  toast('✓ Saved');
   ui.cm.i++; vCalling(); colNav();
 }
 async function colPin(code) {

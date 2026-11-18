@@ -111,7 +111,7 @@ function jrVals() {
 async function jrSave(id) {
   const name = $('#jn').value.trim(); if (!name) { $('#jn').focus(); return; }
   const p = { name, udf: $('#ju').value, vals: [...document.querySelectorAll('.jvc:checked')].map(x => x.value), camp: +$('#jc').value || '', tag: $('#jt').value, active: $('#ja').checked, del: false };
-  const nid = id || uid(); await emit('jrep', nid, p); ui.jr = nid; closeM(); render(); toast('✓ אפגעהיטן');
+  const nid = id || uid(); await emit('jrep', nid, p); ui.jr = nid; closeM(); render(); toast('✓ Saved');
 }
 async function jrDel(id) { if (!confirm('אויסמעקן דעם רופארט?')) return; await emit('jrep', id, { del: true }); ui.jr = ''; closeM(); render(); }
 function jrExcel() {
