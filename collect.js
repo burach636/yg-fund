@@ -160,7 +160,7 @@ function colRow(r, i, tab) {
   const col = r.f && r.f.st ? ({ ok: '#2e9d5b', fix: '#e0a400', ign: '#d2452f' })[r.f.st.k] || '#c9c2b2' : (r.amt > 0.5 ? '#d2452f' : '#c9c2b2');
   return `<div class="colrow${r.done ? ' done' : ''}" style="border-right:6px solid ${col}">
    ${selBox('col-' + tab, r.code)}
-   <div class="cr1"><a class="name" onclick="colStart('${tab}',${i})">${colName(r.code)}</a> <small class="dim">#${r.code}</small> <button class="nbtn" title="📝 נאטיץ" onclick="noteForm(${r.code})">📝</button>
+   <div class="cr1"><a class="name" onclick="${r.f ? `tuFamily(${r.code})` : `openAcct(${r.code})`}">${colName(r.code)}</a> <small class="dim">#${r.code}</small> <button class="nbtn" title="📝 נאטיץ" onclick="noteForm(${r.code})">📝</button>${tab !== 'all' ? ` <button class="nbtn" title="▶ Calling mode – start with this account" onclick="colStartAt('${tab}',${r.code})">▶</button>` : ''}
     ${r.f ? tuStChip(r.f) : ''}${s.hold ? ' <span class="tag purple">⏸ On hold</span>' : ''}${s.ign ? ' <span class="tag gray">🚫 Ignored</span>' : ''}${s.cb ? ` <span class="tag orange">🔁 ${fmtD(s.cb)}</span>` : ''}${colWho(r.code)}${r.done ? ' <span class="tag ok">✓ היינט</span>' : ''}
     ${tab === 'pl' || tab === 'today' ? colPlLine(r.code) : ''}<div class="cr2">${h ? `💬 "${esc(h.text.length > 80 ? h.text.slice(0, 80) + '…' : h.text)}" · ${fmtD((h.at || '').slice(0, 10))} · ${userChip(h.by || '')}` : '<span class="dim">נאך קיין נאטיץ</span>'}${o ? ` · <b>${o[1]}</b>` : ''}</div></div>
    <div class="cr3"><b class="${r.amt > 0.5 ? 'bal' : ''}">${r.amt < -0.005 ? `<span class="credit">קרעדיט ${money(-r.amt)}</span>` : money(r.amt)}</b>${r.bal > r.amt + 0.5 ? `<small class="dim">${money(r.bal)} באלאנס</small>` : ''}</div></div>`;
@@ -200,6 +200,16 @@ function colStart(tab, i) {
   if (!cm.codes.length && view !== 'calling') { toast('גארנישט צו קאלן'); return; }
   if (i != null) cm.i = i;
   try { localStorage.setItem(cmTabKey(), tab); } catch (e) { }   // Calling mode comes back on the same list
+  ui.cm = cm; go('calling');
+}
+// ▶ on a list row (v1.44): Calling mode of that list, starting at this account (owner: clicking the NAME opens the
+// account itself, not Calling mode). Found by code, so Calling mode's own filter cannot shift it to someone else.
+function colStartAt(tab, code) {
+  const cm = colCm(tab) || { tab, codes: [], i: 0 };
+  let j = cm.codes.indexOf(+code);
+  if (j < 0) { cm.codes.unshift(+code); j = 0; }
+  cm.i = j;
+  try { localStorage.setItem(cmTabKey(), tab); } catch (e) { }
   ui.cm = cm; go('calling');
 }
 function vCalling() {
