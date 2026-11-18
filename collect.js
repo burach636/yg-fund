@@ -260,7 +260,10 @@ function vCalling() {
      <div class="cmout">${COL_OUT.map(([k, l]) => `<button class="chip big ${ui.cmOut === k ? 'on' : ''}" onclick="ui.cmOut='${k}';document.querySelectorAll('.cmout .chip').forEach(b=>b.classList.toggle('on',b===this))">${l}</button>`).join('')}</div>
      <div class="grid2" style="margin-top:8px"><label class="f" style="grid-column:1/-1">נאטיץ<textarea id="cmnote" rows="2" placeholder="וואס האט ער געזאגט?"></textarea></label>
       <label class="f">🔁 רוף צוריק אום${dateField('cmcb', '', { clear: true })}</label>
-      <label style="display:flex;gap:8px;align-items:center;font-size:14px;align-self:end"><input type="checkbox" id="cmhold" ${s.hold ? 'checked' : ''}> ⏸ On hold</label></div>
+      <label style="display:flex;gap:8px;align-items:center;font-size:14px;align-self:end"><input type="checkbox" id="cmhold" ${s.hold ? 'checked' : ''}> ⏸ On hold</label>
+      <label class="f" style="grid-column:1/-1">🗂️ שיק צו אפיס ארבעט (ליידיג = נישט)<input id="cmtask" placeholder="למשל: שיקן א רעסיט, רופן צוריק די ווייב…"></label>
+      <label class="f">פאר וועמען<select id="cmtwho" class="whoc">${USERS().map(u => `<option ${u === me ? 'selected' : ''}>${esc(u)}</option>`).join('')}</select></label>
+      <label class="f">ביז ווען${dateField('cmtdue', todayS())}</label></div>
      <div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn ghost" onclick="ui.cm.i++;vCalling()">Skip</button><button class="btn gold" onclick="colSave(${code})">✓ Save & next</button></div>
      <h3 style="margin-top:16px">📝 נאטיצן</h3>${hist.map(h => `<div class="cmh">💬 ${esc(h.text)} <small class="dim">– ${userChip(h.by || '')} · ${fmtD((h.at || '').slice(0, 10))}</small></div>`).join('') || '<p class="dim">—</p>'}
     </div>
@@ -312,6 +315,13 @@ function cmExtraRow(code) {
 }
 async function colSave(code) {
   const k = ui.cmOut, note = $('#cmnote').value.trim(), cb = $('#cmcb').value, hold = $('#cmhold').checked, s = colSt(code);
+  const tTitle = ($('#cmtask') ? $('#cmtask').value : '').trim();
+  if (tTitle) {   // 🗂️ owner (v1.51): a note from the call goes to someone's office work, linked to this account
+    const tp = { title: tTitle, due: $('#cmtdue').value || todayS(), who: $('#cmtwho').value || me, who2: '', code, pri: 'norm', note: '', repeat: '', done: false, priv: false, cat: 'call' };
+    if (AREA === 'tu') tp.area = 'tu';
+    await emitTask(uid(), tp);
+    if (!k && !note && !cb && hold === !!s.hold) { toast('✓ 🗂️ ' + tp.who); $('#cmtask').value = ''; return; }
+  }
   if (!k && !note && !cb && hold === !!s.hold) { toast('קלייבט וואס איז געווען, אדער שרייבט א נאטיץ'); return; }
   const o = COL_OUT.find(x => x[0] === k), now = new Date().toISOString();
   const text = '📞 ' + (o ? o[1] : '') + (note ? (o ? ': ' : '') + note : '') + (cb ? ' · 🔁 ' + fmtD(cb) : '') + (hold && !s.hold ? ' · ⏸ On hold' : '') + (!hold && s.hold ? ' · ▶ נישט מער On hold' : '');
