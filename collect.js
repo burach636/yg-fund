@@ -252,7 +252,7 @@ function vCalling() {
     <div class="cmmain">
      <div class="cmcard">
       <div class="cmtags">${r.f ? tuStChip(r.f, false) : ''}<span class="tag gray">JLS #${code}</span>${s.hold ? '<span class="tag purple">⏸ On hold</span>' : ''}${s.cb ? `<span class="tag orange">🔁 ${fmtD(s.cb)}</span>` : ''}${typeof tagsOf === 'function' ? tagsOf(code).map(x => `<span class="tag custom">${esc(x)}</span>`).join('') : ''}</div>
-      <div class="cmtop"><div><div class="cmname">${esc(a.h || a.n)}</div><div class="cmeng">${esc(a.h ? a.n : '')}</div><div class="cmaddr">📍 ${esc(a.a || '—')}</div>
+      <div class="cmtop"><div><div class="cmname">${esc(a.h || a.n)}</div><div class="cmeng">${esc(a.h ? a.n : '')}</div><div class="cmaddr">📍 <span class="ltr">${esc(a.a || '—')}</span></div>
         <div class="cmaddr">לעצטע באצאלונג: ${last ? fmtD(last) : '—'}${r.f && r.f.st && r.f.st.mo != null ? ` (לפני ${r.f.st.mo} חדשים)` : ''}</div></div>
        <div class="cmbal">${isJr && !(r.amt > 0.009) ? `<small>לעצטע נדבה</small><b style="color:#9fe0b4">${money((IDX.yg.get(code) || {}).lastAmt || 0)}</b><small>YG ס"ה ${money((IDX.yg.get(code) || {}).total || 0)}</small>` : `<small>${r.f ? 'שולדיג יעצט' : 'פעליג'}</small><b>${money(r.amt)}</b>`}${r.bal > r.amt + 0.5 ? `<small>${money(r.bal)} באלאנס</small>` : ''}</div></div>
       <div class="cmphones">${a.ph.slice(0, 4).map(p => { const d = callNum(p[1]); return `<a class="cmcall" href="tel:+${d}" data-n="${d}" onclick="return dial(this,${code})">📞 ${esc(p[0] || 'Phone')}<br><b dir="ltr" class="phn">${esc(p[1])}</b></a>`; }).join('') || '<span class="dim">קיין טעלעפאן</span>'}</div>

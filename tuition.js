@@ -152,7 +152,7 @@ function tuFamily(code) {
   const hist = Object.entries(S.hist).map(([id, h]) => Object.assign({ _id: id }, h)).filter(h => +h.code === +code).sort((x, y) => (y.at || '').localeCompare(x.at || '')).slice(0, 10);
   modal(`<div class="row"><h2 style="margin:0">🎓 ${tuFamName(code)} <small class="dim">#${code}</small></h2><div class="spacer"></div>
      <button class="btn ghost sm" onclick="tuStOpen([${+code}],false)">📄 Statement</button><button class="btn ghost sm" onclick="tuMailForm(${+code})">✉️ Email</button><button class="btn ghost sm" onclick="taskForm(null,${+code})">+ New task</button><button class="btn ghost sm" onclick="tuFamXls(${+code})">⬇ Excel</button><button class="btn ghost sm" onclick="openAcct(${+code})">👤 Account</button><button class="btn ghost sm" onclick="closeM()">Back</button></div>
-   <p class="sub">${tuStChip(f)}<br>${esc(a.a || '')}<br>${a.ph.slice(0, 3).map(p => callBtn(p[1], code) + ' ' + esc(p[0] + ' ' + p[1])).join(' · ')}</p>
+   <p class="sub">${tuStChip(f)}<br>${a.a ? `<span class="ltr">${esc(a.a)}</span>` : ''}<br>${a.ph.slice(0, 3).map(p => callBtn(p[1], code) + ' ' + esc(p[0] + ' ' + p[1])).join(' · ')}</p>
    <div class="tiles" style="margin:8px 0;grid-template-columns:repeat(4,1fr)"><div class="tile t7"><h3>שולדיג יעצט</h3><b>${tuBal(f.due)}</b></div><div class="tile t3"><h3>באלאנס</h3><b>${tuBal(f.bal)}</b></div>
     <div class="tile t6"><h3>געטשארדזשט דאס יאר</h3><b>${money(f.yrBilled)}</b></div><div class="tile t5"><h3>באצאלט דאס יאר</h3><b class="zero">${money(f.yrPaid)}</b></div></div>
    <h3>👦 תלמידים</h3><table><thead><tr><th>נאמען</th><th>קלאס</th><th>אנגעהויבן</th><th>געלערנט ביז</th></tr></thead><tbody>
