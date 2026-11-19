@@ -206,13 +206,15 @@ function vTuHome() {
 }
 
 // ---------- 🧾 Billing: every Jewish year, a box per month ----------
-// 📊 school-year % (owner, v1.66): a school year runs from Isru Chag Sukkos (24 Tishrei) to the next Isru Chag.
+// 📊 school-year % (owner, v1.66; v1.67: Cheshvan to Cheshvan): a school year runs from 1 Cheshvan to the end of the next Tishrei.
 // JLS's file has no payment→bill link, so every family's payments are applied to its bills oldest first (FIFO,
 // bills not on hold; a credit line – negative bill – is applied too but never counts as money in). For year Y:
 //   cur  = money that came in during Y and was applied to Y's own bills – % of Y's bills (current year: bills due up to today)
 //   old  = money that came in during Y and went to bills of earlier years; oldDebt = what was open on those at Y's start
 //   ahead = money that came in during Y for later years' bills; free = money in during Y not applied (credit)
-const tuSY = d => { const h = d && d >= '1900' ? HEB.parts(d) : null; return !h ? 0 : /^Tishri/.test(h.m) && h.d <= 23 ? h.y - 1 : h.y; };
+const tuSY = d => { const h = d && d >= '1900' ? HEB.parts(d) : null; return !h ? 0 : h.m === 'Tishri' ? h.y - 1 : h.y; };
+// billing year (owner, v1.67): Cheshvan … Tishrei – school year Y = Cheshvan of Y up to the end of Tishrei Y+1
+const tuMonthsOf = y => HEB.monthsOf(y).filter(m => m !== 'Tishri').concat('Tishri');
 let _tuPY = null;
 function tuPctYears() {
   const key = tuVersion + '|' + TU.charges.length + '|' + TU.payments.length + '|' + todayS();
@@ -250,49 +252,49 @@ function tuPctYears() {
 }
 function tuPctLine(y) {
   const o = tuPctYears()[y]; if (!o || (o.pct == null && !o.old)) return '';
-  const tip = `${HEB.gem(o.y)}: פון אסרו חג סוכות ${HEB.gem(o.y)} ביז אסרו חג סוכות ${HEB.gem(o.y + 1)}`;
-  return `<div class="tupline" title="${tip}">📊 <b>${HEB.gem(o.y)}</b> <small class="dim">(אסרו חג – אסרו חג)</small>
+  const tip = `${HEB.gem(o.y)}: פון חשון ${HEB.gem(o.y)} ביז תשרי ${HEB.gem(o.y + 1)}`;
+  return `<div class="tupline" title="${tip}">📊 <b>${HEB.gem(o.y)}</b> <small class="dim">(חשון – תשרי)</small>
     ${o.pct != null ? `<span class="tupct${o.down ? ' down' : ''}">${o.down ? '▼ ' : ''}${o.pct}%</span> פון ${o.isCur ? 'די הייאריגע בילס ביז היינט' : 'די בילס פון יאר'} <small class="dim">(${money(o.isCur ? o.curD : o.cur)} פון ${money(o.isCur ? o.bd : o.b)})</small>` : ''}
     ${o.old > 0.5 ? `<span class="tupsep">·</span>💼 <b>${money(o.old)}</b> אפלייעט צו אלטע חשבונות${o.oldPct != null ? ` <span class="tupct old">${o.oldPct}%</span> <small class="dim">פון ${money(o.oldDebt)} אלטן חוב</small>` : ''}` : ''}
     ${o.ahead > 0.5 ? `<span class="tupsep">·</span><small>⏩ ${money(o.ahead)} פאר שפעטערדיגע בילס</small>` : ''}</div>`;
 }
 function tuYears() {
   const Y = {}, G = y => Y[y] || (Y[y] = { y, b: 0, bd: 0, p: 0, o: 0, n: new Set(), m: {} }), M = (o, m) => o.m[m] || (o.m[m] = { b: 0, p: 0, o: 0 }), t = todayS();
-  TU.charges.forEach(c => { if (c[7]) return; const h = HEB.parts(c[2]); if (!h || c[2] < '1990') return; const o = G(h.y), m = M(o, h.m); o.b += c[3]; m.b += c[3]; o.o += c[5]; m.o += c[5]; o.n.add(c[1]); if (c[2] <= t) o.bd += c[3]; });
-  TU.payments.forEach(p => { if (p[7]) return; const h = HEB.parts(p[2]); if (!h || p[2] < '1990') return; const o = G(h.y), m = M(o, h.m); o.p += p[3]; m.p += p[3]; });
-  const L = Object.values(Y).filter(y => y.y <= curHY()).sort((a, b) => b.y - a.y);   // not later than the current Jewish year
+  TU.charges.forEach(c => { if (c[7]) return; const h = HEB.parts(c[2]); if (!h || c[2] < '1990') return; const o = G(tuSY(c[2])), m = M(o, h.m); o.b += c[3]; m.b += c[3]; o.o += c[5]; m.o += c[5]; o.n.add(c[1]); if (c[2] <= t) o.bd += c[3]; });
+  TU.payments.forEach(p => { if (p[7]) return; const h = HEB.parts(p[2]); if (!h || p[2] < '1990') return; const o = G(tuSY(p[2])), m = M(o, h.m); o.p += p[3]; m.p += p[3]; });
+  const L = Object.values(Y).filter(y => y.y <= tuSY(t)).sort((a, b) => b.y - a.y);   // not later than the current billing year
   // % collected (owner, v1.55): payments ÷ the year's bills; the current year only counts the bills due up to today,
   // so a year in the middle is not lowered by months still to come. `down` = lower than the year before → red.
-  L.forEach(y => { const base = y.y === curHY() ? y.bd : y.b; y.pct = base > 0.5 ? Math.round(y.p / base * 100) : null; });
+  L.forEach(y => { const base = y.y === tuSY(t) ? y.bd : y.b; y.pct = base > 0.5 ? Math.round(y.p / base * 100) : null; });
   L.forEach((y, i) => { const prev = L[i + 1]; y.down = y.pct != null && prev && prev.y === y.y - 1 && prev.pct != null && y.pct < prev.pct; });
   return L;
 }
 function vTuBill() {
   if (!tuReady('tubill')) return;
-  const Y = tuYears(), now = HEB.parts(todayS()), max = Math.max(...Y.map(y => y.b), 1), shown = Y.slice(0, ui.tuBN || 4);
-  $('#main').innerHTML = `<div class="row"><div><h2>🧾 Billing – שכר לימוד</h2><p class="sub">יעדעס יאר תשרי מאכט מען א קאנטראקט, און יעדן חודש ווערט א ביל. אין יעדן קעסטל: וויפיל מ'האט געבילט, וויפיל איז אריינגעקומען, און וויפיל איז נאך אפן. דריקט אויף א חודש צו זען די פאמיליעס.</p></div><div class="spacer"></div>
+  const Y = tuYears(), now = HEB.parts(todayS()), nowY = tuSY(todayS()), max = Math.max(...Y.map(y => y.b), 1), shown = Y.slice(0, ui.tuBN || 4);
+  $('#main').innerHTML = `<div class="row"><div><h2>🧾 Billing – שכר לימוד</h2><p class="sub">יעדעס יאר גייט פון <b>חשון ביז תשרי</b>; יעדן חודש ווערט א ביל. אין יעדן קעסטל: וויפיל מ'האט געבילט, וויפיל איז אריינגעקומען, און וויפיל איז נאך אפן. דריקט אויף א חודש צו זען די פאמיליעס.</p></div><div class="spacer"></div>
      <button class="btn ghost" onclick="tuBillXls()">⬇ Excel</button></div>
    ${shown.map(y => `<div class="yrcard"><div class="row" style="margin:0 0 8px"><b class="yr">${HEB.gem(y.y)}</b><div class="bar" style="flex:1;height:12px;margin:0"><i style="width:${y.b / max * 100}%"></i></div>
      <span class="dim" style="font-size:13px">${y.n.size} פאמיליעס · ${TU.contracts.filter(c => tuHY(c[2]) === y.y).length} קאנטראקטן</span></div>
     ${tuPctLine(y.y)}
-    <div class="mgrid" style="--n:${HEB.monthsOf(y.y).length + 1}">${HEB.monthsOf(y.y).map(m => { const v = y.m[m], cur = now && now.y === y.y && now.m === m;
+    <div class="mgrid" style="--n:${tuMonthsOf(y.y).length + 1}">${tuMonthsOf(y.y).map(m => { const v = y.m[m], cur = now && nowY === y.y && now.m === m;
       return `<div class="mbox${v ? ' click' : ' empty0'}${cur ? ' cur' : ''}"${v ? ` onclick="tuMonth(${y.y},'${m}')"` : ''}><span>${HEB.MONTHS[m]}</span><b>${v ? money(v.b) : '—'}</b>${v ? `<small>💵 ${money(v.p)}</small>${v.o > 0.5 ? `<small class="bal">אפן ${money(v.o)}</small>` : ''}` : ''}</div>`; }).join('')}
      <div class="mbox tot click" onclick="tuMonth(${y.y},'')"><span>ס"ה ${HEB.gem(y.y)}</span><b>${money(y.b)}</b><small>💵 ${money(y.p)}</small>${y.o > 0.5 ? `<small class="bal">אפן ${money(y.o)}</small>` : ''}</div></div></div>`).join('') || '<div class="empty">קיין בילס</div>'}
    ${Y.length > shown.length ? `<div class="more"><button class="btn ghost" onclick="ui.tuBN=(ui.tuBN||4)+6;vTuBill()">Show more years (${Y.length - shown.length})</button></div>` : ''}`;
 }
 function tuMonthRows(hy, m) {
-  const inM = d => { const h = HEB.parts(d); return h && h.y === hy && (!m || h.m === m); }, F = new Map();
+  const inM = d => { const h = HEB.parts(d); return h && tuSY(d) === hy && (!m || h.m === m); }, F = new Map();
   const G = c => F.get(c) || (F.set(c, { code: c, b: 0, pd: 0, o: 0, p: 0, n: 0 }), F.get(c));
   TU.charges.forEach(c => { if (!c[7] && inM(c[2])) { const g = G(c[1]); g.b += c[3]; g.pd += c[4]; g.o += c[5]; g.n++; } });
   TU.payments.forEach(p => { if (!p[7] && inM(p[2])) G(p[1]).p += p[3]; });
   return [...F.values()].sort((a, b) => b.o - a.o || b.b - a.b);
 }
 function tuMonth(hy, m) {
-  const R = tuMonthRows(hy, m), T = R.reduce((t, r) => ({ b: t.b + r.b, o: t.o + r.o, p: t.p + r.p }), { b: 0, o: 0, p: 0 }), ttl = (m ? HEB.MONTHS[m] + ' ' : 'גאנץ יאר ') + HEB.gem(hy);
+  const R = tuMonthRows(hy, m), T = R.reduce((t, r) => ({ b: t.b + r.b, o: t.o + r.o, p: t.p + r.p }), { b: 0, o: 0, p: 0 }), ttl = m ? HEB.MONTHS[m] + ' ' + HEB.gem(m === 'Tishri' ? hy + 1 : hy) : 'גאנץ יאר ' + HEB.gem(hy) + ' (חשון–תשרי)';
   window._tuM = { hy, m, R };
   modal(`<div class="row"><h2 style="margin:0">🧾 ${esc(ttl)}</h2><div class="spacer"></div><button class="btn ghost sm" onclick="tuMonthXls()">⬇ Excel</button><button class="btn ghost sm" onclick="closeM()">Back</button></div>
    <p class="sub">${R.length} פאמיליעס · געבילט ${money(T.b)} · אריינגעקומען ${money(T.p)} · נאך אפן <b class="bal">${money(T.o)}</b></p>
-   <div class="scroll" style="max-height:65vh"><table><thead><tr><th>פאמיליע</th><th class="num">בילס</th><th class="num">געבילט</th><th class="num">באצאלט</th><th class="num">נאך אפן</th><th class="num">באצאלונגען אין דער צייט</th></tr></thead><tbody>
+   <div class="scroll" style="max-height:65vh"><table><thead><tr><th>פאמיליע</th><th class="num">בילס</th><th class="num">געבילט</th><th class="num" title="געלט וואס JLS האט אפלייעט אויף די בילס, אפילו ווען עס איז באצאלט געווארן שפעטער">אפלייעט אויף די בילס</th><th class="num">נאך אפן</th><th class="num" title="באצאלונגען וואס זענען אריינגעקומען אין דעם חודש">אריינגעקומען אין דעם חודש</th></tr></thead><tbody>
    ${R.map(r => `<tr><td><a class="name" onclick="tuFamily(${r.code})">${tuFamName(r.code)}</a> <small class="dim">#${r.code}</small></td><td class="num">${r.n}</td><td class="num">${money(r.b)}</td><td class="num">${money(r.pd)}</td><td class="num ${r.o > 0.5 ? 'bal' : ''}">${money(r.o)}</td><td class="num">${money(r.p)}</td></tr>`).join('') || '<tr><td colspan="6" class="empty">—</td></tr>'}</tbody></table></div>`);
 }
 function tuMonthXls() {
@@ -301,7 +303,7 @@ function tuMonthXls() {
 }
 function tuBillXls() {
   const Y = tuYears(), rows = [['Year', 'Month', 'Billed', 'Paid', 'Open']];
-  Y.forEach(y => { HEB.monthsOf(y.y).forEach(m => { const v = y.m[m]; if (v) rows.push([HEB.gem(y.y), HEB.MONTHS[m], r2(v.b), r2(v.p), r2(v.o)]); }); rows.push([HEB.gem(y.y), 'ס"ה', r2(y.b), r2(y.p), r2(y.o)]); });
+  Y.forEach(y => { tuMonthsOf(y.y).forEach(m => { const v = y.m[m]; if (v) rows.push([HEB.gem(y.y), HEB.MONTHS[m], r2(v.b), r2(v.p), r2(v.o)]); }); rows.push([HEB.gem(y.y), 'ס"ה', r2(y.b), r2(y.p), r2(y.o)]); });
   xlsx([{ name: 'Billing', rows }, { name: 'Families', rows: [['Code', 'Family (Hebrew)', 'Family', 'Due now', 'Balance', 'Billed this year', 'Paid this year', 'Last payment']].concat(tuCalc().L.filter(f => f.cur || f.bal > 0.5).map(f => { const a = IDX.by.get(f.code) || {}; return [f.code, a.h || '', a.n || '', r2(f.due), r2(f.bal), r2(f.yrBilled), r2(f.yrPaid), f.last]; })) }], 'tuition-billing.xlsx');
 }
 
