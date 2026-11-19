@@ -69,7 +69,7 @@ async function load() {
       if (!C.S[r.k]) continue;
       const cur = C.S[r.k][r.eid] || (C.S[r.k][r.eid] = {});
       Object.assign(cur, r.p);
-      if (r.k === 'hist') { cur.by = r.by; cur.at = r.at; }
+      if (r.k === 'hist') { if (!cur.at) { cur.by = r.by; cur.at = r.at; } if (r.p && r.p.del) delete C.S.hist[r.eid]; }
     }
     if (rows.length) C.lastId = rows[rows.length - 1].id;
     if (rows.length < 1000) break;

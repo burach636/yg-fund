@@ -228,7 +228,7 @@ function vCalling() {
   const map = new Map(colAll().map(r => [r.code, r])), code = codes[cm.i], r = map.get(code) || cmExtraRow(code);
   const a = IDX.by.get(code) || { ph: [], n: '#' + code, h: '' }, s = colSt(code), t = todayS();
   const doneN = codes.filter(c => (colSt(c).outAt || '').slice(0, 10) === t).length;
-  const hist = Object.values(S.hist).filter(x => +x.code === code).sort((x, y) => (y.at || '').localeCompare(x.at || '')).slice(0, 6);
+  const hist = Object.entries(S.hist).map(([id, h]) => Object.assign({ _id: id }, h)).filter(x => +x.code === code).sort((x, y) => (y.at || '').localeCompare(x.at || '')).slice(0, 6);
   // what to show under the name
   let info = '';
   if (r.f) {
@@ -265,7 +265,7 @@ function vCalling() {
       <label class="f">פאר וועמען<select id="cmtwho" class="whoc">${USERS().map(u => `<option ${u === me ? 'selected' : ''}>${esc(u)}</option>`).join('')}</select></label>
       <label class="f">ביז ווען${dateField('cmtdue', todayS())}</label></div>
      <div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn ghost" onclick="ui.cm.i++;vCalling()">Skip</button><button class="btn gold" onclick="colSave(${code})">✓ Save & next</button></div>
-     <h3 style="margin-top:16px">📝 נאטיצן</h3>${hist.map(h => `<div class="cmh">💬 ${esc(h.text)} <small class="dim">– ${userChip(h.by || '')} · ${fmtD((h.at || '').slice(0, 10))}</small></div>`).join('') || '<p class="dim">—</p>'}
+     <h3 style="margin-top:16px">📝 נאטיצן</h3>${hist.map(h => `<div class="cmh">💬 ${esc(h.text)} <small class="dim">– ${userChip(h.by || '')} · ${fmtD((h.at || '').slice(0, 10))}${h.edAt ? ' (טוישט)' : ''}</small>${histBtns(h._id, 'closeM();render()')}</div>`).join('') || '<p class="dim">—</p>'}
     </div>
     <div class="cmside"><div class="cmsh">UP NEXT <span class="cnt blue">${codes.length}</span></div>
      ${codes.map((c, j) => { const rr = map.get(c) || { amt: 0 }, aa = IDX.by.get(c) || {}, dn = (colSt(c).outAt || '').slice(0, 10) === t; return `<div class="cmli${j === cm.i ? ' on' : ''}${dn ? ' done' : ''}" onclick="ui.cm.i=${j};vCalling()"><span>${j + 1}</span><b>${esc(aa.h || aa.n || '#' + c)}</b><i>${money(isJr && !(rr.amt > 0.009) ? (IDX.yg.get(c) || {}).total || 0 : rr.amt)}</i></div>`; }).join('')}

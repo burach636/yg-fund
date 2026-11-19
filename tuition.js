@@ -149,7 +149,7 @@ function tuFamily(code) {
   const f = tuCalc().L.find(x => x.code === +code); if (!f) return;
   const a = IDX.by.get(+code) || { ph: [], a: '' }, kidOf = n => { const k = f.kids.find(s => s[0] === n); return k ? tuKidName(k) : ''; };
   const ch = f.ch.slice().sort((x, y) => (y[2] || '').localeCompare(x[2] || '')), pay = f.pay.slice().sort((x, y) => (y[2] || '').localeCompare(x[2] || ''));
-  const hist = Object.values(S.hist).filter(h => +h.code === +code).sort((x, y) => (y.at || '').localeCompare(x.at || '')).slice(0, 10);
+  const hist = Object.entries(S.hist).map(([id, h]) => Object.assign({ _id: id }, h)).filter(h => +h.code === +code).sort((x, y) => (y.at || '').localeCompare(x.at || '')).slice(0, 10);
   modal(`<div class="row"><h2 style="margin:0">🎓 ${tuFamName(code)} <small class="dim">#${code}</small></h2><div class="spacer"></div>
      <button class="btn ghost sm" onclick="tuStOpen([${+code}],false)">📄 Statement</button><button class="btn ghost sm" onclick="tuMailForm(${+code})">✉️ Email</button><button class="btn ghost sm" onclick="taskForm(null,${+code})">+ New task</button><button class="btn ghost sm" onclick="tuFamXls(${+code})">⬇ Excel</button><button class="btn ghost sm" onclick="openAcct(${+code})">👤 Account</button><button class="btn ghost sm" onclick="closeM()">Back</button></div>
    <p class="sub">${tuStChip(f)}<br>${esc(a.a || '')}<br>${a.ph.slice(0, 3).map(p => callBtn(p[1], code) + ' ' + esc(p[0] + ' ' + p[1])).join(' · ')}</p>
@@ -165,7 +165,7 @@ function tuFamily(code) {
    <h3>💵 באצאלונגען</h3><div class="scroll" style="max-height:240px"><table><thead><tr><th>דאטום</th><th class="num">סכום</th><th>ווי</th><th>שעק #</th><th>נאטיץ</th></tr></thead><tbody>
     ${pay.map(p => `<tr style="${p[7] ? 'opacity:.5;text-decoration:line-through' : ''}"><td>${fmtD(p[2])}</td><td class="num">${money(p[3])}</td><td>${esc(p[4])}</td><td class="ltr">${esc(p[5])}</td><td style="font-size:13px">${esc(p[6])}</td></tr>`).join('') || '<tr><td colspan="5" class="empty">—</td></tr>'}</tbody></table></div>
    <div class="row"><h3>📝 היסטאריע</h3><div class="spacer"></div><button class="btn ghost sm" onclick="noteForm(${+code})">📝 Note</button></div>
-   ${hist.map(h => `<div style="font-size:14px;margin:4px 0">💬 ${esc(h.text)} <small class="dim">– ${esc(h.by || '')}, ${fmtD((h.at || '').slice(0, 10))}</small></div>`).join('') || '<p class="dim">—</p>'}`);
+   ${hist.map(h => `<div style="font-size:14px;margin:4px 0">💬 ${esc(h.text)} <small class="dim">– ${esc(h.by || '')}, ${fmtD((h.at || '').slice(0, 10))}${h.edAt ? ' (טוישט)' : ''}</small>${histBtns(h._id, `tuFamily(${+code})`)}</div>`).join('') || '<p class="dim">—</p>'}`);
 }
 
 function tuXls() {

@@ -422,3 +422,5 @@ nav.incol #navuser{display:block}
 .goalbox{border-color:#c9962b;background:linear-gradient(180deg,#fffaf0,#fff);margin:0 0 14px}
 .goalbar{position:relative;height:22px;background:#e9e2cf;border-radius:12px;overflow:hidden}.goalbar i{position:absolute;top:0;bottom:0;right:0;background:linear-gradient(90deg,#b8892b,#e8c05a);border-radius:12px}.goalbar b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:#3d2d00}
 .tupct{display:inline-block;font-weight:700;color:#1f7a45;background:#e7f4ec;border-radius:8px;padding:1px 7px;font-size:12px;white-space:nowrap}.tupct.down{color:#b3261e;background:#fdecec}
+
+.hbtn{background:none;border:0;cursor:pointer;font-size:12px;padding:0 4px;opacity:.55}.hbtn:hover{opacity:1}
