@@ -4,8 +4,10 @@
 // Sub-lists (the sidebar turns into them): today = calls for today, cb = call back today, hold = on hold, all.
 // Per-account state: event kind `col`, id `<area>|<code>`: {hold, holdNote, cb (date), cbNote, out (last outcome),
 // outAt, outBy, pin (note everybody sees)}; every outcome also writes a `hist` note.
-const COL_OUT = [['noans', '📵 קיין ענטפער'], ['msg', '💬 מעסעדזש געלאזט'], ['talk', '🗣️ גערעדט'], ['prom', '🤝 צוגעזאגט'], ['paid', '✅ באצאלט'], ['check', '🗓️ שעק דעיטעד'],
+const COL_OUT_ALL = [['noans', '📵 קיין ענטפער'], ['msg', '💬 מעסעדזש געלאזט'], ['talk', '🗣️ גערעדט'], ['prom', '🤝 צוגעזאגט'], ['paid', '✅ באצאלט'], ['check', '🗓️ שעק דעיטעד'],
   ['plan', '📋 וויל א פלאן'], ['ref', '⛔ אפגעזאגט'], ['wrong', '☎️ פאלשער נאמבער'], ['note', '📝 נאר א נאטיץ']];
+// owner (v1.62): "שעק דעיטעד" and "וויל א פלאן" are no longer offered; old marks still show their label
+const COL_OUT = COL_OUT_ALL.filter(x => x[0] !== 'check' && x[0] !== 'plan');
 const COL_TABS = [['today', '📞 קאלן היינט'], ['ask', '📋 היינט צו בעטן'], ['pl', '💳 פלעדזשעס'], ['cb', '🔁 היינט צוריק קאלן'], ['hold', '⏸ ON HOLD'], ['all', '📚 אלע אקאונטס'], ['every', '👥 אלע אקאונטס'], ['ign', '🚫 Ignored']];
 // v1.30: "every" (fund) = every JLS account, so a 🔎 filter can find people who never gave to YG (the other fund lists hold
 // only YG donors and pledges); "ign" = accounts put on 🚫 Ignore (col.ign): never in a call list or Calling mode, but still
@@ -156,7 +158,7 @@ function vCol() {
 }
 const colWho = c => { const w = (S.acct[c] || {})[colArea() === 'tu' ? 'tuWho' : 'assigned']; return w ? ' ' + userChip(w) : ''; };
 function colRow(r, i, tab) {
-  const s = r.s || colSt(r.code), h = colLastNote(r.code), o = COL_OUT.find(x => x[0] === s.out);
+  const s = r.s || colSt(r.code), h = colLastNote(r.code), o = COL_OUT_ALL.find(x => x[0] === s.out);
   const col = r.f && r.f.st ? ({ ok: '#2e9d5b', fix: '#e0a400', ign: '#d2452f' })[r.f.st.k] || '#c9c2b2' : (r.amt > 0.5 ? '#d2452f' : '#c9c2b2');
   return `<div class="colrow${r.done ? ' done' : ''}" style="border-right:6px solid ${col}">
    ${selBox('col-' + tab, r.code)}
@@ -262,7 +264,7 @@ function vCalling() {
       <label class="f">🔁 רוף צוריק אום${dateField('cmcb', '', { clear: true })}</label>
       <label style="display:flex;gap:8px;align-items:center;font-size:14px;align-self:end"><input type="checkbox" id="cmhold" ${s.hold ? 'checked' : ''}> ⏸ On hold</label>
       <label class="f" style="grid-column:1/-1">🗂️ שיק צו אפיס ארבעט (ליידיג = נישט)<input id="cmtask" placeholder="למשל: שיקן א רעסיט, רופן צוריק די ווייב…"></label>
-      <label class="f">פאר וועמען<select id="cmtwho" class="whoc">${USERS().map(u => `<option ${u === me ? 'selected' : ''}>${esc(u)}</option>`).join('')}</select></label>
+      <div class="f"><span>פאר וועמען (ביז 2)</span><div id="cmtwho" class="cmtwho">${USERS().map(u => `<label class="chip" style="--uc:${userColor(u)}"><input type="checkbox" value="${esc(u)}" ${u === me ? 'checked' : ''} onchange="cmtWho(this)"> ${esc(u)}</label>`).join('')}</div></div>
       <label class="f">ביז ווען${dateField('cmtdue', todayS())}</label></div>
      <div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn ghost" onclick="ui.cm.i++;vCalling()">Skip</button><button class="btn gold" onclick="colSave(${code})">✓ Save & next</button></div>
      <h3 style="margin-top:16px">📝 נאטיצן</h3>${hist.map(h => `<div class="cmh">💬 ${esc(h.text)} <small class="dim">– ${userChip(h.by || '')} · ${fmtD((h.at || '').slice(0, 10))}${h.edAt ? ' (טוישט)' : ''}</small>${histBtns(h._id, 'closeM();render()')}</div>`).join('') || '<p class="dim">—</p>'}
@@ -317,13 +319,13 @@ async function colSave(code) {
   const k = ui.cmOut, note = $('#cmnote').value.trim(), cb = $('#cmcb').value, hold = $('#cmhold').checked, s = colSt(code);
   const tTitle = ($('#cmtask') ? $('#cmtask').value : '').trim();
   if (tTitle) {   // 🗂️ owner (v1.51): a note from the call goes to someone's office work, linked to this account
-    const tp = { title: tTitle, due: $('#cmtdue').value || todayS(), who: $('#cmtwho').value || me, who2: '', code, pri: 'norm', note: '', repeat: '', done: false, priv: false, cat: 'call' };
+    const tp = { title: tTitle, due: $('#cmtdue').value || todayS(), who: cmtWhoList()[0] || me, who2: cmtWhoList()[1] || '', code, pri: 'norm', note: '', repeat: '', done: false, priv: false, cat: 'call' };
     if (AREA === 'tu') tp.area = 'tu';
     await emitTask(uid(), tp);
-    if (!k && !note && !cb && hold === !!s.hold) { toast('✓ 🗂️ ' + tp.who); $('#cmtask').value = ''; return; }
+    if (!k && !note && !cb && hold === !!s.hold) { toast('✓ 🗂️ ' + tp.who + (tp.who2 ? ' + ' + tp.who2 : '')); $('#cmtask').value = ''; return; }
   }
   if (!k && !note && !cb && hold === !!s.hold) { toast('קלייבט וואס איז געווען, אדער שרייבט א נאטיץ'); return; }
-  const o = COL_OUT.find(x => x[0] === k), now = new Date().toISOString();
+  const o = COL_OUT_ALL.find(x => x[0] === k), now = new Date().toISOString();
   const text = '📞 ' + (o ? o[1] : '') + (note ? (o ? ': ' : '') + note : '') + (cb ? ' · 🔁 ' + fmtD(cb) : '') + (hold && !s.hold ? ' · ⏸ On hold' : '') + (!hold && s.hold ? ' · ▶ נישט מער On hold' : '');
   await emit('hist', uid(), { code, text, area: colArea() });
   await emit('col', colKey(code), { out: k || 'note', outAt: now, outBy: me, cb: cb || '', hold });
@@ -437,3 +439,7 @@ function vDone() {
      return hd + `<div class="colrow done0" style="border-right:6px solid ${userColor(x.who)}"><span style="font-size:20px">${x.icon}</span><div class="cr1"><b>${esc(x.text)}</b> ${x.code ? '· ' + name(x.code) : ''}
        <div class="cr2">${String(x.ts).length > 10 ? new Date(x.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' · ' : ''}${userChip(x.who)}</div></div>${x.kind === 'task' ? `<button class="btn ghost sm" onclick="taskUndo('${x.id}')">↩ Undo</button>` : ''}</div>`; }).join('') || '<div class="empty">נאך גארנישט פארטיג היינט אדער נעכטן</div>'}</div>`;
 }
+
+// 🗂️ office work from Calling mode for one or two team members (owner, v1.62)
+function cmtWhoList() { return [...document.querySelectorAll('#cmtwho input:checked')].map(x => x.value); }
+function cmtWho(el) { if (el.checked && cmtWhoList().length > 2) { el.checked = false; toast('⚠️ מאקסימום 2'); } }
