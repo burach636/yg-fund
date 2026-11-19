@@ -92,6 +92,7 @@ Backend is **Supabase** (project `qrudivrakwoathgbzrwd`).
 - `xlsx.js`: tiny .xlsx writer, `xlsx([{name, rows}], file)`. All "⬇ Excel" buttons use it (donors list, one donor, pledges, fundraisers with 5 sheets, one 2-week period, shul donors).
 - `jls.js`: the Jet 4 reader, `JLS.extract(bytes, company)`, and `JLS.schema(bytes)` (table + column names and row counts only, no values; Settings > "🔍 JLS טאבעלעס"). The reader decodes only the columns asked for.
 - `letterhead.jpg`: the owner's letterhead (Word template "BW", full page with frame), behind every statement page – fundraising (`stPage`) and tuition (`tuStPage`) – via `stHead()`/`stLH()` in receipts.js and class `.pg.lh` (positioned like in the .dotx: 8.773×11.418in, −0.157in left, −0.154in top; content starts ~2.7in down inside the frame). Setting `stmtLH` (default on; checkbox in both statement ⚙️ Text dialogs) falls back to the old logo header.
+- `about.html` (2026-11-19, owner): a public, stand-alone info page for SMS provider / 10DLC registration – https://yeshivasmaharitdsatmar.github.io/about.html – the yeshiva's legal name, address, office phone, e-mail (all given by the owner for public use), Privacy Policy (`#privacy`) and SMS Terms (`#sms`: staff-only messages, STOP/HELP, rates). Not linked from the app; the EIN is deliberately not on it.
 - `style.css`, `logo.png` (the yeshiva's logo; never alter it), `icon.png`.
 
 ## UX rules the user asked for
