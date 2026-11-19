@@ -429,3 +429,4 @@ nav.incol #navuser{display:block}
 .cmname.cmlink::after{content:'Open ↗';font-size:12px;font-weight:700;color:#1d3557;background:#f4d48a;border-radius:20px;padding:3px 10px;white-space:nowrap}
 .cmname.cmlink:hover{border-bottom-color:#f4d48a;border-bottom-style:solid}.cmname.cmlink:hover::after{background:#fff}
 a.name:hover{color:#2a5ba8;border-bottom-style:solid}
+.tupline{font-size:13px;margin:-2px 0 8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:#f7f4ec;border:1px solid #ece4cf;border-radius:10px;padding:5px 10px}.tupsep{color:#bbb}.tupct.old{color:#6b4f00;background:#f6ecd2}
