@@ -26,9 +26,10 @@ const goalHY = (iso: string) => { const [y, m, d] = iso.split('-').map(Number); 
 const firstName = (a: any) => { let w = String(a.h || '').trim().split(/\s+/).filter(Boolean); const l = String(a.lh || '').trim().split(/\s+/).filter(Boolean);
   if (l.length && w.slice(-l.length).join(' ') === l.join(' ')) w = w.slice(0, -l.length); else if (w.length > 1 && !l.length) w = w.slice(0, -1);
   const T = /['"׳״]|^(הרב|רבי|הגאון|הרה"ח|מוהר"ר)$/; while (w.length > 1 && T.test(w[0])) w.shift(); return w.join(' ') || a.h || a.n || ''; };
+// the yeshiva's name in the owner's font BA Franknatan, as a picture (e-mail programs do not load web fonts)
+const NAME_W = 231;
 const MAIL_RX = /^[^@\s,;]+@[^@\s,;]+\.[^@\s,;]+$/;
 const mailList = (s: any) => String(s || '').split(/[,;\s]+/).map(x => x.trim()).filter(Boolean);
-const FONT_Y = "'EFT_Pnina Black','EFT_Pnina','Frank Ruhl Libre','David','Times New Roman',serif";
 function gem(n: number) {
   const L: [number, string][] = [[400, 'ת'], [300, 'ש'], [200, 'ר'], [100, 'ק'], [90, 'צ'], [80, 'פ'], [70, 'ע'], [60, 'ס'], [50, 'נ'], [40, 'מ'], [30, 'ל'], [20, 'כ'], [10, 'י'], [9, 'ט'], [8, 'ח'], [7, 'ז'], [6, 'ו'], [5, 'ה'], [4, 'ד'], [3, 'ג'], [2, 'ב'], [1, 'א']];
   n = n % 1000; let s = '';
@@ -78,7 +79,7 @@ function letter(D: any, o: { subject?: string, note?: string, celebrate?: boolea
   const box = (label: string, val: string, color: string) => `<td width="33%" style="padding:6px"><div style="background:#fff;border:1px solid #e6dfcf;border-radius:12px;padding:12px 6px;text-align:center"><div style="font:bold 22px Arial;color:${color}">${val}</div><div style="font:12px Arial;color:#777;margin-top:2px">${label}</div></div></td>`;
   const html = `<div dir="rtl" style="background:#f3efe2;padding:18px 8px;font-family:Arial,sans-serif;color:#222">
  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;background:#faf7f0;border-radius:16px;overflow:hidden;border:1px solid #e6dfcf">
-  <tr><td style="background:#1d3557;padding:20px;text-align:center;border-bottom:4px solid #c9962b"><img src="${SITE}logo.png" width="84" alt="" style="display:block;margin:0 auto 6px"><div style="color:#f4d48a;font-family:${FONT_Y};font-size:22px;font-weight:900;letter-spacing:1px">ישיבת מהרי"ט ד'סאטמאר</div></td></tr>
+  <tr><td style="background:#1d3557;padding:20px;text-align:center;border-bottom:4px solid #c9962b"><img src="${SITE}logo.png" width="84" alt="" style="display:block;margin:0 auto 6px"><img src="${SITE}yeshiva-name.png" width="${NAME_W}" alt="ישיבת מהרי&quot;ט ד'סאטמאר" style="display:block;margin:0 auto;border:0;color:#f4d48a;font:bold 20px Arial"></td></tr>
   <tr><td style="padding:22px 22px 6px;text-align:center">
    <div style="font:bold 20px Arial;color:#1d3557;line-height:1.5">מע"כ ידידינו הרה"ח ר' ${esc(D.first)} שיחי'${cel ? '' : ` – 'פרוטה פרוטה מצטרפת' רעפארט`}</div>
    ${cel ? '<div style="font:bold 22px Arial;color:#2e7d4f;margin-top:6px">🎉 מזל טוב! איר האט דערגרייכט דעם ציל!</div>' : ''}

@@ -1,3 +1,9 @@
+/* 🔤 the owner's own fonts (fonts/, sent 2026-11-19) – use by name: 'BA Franknatan', 'BA Franknatan Old Blur', 'Kitov Hebrew 1', 'Kitov Hebrew 2', 'Hebrew Bold' */
+@font-face{font-family:'BA Franknatan';src:url(fonts/BAFranknatanClassic.ttf) format('truetype');font-display:swap}
+@font-face{font-family:'BA Franknatan Old Blur';src:url(fonts/BAFranknatanOldBlur.ttf) format('truetype');font-display:swap}
+@font-face{font-family:'Kitov Hebrew 1';src:url(fonts/KitovHebrew1.ttf) format('truetype');font-display:swap}
+@font-face{font-family:'Kitov Hebrew 2';src:url(fonts/KitovHebrew2.ttf) format('truetype');font-display:swap}
+@font-face{font-family:'Hebrew Bold';src:url(fonts/HebrewBold.ttf) format('truetype');font-display:swap}
 :root{
   --navy:#14284b; --navy2:#1e3a6b; --gold:#b8913a; --gold2:#e9d8ad;
   --bg:#f4f1ea; --card:#fff; --ink:#1d2433; --muted:#6b7385; --line:#e3ddcf;
@@ -344,7 +350,7 @@ nav.incol #navuser{display:block}
 .pushke .slot{position:absolute;top:14px;left:50%;transform:translateX(-50%);width:84px;height:12px;border-radius:8px;background:#060d1c;box-shadow:inset 0 3px 5px rgba(0,0,0,.8),0 1px 0 rgba(255,255,255,.25)}
 .pushke .face{position:absolute;inset:44px 14px 14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
 .pushke .face img{height:96px;filter:drop-shadow(0 2px 0 #7a5c1b) drop-shadow(0 6px 8px rgba(0,0,0,.5))}
-.pushke .face span{color:#e9d8ad;font-family:'EFT_Pnina Black','EFT_Pnina','Frank Ruhl Libre','David','Times New Roman',serif;font-size:15px;font-weight:700;letter-spacing:.8px}
+.pushke .face span{color:#e9d8ad;font-family:'BA Franknatan','Frank Ruhl Libre','David','Times New Roman',serif;font-size:15px;font-weight:700;letter-spacing:.8px}
 .pushke .shine2{position:absolute;inset:0;border-radius:16px;background:linear-gradient(115deg,transparent 35%,rgba(255,255,255,.18) 45%,transparent 55%);background-size:300% 100%;animation:shine 5s ease-in-out infinite}
 @keyframes boxBob{0%,100%{transform:translateX(-50%) translateY(0)}6%{transform:translateX(-50%) translateY(3px) scale(1.01,.99)}12%{transform:translateX(-50%) translateY(0)}}
 .glow{position:absolute;left:50%;bottom:0;width:260px;height:30px;transform:translateX(-50%);background:radial-gradient(ellipse,rgba(201,162,39,.35),transparent 70%)}
