@@ -54,8 +54,10 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--gold2);border-co
 .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 a.name{color:var(--navy);text-decoration:none;cursor:pointer;border-bottom:1px dashed var(--gold);font-weight:800;font-size:15.5px}
 .heb{color:#9aa0ad;font-size:12px;font-weight:400;margin-right:6px}
-table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
-th{background:#faf7f0;color:var(--muted);font-size:12px;font-weight:700;text-align:right;padding:9px;border-bottom:1px solid var(--line);white-space:nowrap}
+table{width:100%;border-collapse:separate;border-spacing:0;background:#fff;border:1px solid var(--line);border-radius:12px}
+th{background:#faf7f0;color:var(--muted);font-size:12px;font-weight:700;text-align:right;padding:9px;border-bottom:1px solid var(--line);white-space:nowrap;position:sticky;top:var(--hdr,0);z-index:3}
+thead th:first-child{border-top-right-radius:12px}thead th:last-child{border-top-left-radius:12px}
+.modal th,#calpop th,.scroll th{top:0}td{border-bottom-color:#f0ebe0}
 td{padding:8px 9px;border-bottom:1px solid #f0ebe0;font-size:14px;vertical-align:top}
 tr:hover td{background:#fcfaf5}
 .num{font-variant-numeric:tabular-nums;direction:ltr;unicode-bidi:embed;text-align:right;white-space:nowrap}
@@ -401,10 +403,14 @@ nav.incol #navuser{display:block}
 .phn{direction:ltr;unicode-bidi:isolate;display:inline-block}
 
 .expgrid{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:16px;align-items:start}
-.expside{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;position:sticky;top:10px;max-height:calc(100vh - 140px);overflow-y:auto}
+.expside{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;position:sticky;top:calc(var(--hdr,0px) + 10px);max-height:calc(100vh - var(--hdr,0px) - 30px);overflow-y:auto}
 .expvi{display:flex;gap:6px;align-items:center;padding:10px 12px;border-bottom:1px solid #f0ebe0;cursor:pointer;font-size:14px}
 .expvi b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.expvi i{font-style:normal;color:var(--muted);white-space:nowrap}
-.expvi:hover{background:#fffaf0}.expvi.on{background:var(--navy);color:#fff}.expvi.on i{color:#d9e1ee}
+.expvi:hover{background:#fffaf0}.expvi.on{background:#dfe8f6;color:var(--navy);box-shadow:inset -4px 0 0 var(--gold)}.expvi.on i{color:var(--navy)}
+.expvi.exphead{background:var(--navy);color:#fff;position:sticky;top:0;z-index:2;font-size:15px}.expvi.exphead i{color:#f4d48a}.expvi.exphead:hover{background:#25426b}
+.expci{display:flex;gap:6px;align-items:center;padding:9px 10px;border-bottom:1px solid #f0ebe0;cursor:pointer;font-size:13.5px;background:#faf7f0;color:var(--navy)}
+.expci.top{background:#f1ead8;font-size:14px}.expci b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.expci i{font-style:normal;font-weight:700;white-space:nowrap}
+.expci:hover{background:#efe4c8}.expci.on{background:#dfe8f6;box-shadow:inset -4px 0 0 var(--gold)}
 .expyr{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px}
 @media(max-width:900px){.expgrid{grid-template-columns:1fr}.expside{position:static;max-height:none}}
 .goalbox{border-color:#c9962b;background:linear-gradient(180deg,#fffaf0,#fff);margin:0 0 14px}
