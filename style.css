@@ -425,4 +425,7 @@ nav.incol #navuser{display:block}
 
 .hbtn{background:none;border:0;cursor:pointer;font-size:12px;padding:0 4px;opacity:.55}.hbtn:hover{opacity:1}
 .cmtwho{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}.cmtwho .chip{display:inline-flex;align-items:center;gap:4px;border-right:4px solid var(--uc,#ccc)}.cmtwho .chip:has(input:checked){background:#e7eef8;font-weight:600}
-.cmname.cmlink{cursor:pointer;display:inline-block}.cmname.cmlink:hover{text-decoration:underline;text-decoration-color:var(--gold);text-underline-offset:6px}
+.cmname.cmlink{cursor:pointer;display:inline-flex;align-items:center;gap:10px;border-bottom:2px dashed rgba(244,212,138,.6);padding-bottom:2px;transition:border-color .15s}
+.cmname.cmlink::after{content:'Open ↗';font-size:12px;font-weight:700;color:#1d3557;background:#f4d48a;border-radius:20px;padding:3px 10px;white-space:nowrap}
+.cmname.cmlink:hover{border-bottom-color:#f4d48a;border-bottom-style:solid}.cmname.cmlink:hover::after{background:#fff}
+a.name:hover{color:#2a5ba8;border-bottom-style:solid}
