@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>ישיבת מהרי"ט ד'סאטמאר</title>
+<link rel="icon" href="icon.png">
+<link rel="stylesheet" href="style.css">
+<style>
+  /* 🎯 a donor's personal goal page (v1.55): goal.html?t=<token> – data from the Supabase function "goal" */
+  body { background: #f3efe2; margin: 0; }
+  .gwrap { max-width: 760px; margin: 0 auto; padding: 16px; }
+  .ghead { text-align: center; padding: 6px 0 0; }
+  .ghead h2 { margin: 6px 0 0; color: var(--navy, #1d3557); font-size: 26px; }
+  .ghead .eng { color: #888; font-size: 14px; }
+  .gbar { position: relative; height: 34px; background: #e9e2cf; border-radius: 20px; overflow: hidden; margin: 16px 0 8px; box-shadow: inset 0 2px 6px rgba(0,0,0,.12); }
+  .gbar i { position: absolute; top: 0; bottom: 0; right: 0; width: 0; background: linear-gradient(90deg, #b8892b, #e8c05a); border-radius: 20px; transition: width 2.2s cubic-bezier(.2,.8,.2,1); }
+  .gbar b { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 15px; color: #3d2d00; }
+  .gstats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 14px 0; }
+  .gstats div { background: #fff; border: 1px solid #e6dfcf; border-radius: 14px; padding: 12px 6px; text-align: center; }
+  .gstats b { display: block; font-size: 24px; } .gstats span { font-size: 12px; color: #777; }
+  .gpays { background: #fff; border: 1px solid #e6dfcf; border-radius: 14px; padding: 12px 14px; margin-top: 14px; }
+  .gpays h3 { margin: 0 0 8px; color: var(--navy, #1d3557); font-size: 16px; }
+  .gpays table { width: 100%; border-collapse: collapse; font-size: 14px; border: 0; }
+  .gpays td { padding: 7px 8px; border-bottom: 1px solid #f0ebe0; }
+  .gpays td:last-child { text-align: left; font-weight: bold; }
+  .gpays tr.new td { animation: gin .6s both; }
+  @keyframes gin { from { opacity: 0; transform: translateY(8px); } }
+  .gwon { text-align: center; font-size: 22px; font-weight: bold; color: #2e7d4f; margin: 10px 0; animation: gpop 1s both 2.2s; }
+  @keyframes gpop { from { opacity: 0; transform: scale(.6); } }
+  .gfoot { text-align: center; color: #888; font-size: 12px; margin: 18px 0 8px; }
+  .gerr { text-align: center; padding: 60px 16px; color: #666; }
+  .hero { padding-top: 6px; }
+  @media (max-width: 560px) { .gstats b { font-size: 18px; } .ghead h2 { font-size: 21px; } }
+</style>
+</head>
+<body>
+<div class="gwrap" id="g"><div class="gerr">⏳</div></div>
+<script>
+'use strict';
+const FN = 'https://qrudivrakwoathgbzrwd.supabase.co/functions/v1/goal';
+const money = n => { const v = Math.round(Number(n || 0) * 100) / 100, c = Math.round(Math.abs(v) * 100) % 100 !== 0; return (v < 0 ? '-$' : '$') + Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: c ? 2 : 0, maximumFractionDigits: 2 }); };
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const box = document.getElementById('g');
+const t = new URLSearchParams(location.search).get('t') || '';
+function count(el, end, dur) { const t0 = performance.now(); const step = n => { const k = Math.min(1, (n - t0) / dur), e = 1 - Math.pow(1 - k, 3); el.textContent = money(Math.round(end * e)); if (k < 1) requestAnimationFrame(step); else el.textContent = money(end); }; requestAnimationFrame(step); }
+(async () => {
+  try {
+    const r = await fetch(FN + '?t=' + encodeURIComponent(t));
+    const D = await r.json();
+    if (!r.ok || D.error) throw new Error('not found');
+    // the same falling $100 bills into the tzedakah box as the app's home page
+    const bill = band => `<img src="bill100.jpg" alt="" draggable="false">${band ? '<span class="band">$10,000</span>' : ''}`;
+    const coins = Array.from({ length: 8 }, (_, i) => `<i class="coin bill${i % 3 === 1 ? ' bundle' : ''}" style="--d:${(i * 0.6).toFixed(2)}s;--x:${[-34, 22, -8, 38, -40, 6, 28, -20][i]}px;--r:${[-24, 18, -10, 30, -32, 12, 22, -16][i]}deg">${bill(i % 3 === 1)}</i>`).join('');
+    box.innerHTML = `<div class="ghead"><h2>${esc(D.name)}</h2>${D.eng ? `<div class="eng">${esc(D.eng)}</div>` : ''}</div>
+     <div class="hero"><div class="hero-box"><div class="coins">${coins}</div>
+      <div class="pushke"><div class="slot"></div><div class="face"><img src="logo.png" alt=""><span>ישיבת מהרי"ט ד'סאטמאר</span></div><div class="shine2"></div></div><div class="glow"></div></div>
+      <div class="hero-sum"><small>שוין געגעבן אין ${esc(D.year)}</small><b id="gn">$0</b></div></div>
+     <div class="gbar"><i id="gb"></i><b id="gp">0%</b></div>
+     ${D.won ? '<div class="gwon">🎉 מזל טוב! איר האט דערגרייכט דעם ציל!</div>' : ''}
+     <div class="gstats"><div><b style="color:#2e7d4f">${money(D.given)}</b><span>שוין געגעבן</span></div><div><b style="color:#b8892b">${money(D.won ? D.given - D.amt : D.left)}</b><span>${D.won ? 'איבערן ציל' : 'נאך ביזן ציל'}</span></div><div><b style="color:#1d3557">${money(D.amt)}</b><span>דער ציל פאר ${esc(D.year)}</span></div></div>
+     ${D.pays.length ? `<div class="gpays"><h3>אייערע באצאלונגען אין ${esc(D.year)}</h3><table>${D.pays.map((p, i) => `<tr class="new" style="animation-delay:${2.2 + i * .12}s"><td>${esc(p.d)}</td><td>${money(p.amt)}</td></tr>`).join('')}<tr><td><b>סך הכל</b></td><td>${money(D.given)}</td></tr></table></div>` : ''}
+     <div class="gfoot">א הארציגן יישר כח פאר אייער גרויסע שטיצע<br>Yeshiva Mesivta Torah V'Yirah Maharit D'Satmar</div>`;
+    count(document.getElementById('gn'), D.given, 2200);
+    requestAnimationFrame(() => setTimeout(() => { document.getElementById('gb').style.width = D.pct + '%'; }, 100));
+    const gp = document.getElementById('gp'), t0 = performance.now();
+    const st = n => { const k = Math.min(1, (n - t0) / 2200); gp.textContent = Math.round(D.pct * (1 - Math.pow(1 - k, 3))) + '%'; if (k < 1) requestAnimationFrame(st); };
+    requestAnimationFrame(st);
+  } catch (e) {
+    box.innerHTML = '<div class="gerr">דער לינק ארבעט נישט. ביטע פרעגט די ישיבה פאר א נייעם לינק.</div>';
+  }
+})();
+</script>
+</body>
+</html>

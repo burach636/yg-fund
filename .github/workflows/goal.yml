@@ -1,0 +1,16 @@
+# Once a day: ask the Supabase function "goal" to send the automatic donor-goal e-mails that are due
+# (every 2 weeks for donors with "auto" on, and the 🎉 e-mail when a goal is reached). Safe to run more than once.
+name: donor goal e-mails
+on:
+  schedule:
+    - cron: '7 15 * * *'     # every day, 15:07 UTC (about 10 am in New York)
+  workflow_dispatch:
+jobs:
+  goal:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Call the goal function
+        run: |
+          URL=$(grep -oE "url: *'[^']+'" config.js | sed -E "s/url: *'([^']+)'/\1/")
+          curl -sS -m 120 "$URL/functions/v1/goal?run=1"; echo

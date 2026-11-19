@@ -81,7 +81,7 @@ async function pullLog() {
   }
   return changed;
 }
-// Download a JLS data file always fresh (v1.54.1): the files used to be saved with Supabase's default 1-hour cache, so
+// Download a JLS data file always fresh (v1.55.1): the files used to be saved with Supabase's default 1-hour cache, so
 // another user's browser could show the old numbers for up to an hour after an import.
 async function jlsFile(path) {
   try {
@@ -110,7 +110,7 @@ function hebLast(a) {
   const lh = a.lh || (a.h ? a.h.trim().split(/\s+/).pop() : '');
   return lh ? '0' + lh + ' ' + (a.h || '') : '1' + (a.ln || a.n || '').toLowerCase() + ' ' + (a.n || '').toLowerCase();
 }
-// 🔍 Search that understands both keyboards (v1.54, owner): text typed with the keyboard on Hebrew/Yiddish while
+// 🔍 Search that understands both keyboards (v1.55, owner): text typed with the keyboard on Hebrew/Yiddish while
 // meaning English letters ("יקךךם" = "hello"), or English letters while meaning Yiddish ("nav" = "מאה"), is also tried through the other layout (standard Israeli layout). Niqqud and Yiddish ligatures
 // (ײ װ ױ) are ignored. qVars(raw) = the normalised text + its swapped twin; every search box tries both.
 const KB_PAIRS = "q/w'eקrרtאyטuוiןoםpפaשsדdגfכgעhיjחkלlךzזxסcבvהbנmצ;ף,ת.ץnמ";
@@ -467,7 +467,7 @@ function wire() {
 function setArea(a, keepView) {
   AREA = a; try { sessionStorage.setItem('yg_area', a); } catch (e) { }
   document.body.classList.toggle('area-tu', a === 'tu');
-  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.54</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.54</small>';
+  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.55</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.55</small>';
   $('#btnArea').style.display = canFund() && canView('tuition') ? '' : 'none';
   $('#btnArea').textContent = a === 'tu' ? '⇄ צו פאנדרעיזינג' : '⇄ צו שכר לימוד';
   setupUser();
@@ -704,6 +704,7 @@ function filterAccounts() {
   if (f === 'mine') L = L.filter(a => (S.acct[a.c] || {}).assigned === me);
   if (f === 'active') L = L.filter(a => !a.x);
   if (f === 'once') L = L.filter(a => ask(a.c).freq === 'once');
+  if (f === 'goal') L = L.filter(a => goalOf(a.c));
   if (ui.accShul) L = L.filter(a => (S.acct[a.c] || {}).shul === ui.accShul);
   if (ui.accTag) L = L.filter(a => tagsOf(a.c).includes(ui.accTag));
   if (ui.accSort === 'total') L.sort((x, y) => ((IDX.yg.get(y.c) || {}).total || 0) - ((IDX.yg.get(x.c) || {}).total || 0) || x._k.localeCompare(y._k, 'he'));
@@ -715,7 +716,7 @@ function vAccounts() {
   window._accL = L;
   $('#main').innerHTML = `<div class="row"><div><h2>👥 אלע אקאונטס</h2><p class="sub">אלע ${JD.accounts.length.toLocaleString()} אקאונטס פון JLS. זוכט אויף ענגליש אדער לשון קודש, לויט טעלעפאן, אדרעס אדער נומער.</p></div><div class="spacer"></div><button class="btn ghost" onclick="csvAcc()">⬇ Excel</button></div>
   <div class="row"><input id="q" placeholder="🔍 Search..." value="${esc(ui.accQ)}" style="flex:1;min-width:240px;font-size:16px">
-  <div class="chips">${[['all', 'אלע'], ['yg', 'YG נדבנים'], ['bal', 'מיט באלאנס'], ['vip', '⭐ VIP'], ['mine', 'מיינע'], ['once', '🚫 איינמאליגע'], ['active', 'אקטיוו']].map(([k, l]) => `<button class="chip ${ui.accF === k ? 'on' : ''}" onclick="ui.accF='${k}';ui.accN=100;vAccounts()">${l}</button>`).join('')}</div>
+  <div class="chips">${[['all', 'אלע'], ['yg', 'YG נדבנים'], ['bal', 'מיט באלאנס'], ['vip', '⭐ VIP'], ['mine', 'מיינע'], ['once', '🚫 איינמאליגע'], ['goal', '🎯 מיט א ציל'], ['active', 'אקטיוו']].map(([k, l]) => `<button class="chip ${ui.accF === k ? 'on' : ''}" onclick="ui.accF='${k}';ui.accN=100;vAccounts()">${l}</button>`).join('')}</div>
   ${allTags().length ? `<select class="mini" onchange="ui.accTag=this.value;ui.accN=100;vAccounts()"><option value="">🏷️ All flags</option>${allTags().map(t => `<option value="${esc(t)}" ${t === ui.accTag ? 'selected' : ''}>🏷️ ${esc(t)}</option>`).join('')}</select>` : ''}
   ${shulList().length ? `<select class="mini" onchange="ui.accShul=this.value;ui.accN=100;vAccounts()"><option value="">🕍 אלע שולן</option>${shulList().map(x => `<option value="${x.id}" ${x.id === ui.accShul ? 'selected' : ''}>🕍 ${esc(x.name)}</option>`).join('')}</select>` : ''}</div>
   <div class="row" style="margin-bottom:6px">${fltBar('acc', 'vAccounts()')}<span class="sub" style="margin:0">${L.length.toLocaleString()} געפונען · ריי:</span><div class="chips">${[['abc', 'א-ב (לעצטער נאמען)'], ['total', 'גרעסטע נדבנים']].map(([k, l]) => `<button class="chip ${ui.accSort === k ? 'on' : ''}" onclick="ui.accSort='${k}';vAccounts()">${l}</button>`).join('')}</div></div>
@@ -765,7 +766,7 @@ function openAcct(code) {
    <div class="stat"><b>${g && g.last ? money(g.lastAmt) : '—'}</b><span>לעצטע: ${g ? fmtD(g.last) : '—'}</span></div>
    <div class="stat"><b class="${p && p.open > 0.009 ? 'bal' : ''}">${money(p ? p.open : 0)}</b><span>אפענער פלעדזש</span></div>
    <div class="stat"><b style="font-size:19px">${k.next ? fmtDual(k.next) : '—'}</b><span>ווייטער בעטן</span></div></div>
-  ${acctFuture(code)}
+  ${acctFuture(code)}${goalBox(code)}
   <div class="cols"><div class="box"><div class="k">פון JLS</div>
    ${a.w || a.wh ? `<div style="margin:4px 0">👩 <b>${esc(a.wh || a.w)}</b> <span class="heb">${esc(a.wh ? a.w : '')}</span></div>` : ''}
    <div style="margin:6px 0">🏠 <span class="ltr">${esc(a.a || '—')}</span></div>
@@ -786,7 +787,73 @@ function openAcct(code) {
   <div class="tabs2">${[['pay', 'באצאלונגען'], ['pl', 'פלעדזשעס'], ['hist', 'היסטאריע (' + hist.length + ')'], ['tasks', 'ארבעטן (' + tasks.filter(t => !t[1].done).length + ')']].map(([kk, l]) => `<button class="${acctTab === kk ? 'on' : ''}" onclick="acctTab='${kk}';openAcct(${code})">${l}</button>`).join('')}</div>
   <div class="scroll">${tabBody[acctTab]}</div>`);
 }
-// 💳 On the account (owner, v1.54): active credit-card plans (JD.ccplans, schedule columns only) and held /
+// 🎯 donor goal (owner, v1.55): acct.goal = {amt, hy, tok, auto, note, subject, sentAt, won, wonAt} – always written whole.
+// The e-mail and the personal page (goal.html?t=tok) are built by the Supabase function "goal"; it also sends the
+// automatic e-mails every 2 weeks and the 🎉 e-mail when the goal is reached.
+const goalOf = c => (S.acct[c] || {}).goal || null;
+function goalCalc(c) {
+  const g = goalOf(c); if (!g || !(+g.amt > 0)) return null;
+  const hy = +g.hy || curHY(), list = ((IDX.yg.get(+c) || {}).list || []).filter(p => !p[9] && p[3] > 0 && (HEB.parts(p[2]) || {}).y === hy);
+  const given = Math.round(list.reduce((s, p) => s + p[3], 0) * 100) / 100, amt = +g.amt;
+  return { g, hy, amt, given, left: Math.max(0, amt - given), pct: Math.min(100, Math.round(given / amt * 100)), won: given >= amt - 0.005, list };
+}
+function goalBox(c) {
+  const G = goalCalc(c);
+  if (!G) return `<div style="margin:-6px 0 12px"><button class="btn ghost sm" onclick="goalForm(${c})">🎯 + Goal</button></div>`;
+  return `<div class="box goalbox"><div class="row" style="margin:0 0 6px"><b>🎯 ציל ${HEB.gem(G.hy)}: ${money(G.amt)}</b>${G.won ? '<span class="tag ok">🎉 דערגרייכט</span>' : ''}<div class="spacer"></div>
+    <button class="btn ghost sm" onclick="goalForm(${c})">Edit</button><button class="btn ghost sm" onclick="goalLink(${c})">🔗 Copy link</button><button class="btn gold sm" onclick="goalMail(${c})">✉️ Send email</button></div>
+   <div class="goalbar"><i style="width:${G.pct}%"></i><b>${G.pct}%</b></div>
+   <div class="sub" style="margin:6px 0 0">געגעבן <b>${money(G.given)}</b> · נאך <b>${money(G.left)}</b> ביזן ציל${G.g.auto ? ' · ⏰ אימעיל אויטאמאטיש יעדע 2 וואכן' : ''}${G.g.sentAt ? ' · לעצטע אימעיל ' + fmtD(G.g.sentAt.slice(0, 10)) : ''}</div></div>`;
+}
+const goalTok = () => { const a = new Uint8Array(24), ch = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789'; crypto.getRandomValues(a); return [...a].map(x => ch[x % ch.length]).join(''); };
+function goalForm(c) {
+  const g = goalOf(c) || { amt: '', hy: curHY(), auto: false, note: '' }, hy = +g.hy || curHY();
+  modal(`<h2>🎯 ציל – ${esc(acctName(c))}</h2><div class="grid2">
+   <label class="f">ציל $<input id="gla" type="number" step="1" value="${esc(g.amt)}" placeholder="26000"></label>
+   <label class="f">פאר וועלכן יאר<select id="gly">${[curHY() - 1, curHY(), curHY() + 1].map(y => `<option value="${y}" ${y === hy ? 'selected' : ''}>${HEB.gem(y)}</option>`).join('')}</select></label>
+   <label class="f" style="grid-column:1/-1">א פערזענליכע שורה אין אימעיל (אפציאנאל)<textarea id="gln" rows="2" placeholder="למשל: נאך 3 מאל $4,000 און מיר האבן עס!">${esc(g.note || '')}</textarea></label>
+   <label style="grid-column:1/-1;display:flex;gap:8px;align-items:center;font-size:14px"><input type="checkbox" id="glauto" ${g.auto ? 'checked' : ''}> ⏰ שיק אים אויטאמאטיש דעם אימעיל יעדע 2 וואכן (ביז ער דערגרייכט דעם ציל)</label>
+   <div class="sub" style="grid-column:1/-1">🎉 ווען ער דערגרייכט דעם ציל, באקומט ער אויטאמאטיש א "מזל טוב" אימעיל. אימעיל: <b>${esc(emailOf(c) || '— קיין אימעיל —')}</b></div></div>
+   <div class="row" style="justify-content:flex-end;margin-top:14px">${goalOf(c) ? `<button class="btn red" onclick="goalDel(${c})">Delete</button><div class="spacer"></div>` : ''}<button class="btn ghost" onclick="openAcct(${c})">Back</button><button class="btn" onclick="goalSave(${c})">Save</button></div>`, 'narrow');
+}
+async function goalSave(c) {
+  const amt = +$('#gla').value; if (!(amt > 0)) { $('#gla').focus(); toast('⚠️ שרייבט דעם ציל'); return; }
+  const old = goalOf(c) || {}, hy = +$('#gly').value;
+  await emit('acct', c, { goal: Object.assign({}, old, { amt, hy, note: $('#gln').value.trim(), auto: $('#glauto').checked, tok: old.tok || goalTok() }, hy !== +old.hy ? { won: false, sentAt: '' } : {}) });
+  toast('✓ Saved'); openAcct(c);
+}
+async function goalDel(c) { if (!confirm('אויסמעקן דעם ציל?')) return; await emit('acct', c, { goal: null }); openAcct(c); }
+function goalLink(c) { const g = goalOf(c); if (!g || !g.tok) return; const u = SITE + 'goal.html?t=' + g.tok; try { navigator.clipboard.writeText(u); toast('✓ Copied'); } catch (e) { prompt('Link:', u); } }
+async function goalCall(body) {
+  const { data, error } = await sb.functions.invoke('goal', { body });
+  let m = error ? (error.message || String(error)) : data && data.error;
+  if (error) try { const j = await error.context.json(); if (j && j.error) m = j.error; } catch (e) { }
+  if (m) throw new Error(m);
+  return data;
+}
+async function goalMail(c, subject, note) {
+  try {
+    busy('מאכט דעם אימעיל...');
+    const d = await goalCall({ action: 'preview', code: c, subject: subject || '', note: note != null ? note : undefined });
+    busy(false);
+    const g = goalOf(c) || {};
+    modal(`<h2>✉️ ציל אימעיל – ${esc(acctName(c))}</h2><div class="grid2">
+     <label class="f">צו<input id="gmt" type="email" style="direction:ltr" value="${esc(d.to || '')}"></label>
+     <label class="f">Subject<input id="gms" value="${esc(d.subject)}"></label>
+     <label class="f" style="grid-column:1/-1">פערזענליכע שורה<textarea id="gmn" rows="2">${esc(note != null ? note : (g.note || ''))}</textarea></label></div>
+     <div class="row" style="margin:6px 0"><button class="btn ghost sm" onclick="goalMail(${c},$('#gms').value,$('#gmn').value)">🔄 Preview</button><span class="sub" style="margin:0">${d.pct}% · ${money(d.given)}</span></div>
+     <iframe id="gmf" style="width:100%;height:420px;border:1px solid var(--line);border-radius:10px;background:#fff"></iframe>
+     <div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn ghost" onclick="openAcct(${c})">Back</button><button class="btn gold" id="gmgo" onclick="goalSend(${c})">✉️ Send</button></div>`);
+    $('#gmf').srcdoc = d.html;
+  } catch (e) { busy(false); toast('⚠️ ' + (e.message || e)); }
+}
+async function goalSend(c) {
+  const to = $('#gmt').value.trim(); if (!to) { toast('⚠️ קיין אימעיל'); return; }
+  $('#gmgo').disabled = true; busy('שיקט...');
+  try { await goalCall({ action: 'send', code: c, to, subject: $('#gms').value, note: $('#gmn').value, by: me }); busy(false); await pullLog(); toast('✓ ✉️ ' + to); openAcct(c); }
+  catch (e) { busy(false); $('#gmgo').disabled = false; toast('⚠️ ' + (e.message || e)); }
+}
+// 💳 On the account (owner, v1.55): active credit-card plans (JD.ccplans, schedule columns only) and held /
 // post-dated checks (YG payments whose check date is still ahead) – the same things plCovered() looks at.
 function acctFuture(code) {
   const t = todayS(), camp = n => (JD.campaigns || {})[n] || (n ? '#' + n : '');
@@ -808,7 +875,7 @@ function acctFuture(code) {
 }
 async function saveAcct(code) {
   await emit('acct', code, { freq: $('#af').value, nextAsk: $('#an').value, assigned: $('#aa').value, vip: !!$('#av').value, notes: $('#ao').value, shul: $('#ash').value, email: $('#aem').value.trim().toLowerCase() === ((IDX.by.get(code) || {}).em || [])[0] ? '' : $('#aem').value.trim().toLowerCase() });
-  closeM(); render(); toast('✓ Saved');   // owner (v1.54): Save closes the account window
+  closeM(); render(); toast('✓ Saved');   // owner (v1.55): Save closes the account window
 }
 async function addNote(code) {
   const t = $('#hn').value.trim(); if (!t) return;
@@ -817,7 +884,7 @@ async function addNote(code) {
 
 // ---------- REPORTS ----------
 // Payments by Jewish year and month (refunds left out)
-// Years are shown only up to the current Jewish year (owner, v1.54): no next year from post-dated payments,
+// Years are shown only up to the current Jewish year (owner, v1.55): no next year from post-dated payments,
 // scheduled credit-card charges or bills already entered for later.
 const curHY = () => (HEB.parts(todayS()) || {}).y || 9999;
 function hebYears() {
@@ -1101,7 +1168,7 @@ function closeM() { $('#ov').classList.remove('on'); }
 
 const setHH = () => document.documentElement.style.setProperty('--hh', document.querySelector('header').offsetHeight + 'px');
 window.addEventListener('resize', setHH); window.addEventListener('load', setHH); setHH();
-// ---------- 🔄 new version on the website: update by itself (v1.54) ----------
+// ---------- 🔄 new version on the website: update by itself (v1.55) ----------
 // Every minute the page asks the server for index.html and compares <meta name="app-version">. When it changed:
 // if nobody is in the middle of something (no window open, not typing, no mouse/keys for 20 s) the page reloads by
 // itself and comes back to the same page; otherwise a small "🔄 נייע ווערסיע" button waits for a click.

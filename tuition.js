@@ -207,10 +207,15 @@ function vTuHome() {
 
 // ---------- 🧾 Billing: every Jewish year, a box per month ----------
 function tuYears() {
-  const Y = {}, G = y => Y[y] || (Y[y] = { y, b: 0, p: 0, o: 0, n: new Set(), m: {} }), M = (o, m) => o.m[m] || (o.m[m] = { b: 0, p: 0, o: 0 });
-  TU.charges.forEach(c => { if (c[7]) return; const h = HEB.parts(c[2]); if (!h || c[2] < '1990') return; const o = G(h.y), m = M(o, h.m); o.b += c[3]; m.b += c[3]; o.o += c[5]; m.o += c[5]; o.n.add(c[1]); });
+  const Y = {}, G = y => Y[y] || (Y[y] = { y, b: 0, bd: 0, p: 0, o: 0, n: new Set(), m: {} }), M = (o, m) => o.m[m] || (o.m[m] = { b: 0, p: 0, o: 0 }), t = todayS();
+  TU.charges.forEach(c => { if (c[7]) return; const h = HEB.parts(c[2]); if (!h || c[2] < '1990') return; const o = G(h.y), m = M(o, h.m); o.b += c[3]; m.b += c[3]; o.o += c[5]; m.o += c[5]; o.n.add(c[1]); if (c[2] <= t) o.bd += c[3]; });
   TU.payments.forEach(p => { if (p[7]) return; const h = HEB.parts(p[2]); if (!h || p[2] < '1990') return; const o = G(h.y), m = M(o, h.m); o.p += p[3]; m.p += p[3]; });
-  return Object.values(Y).filter(y => y.y <= curHY()).sort((a, b) => b.y - a.y);   // not later than the current Jewish year
+  const L = Object.values(Y).filter(y => y.y <= curHY()).sort((a, b) => b.y - a.y);   // not later than the current Jewish year
+  // % collected (owner, v1.55): payments ÷ the year's bills; the current year only counts the bills due up to today,
+  // so a year in the middle is not lowered by months still to come. `down` = lower than the year before → red.
+  L.forEach(y => { const base = y.y === curHY() ? y.bd : y.b; y.pct = base > 0.5 ? Math.round(y.p / base * 100) : null; });
+  L.forEach((y, i) => { const prev = L[i + 1]; y.down = y.pct != null && prev && prev.y === y.y - 1 && prev.pct != null && y.pct < prev.pct; });
+  return L;
 }
 function vTuBill() {
   if (!tuReady('tubill')) return;
@@ -218,10 +223,10 @@ function vTuBill() {
   $('#main').innerHTML = `<div class="row"><div><h2>🧾 Billing – שכר לימוד</h2><p class="sub">יעדעס יאר תשרי מאכט מען א קאנטראקט, און יעדן חודש ווערט א ביל. אין יעדן קעסטל: וויפיל מ'האט געבילט, וויפיל איז אריינגעקומען, און וויפיל איז נאך אפן. דריקט אויף א חודש צו זען די פאמיליעס.</p></div><div class="spacer"></div>
      <button class="btn ghost" onclick="tuBillXls()">⬇ Excel</button></div>
    ${shown.map(y => `<div class="yrcard"><div class="row" style="margin:0 0 8px"><b class="yr">${HEB.gem(y.y)}</b><div class="bar" style="flex:1;height:12px;margin:0"><i style="width:${y.b / max * 100}%"></i></div>
-     <span class="dim" style="font-size:13px">${y.n.size} פאמיליעס · ${TU.contracts.filter(c => tuHY(c[2]) === y.y).length} קאנטראקטן</span></div>
+     ${y.pct != null ? `<span class="tupct${y.down ? ' down' : ''}">${y.down ? '▼ ' : ''}${y.pct}%${y.y === curHY() ? ' ביז היינט' : ''}</span>` : ''}<span class="dim" style="font-size:13px">${y.n.size} פאמיליעס · ${TU.contracts.filter(c => tuHY(c[2]) === y.y).length} קאנטראקטן</span></div>
     <div class="mgrid" style="--n:${HEB.monthsOf(y.y).length + 1}">${HEB.monthsOf(y.y).map(m => { const v = y.m[m], cur = now && now.y === y.y && now.m === m;
       return `<div class="mbox${v ? ' click' : ' empty0'}${cur ? ' cur' : ''}"${v ? ` onclick="tuMonth(${y.y},'${m}')"` : ''}><span>${HEB.MONTHS[m]}</span><b>${v ? money(v.b) : '—'}</b>${v ? `<small>💵 ${money(v.p)}</small>${v.o > 0.5 ? `<small class="bal">אפן ${money(v.o)}</small>` : ''}` : ''}</div>`; }).join('')}
-     <div class="mbox tot click" onclick="tuMonth(${y.y},'')"><span>ס"ה ${HEB.gem(y.y)}</span><b>${money(y.b)}</b><small>💵 ${money(y.p)}</small>${y.o > 0.5 ? `<small class="bal">אפן ${money(y.o)}</small>` : ''}</div></div></div>`).join('') || '<div class="empty">קיין בילס</div>'}
+     <div class="mbox tot click" onclick="tuMonth(${y.y},'')"><span>ס"ה ${HEB.gem(y.y)}</span><b>${money(y.b)}</b><small>💵 ${money(y.p)}</small>${y.pct != null ? `<small class="tupct${y.down ? ' down' : ''}" title="${y.y === curHY() ? 'לויט די בילס ביז היינט' : 'לויט די בילס פון גאנצן יאר'}">${y.pct}%</small>` : ''}${y.o > 0.5 ? `<small class="bal">אפן ${money(y.o)}</small>` : ''}</div></div></div>`).join('') || '<div class="empty">קיין בילס</div>'}
    ${Y.length > shown.length ? `<div class="more"><button class="btn ghost" onclick="ui.tuBN=(ui.tuBN||4)+6;vTuBill()">Show more years (${Y.length - shown.length})</button></div>` : ''}`;
 }
 function tuMonthRows(hy, m) {
