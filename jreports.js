@@ -97,7 +97,7 @@ function jrForm(id) {
    <label class="f">UDF פעלד<select id="ju" onchange="jrVals()"><option value="">— נישט קיין UDF —</option>${types.map(t => `<option ${t === (d.udf || '').toUpperCase() ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>
    <label class="f">נישט געגעבן צו קאמפעין<select id="jc"><option value="">—</option>${camps.map(([n, cnt]) => `<option value="${n}" ${+d.camp === n ? 'selected' : ''}>#${n} ${esc(JD.campaigns[n] || '')} (${cnt})</option>`).join('')}</select></label>
    <div style="grid-column:1/-1"><div class="sub" style="margin:4px 0">ווערטן (ליידיג = יעדער ווערט):</div><div id="jv" class="chips"></div></div>
-   <label class="f">🏷️ נאר מיט דעם פלאג (אפציאנאל)<select id="jt"><option value="">—</option>${tags.map(t => `<option ${t === d.tag ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>
+   <label class="f">🏷️ Only with this flag (optional)<select id="jt"><option value="">—</option>${tags.map(t => `<option ${t === d.tag ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>
    <label style="display:flex;gap:8px;align-items:center;font-size:14px"><input type="checkbox" id="ja" ${d.active ? 'checked' : ''}> נאר אקטיווע אקאונטס</label></div>
    <div class="row" style="justify-content:flex-end;margin-top:14px">${id ? `<button class="btn red" onclick="jrDel('${id}')">Delete</button><div class="spacer"></div>` : ''}<button class="btn ghost" onclick="closeM()">Back</button><button class="btn" onclick="jrSave('${id || ''}')">Save</button></div>`, 'narrow');
   window._jrSel = new Set((d.vals || []).map(String));
@@ -140,7 +140,7 @@ function tagEditor(code) {
   const T = tagsOf(code), jsq = t => esc(t).replace(/'/g, '&#39;');
   return `<div id="tged"><div class="chips" style="margin-bottom:8px">${PRESET_TAGS.map(t => `<button type="button" class="chip ${T.includes(t) ? 'on' : ''}" style="font-size:12px;padding:3px 10px" onclick="tagToggle(${code},'${jsq(t)}')">${T.includes(t) ? '✓ ' : ''}${esc(t)}</button>`).join('')}</div>
    <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">${T.filter(t => !PRESET_TAGS.includes(t)).map(t => tagChip(t, ` <a style="cursor:pointer" title="אראפנעמען" onclick="tagDel(${code},'${esc(t).replace(/'/g, '&#39;')}')">✕</a>`)).join('')}
-   <input id="tgin" list="tglist" placeholder="+ אן אנדער פלאג..." style="flex:1;min-width:170px" onkeydown="if(event.key==='Enter'){event.preventDefault();tagAdd(${code})}"><datalist id="tglist">${allTags().map(t => `<option value="${esc(t)}">`).join('')}</datalist>
+   <input id="tgin" list="tglist" placeholder="+ Another flag..." style="flex:1;min-width:170px" onkeydown="if(event.key==='Enter'){event.preventDefault();tagAdd(${code})}"><datalist id="tglist">${allTags().map(t => `<option value="${esc(t)}">`).join('')}</datalist>
    <button class="btn ghost sm" onclick="tagAdd(${code})">Add</button></div></div>`;
 }
 async function tagToggle(code, t) {

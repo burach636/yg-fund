@@ -97,7 +97,7 @@ function fltForm(k) {
     <label class="f">נישט געגעבן זינט${dateField('fng', f.noGiftSince || '', { clear: true })}</label>` : `
     <label class="f">ווי ער באצאלט<select id="fst"><option value="">—</option>${['ok', 'fix', 'ign'].map(x => `<option value="${x}" ${f.st === x ? 'selected' : ''}>${TU_ST[x][0]}</option>`).join('')}</select></label>
     <label class="f">שולדיג יעצט לכל הפחות $<input id="fmd" type="number" value="${esc(f.minDue || '')}"></label>`}
-    <label class="f">🏷️ פלאג<select id="ftg"><option value="">—</option>${tags.map(t => `<option ${t === f.tag ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>
+    <label class="f">🏷️ Flag<select id="ftg"><option value="">—</option>${tags.map(t => `<option ${t === f.tag ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>
     <label class="f">👤 ווער קאלט<select id="fwh"><option value="">—</option><option value="__me" ${f.who === '__me' ? 'selected' : ''}>מיינע</option><option value="__none" ${f.who === '__none' ? 'selected' : ''}>נישט צוגעטיילט</option>${USERS().map(u => `<option ${f.who === u ? 'selected' : ''}>${esc(u)}</option>`).join('')}</select></label>
    </div>
    <label class="fltkeep"><input type="checkbox" id="fkeep" ${f._keep ? 'checked' : ''}> 📌 Keep this filter – it stays (also after closing the program) until this box is unchecked</label>

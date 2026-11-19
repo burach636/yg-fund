@@ -132,8 +132,8 @@ function vFund() {
    ${F.exempt.length ? `<h3>סכומים אן פראצענט</h3><table><tbody>${F.exempt.map(x => `<tr><td class="num">${fmtD(x.date)}</td><td class="num">−${money(x.amt)}</td><td style="font-size:13px">${esc(x.note || '')}</td><td><button class="btn ghost sm" onclick="frExForm('${x.id}')">Edit</button></td></tr>`).join('')}</tbody></table>` : ''}
    ${Object.values(S.frin).some(x => !x.del) ? `<h3>אריינקומען וואס איז נישט אין JLS</h3><table><tbody>${Object.entries(S.frin).filter(([, x]) => !x.del).sort((a, b) => b[1].date.localeCompare(a[1].date)).map(([id, x]) => `<tr><td class="num">${fmtD(x.date)}</td><td class="num">${money(x.amt)}</td><td style="font-size:13px">${esc(x.note || '')}</td><td><button class="btn ghost sm" onclick="frInForm('${id}')">Edit</button></td></tr>`).join('')}</tbody></table>` : ''}
   </div></div>
-  ${expSection(F)}`;
-  const qi = $('#expq');
+  ${expCard(F)}`;
+  const qi = null;
   if (qi) { if (ui._expFocus) { qi.focus(); qi.setSelectionRange(qi.value.length, qi.value.length); ui._expFocus = false; } let tm; qi.oninput = () => { clearTimeout(tm); tm = setTimeout(() => { ui.expQ = qi.value; ui._expFocus = true; vFund(); }, 300); }; }
 }
 function frPeriod(k) {
@@ -591,8 +591,84 @@ function expSection(F) {
     <td><button class="btn ghost sm" onclick="expForm('${x.id}')">Edit</button></td></tr>`).join('') || '<tr><td colspan="6" class="empty">נאך קיין עקספענסעס</td></tr>'}
    </tbody>${L.length ? `<tfoot><tr><td colspan="3" style="text-align:left"><b>סך הכל</b></td><td class="num"><b>${money(tot)}</b></td><td colspan="2"></td></tr></tfoot>` : ''}</table></div>`;
 }
-function expForm(id) {
-  const x = id ? S.frexp[id] : { date: todayS(), vendor: '', desc: '', amt: '', hy: +ui.expY || 0 };
+// ---------- 🍽️ dinner expenses page (owner, v1.54): like QuickBooks – vendors listed on the left, click one for every
+// year and charge with its invoice; yearly report to print or download; ⚠️ when a vendor charged more than the year before.
+function expCard(F) {
+  const y = expYearOf(todayS()), Y = F.expYears[y] || { total: 0, covered: 0, left: 0 }, n = F.expenses.filter(x => x.hy === y).length, up = expVendors(F).filter(v => v.up[y]).length;
+  return `<div class="box" style="margin-top:18px;cursor:pointer" onclick="go('exp')"><div class="row" style="margin:0"><h3 style="margin:0">🍽️ דינער עקספענסעס</h3><div class="spacer"></div><button class="btn gold sm">Open ›</button></div>
+   <div class="stats" style="margin:10px 0 0"><div class="stat"><b>${money(Y.total)}</b><span>${HEB.gem(y)} · ${n} עקספענסעס</span></div><div class="stat"><b class="zero">${money(Y.covered)}</b><span>שוין געדעקט</span></div><div class="stat"><b class="${Y.left > 0.009 ? 'bal' : 'zero'}">${money(Y.left)}</b><span>נאך צו דעקן</span></div>${up ? `<div class="stat"><b class="bal">⚠️ ${up}</b><span>פירמעס בעטן מער ווי פאראיאר</span></div>` : ''}</div></div>`;
+}
+// every vendor: totals per Jewish year, and the years it charged more than the year before
+function expVendors(F) {
+  const M = new Map();
+  F.expenses.forEach(x => { const k = (x.vendor || '—').trim(), v = M.get(k.toLowerCase()) || { name: k, years: {}, list: [], total: 0 }; v.years[x.hy] = (v.years[x.hy] || 0) + x.amt; v.total += x.amt; v.list.push(x); M.set(k.toLowerCase(), v); });
+  return [...M.values()].map(v => { v.up = {}; Object.keys(v.years).forEach(y => { const a = v.years[y], b = v.years[+y - 1]; if (b > 0.009 && a > b + 0.009) v.up[y] = (a - b) / b; }); return v; }).sort((a, b) => a.name.localeCompare(b.name, 'he'));
+}
+const expPct = p => '+' + Math.round(p * 100) + '%';
+function vExp() {
+  const F = fundCalc(), V = expVendors(F), years = [...new Set(F.expenses.map(x => x.hy))].filter(y => y <= curHY()).sort((a, b) => b - a);
+  const y = ui.expY === 'all' ? 'all' : (years.includes(+ui.expY) ? +ui.expY : (years[0] || expYearOf(todayS())));
+  const q = (ui.expQ || '').trim(), QV = qVars(q), inY = x => y === 'all' || x.hy === y;
+  const vt = v => y === 'all' ? v.total : (v.years[y] || 0);
+  const list = V.filter(v => (y === 'all' || v.years[y]) && (!q || qHit(QV, v.name + ' ' + v.list.map(x => (x.desc || '') + ' ' + x.amt).join(' '))));
+  const sel = V.find(v => v.name.toLowerCase() === (ui.expV || '').toLowerCase());
+  const grand = F.expenses.filter(inY).reduce((s, x) => s + x.amt, 0);
+  const side = `<div class="expside"><div class="expvi ${!sel ? 'on' : ''}" onclick="ui.expV='';vExp()"><b>📋 אלע פירמעס</b><i>${money(grand)}</i></div>
+   ${list.map(v => `<div class="expvi ${sel === v ? 'on' : ''}" onclick="ui.expV=${esc(JSON.stringify(v.name))};vExp()"><b>${esc(v.name)}</b>${y !== 'all' && v.up[y] ? `<span class="tag late" title="מער ווי פאראיאר">⚠️ ${expPct(v.up[y])}</span>` : ''}<i>${money(vt(v))}</i></div>`).join('') || '<div class="empty">—</div>'}</div>`;
+  let main;
+  if (sel) {   // one vendor: every year, every charge with its invoice
+    const ys = Object.keys(sel.years).map(Number).sort((a, b) => b - a).filter(v => y === 'all' || v === y);
+    main = `<div class="row" style="margin:0 0 8px"><h2 style="margin:0">${esc(sel.name)}</h2><div class="spacer"></div><button class="btn gold sm" onclick="expForm(null,${esc(JSON.stringify(sel.name))})">+ New expense</button></div>
+     <div class="stats" style="margin-bottom:12px">${Object.keys(sel.years).map(Number).sort((a, b) => b - a).slice(0, 4).map(v => `<div class="stat"><b>${money(sel.years[v])}</b><span>${HEB.gem(v)}${sel.up[v] ? ` <span class="tag late">⚠️ ${expPct(sel.up[v])}</span>` : ''}</span></div>`).join('')}<div class="stat"><b>${money(sel.total)}</b><span>סך הכל אלע יארן</span></div></div>
+     ${ys.map(v => { const L = sel.list.filter(x => x.hy === v).sort((a, b) => (a.date || '').localeCompare(b.date || '')); return `<div class="expyr"><div class="row" style="margin:0 0 6px"><h3 style="margin:0">${HEB.gem(v)}</h3>${sel.up[v] ? `<span class="tag late">⚠️ ${expPct(sel.up[v])} מער ווי ${HEB.gem(v - 1)} (${money(sel.years[v - 1])})</span>` : (sel.years[v - 1] ? `<span class="dim" style="font-size:13px">${HEB.gem(v - 1)}: ${money(sel.years[v - 1])}</span>` : '')}<div class="spacer"></div><b>${money(sel.years[v])}</b></div>
+       <table><thead><tr><th>טאג</th><th>וואס</th><th>סכום</th><th>אינוואיס</th><th></th></tr></thead><tbody>${L.map(x => `<tr><td class="num" style="font-size:13px">${fmtD(x.date)}</td><td style="font-size:13px">${esc(x.desc || '')}<br><small class="dim">${esc(x.by || '')}</small></td><td class="num"><b>${money(x.amt)}</b></td>
+        <td>${x.file ? `<button class="btn ghost sm" title="${esc(x.file.name)}" onclick="expOpen('${x.id}')">📎 ${esc(x.file.name.length > 22 ? x.file.name.slice(0, 20) + '…' : x.file.name)}</button>` : '<span class="dim">—</span>'}</td><td><button class="btn ghost sm" onclick="expForm('${x.id}')">Edit</button></td></tr>`).join('')}</tbody></table></div>`; }).join('') || '<div class="empty">—</div>'}`;
+  } else {   // all vendors: a table of every vendor × year
+    const cols = (y === 'all' ? years : [y, y - 1].filter(v => years.includes(v) || v === y)).slice(0, 6);
+    main = `<h2 style="margin:0 0 8px">📋 אלע פירמעס ${y === 'all' ? '' : HEB.gem(y)}</h2>
+     <table><thead><tr><th>פירמע</th>${cols.map(v => `<th>${HEB.gem(v)}</th>`).join('')}<th></th></tr></thead><tbody>
+     ${list.map(v => `<tr style="cursor:pointer" onclick="ui.expV=${esc(JSON.stringify(v.name))};vExp()"><td><b>${esc(v.name)}</b></td>${cols.map(c => `<td class="num">${v.years[c] ? money(v.years[c]) : '<span class="dim">—</span>'}${v.up[c] ? ` <span class="tag late">⚠️ ${expPct(v.up[c])}</span>` : ''}</td>`).join('')}<td class="dim" style="font-size:12px">${v.list.filter(inY).length} ›</td></tr>`).join('') || `<tr><td colspan="${cols.length + 2}" class="empty">נאך קיין עקספענסעס</td></tr>`}</tbody>
+     <tfoot><tr><td><b>סך הכל</b></td>${cols.map(c => `<td class="num"><b>${money(F.expenses.filter(x => x.hy === c).reduce((s, x) => s + x.amt, 0))}</b></td>`).join('')}<td></td></tr></tfoot></table>`;
+  }
+  $('#main').innerHTML = `<div class="row"><button class="btn ghost sm" onclick="go('fund')">‹ פאנדרעיזינג חשבונות</button><h2 style="margin:0">🍽️ דינער עקספענסעס</h2><div class="spacer"></div>
+    <button class="btn ghost sm" onclick="expReport()">🖨️ Report</button><button class="btn ghost sm" onclick="expReportXls()">⬇ Excel</button><button class="btn gold" onclick="expForm()">+ New expense</button></div>
+   <div class="row" style="margin:8px 0"><div class="chips">${years.map(v => `<button class="chip ${v === y ? 'on' : ''}" onclick="ui.expY=${v};vExp()">${HEB.gem(v)}</button>`).join('')}<button class="chip ${y === 'all' ? 'on' : ''}" onclick="ui.expY='all';vExp()">אלע יארן</button></div>
+    <input id="expq" placeholder="🔍 Search: vendor, what, amount..." value="${esc(q)}" style="flex:1;min-width:200px;max-width:320px"></div>
+   <div class="expgrid"><div class="expmain">${main}</div>${side}</div>`;
+  const qi = $('#expq'); if (ui._expFocus) { qi.focus(); qi.setSelectionRange(qi.value.length, qi.value.length); ui._expFocus = false; }
+  let tm; qi.oninput = () => { clearTimeout(tm); tm = setTimeout(() => { ui.expQ = qi.value; ui._expFocus = true; vExp(); }, 300); };
+}
+// the year chosen on the page (or the current one); 'all' → every year, one section each
+function expRepYears(F) { const ys = [...new Set(F.expenses.map(x => x.hy))].filter(y => y <= curHY()).sort((a, b) => b - a); return ui.expY === 'all' ? ys : [ys.includes(+ui.expY) ? +ui.expY : (ys[0] || expYearOf(todayS()))]; }
+function expReport() {
+  const F = fundCalc(), V = expVendors(F), ys = expRepYears(F);
+  const page = y => { const vs = V.filter(v => v.years[y]), tot = vs.reduce((s, v) => s + v.years[y], 0);
+    return `<section class="pg"><div class="hd"><img src="${SITE}logo.png" alt=""><div><h1>דינער עקספענסעס · ${HEB.gem(y)}</h1><p>Yeshiva Mesivta Torah V'Yirah Maharit D'Satmar · ${engD(todayS())}</p></div></div>
+     <table><thead><tr><th>פירמע</th><th>טאג</th><th>וואס</th><th class="n">סכום</th><th class="n">${HEB.gem(y - 1)}</th></tr></thead><tbody>
+     ${vs.map(v => v.list.filter(x => x.hy === y).sort((a, b) => (a.date || '').localeCompare(b.date || '')).map((x, i, A) => `<tr><td>${i ? '' : `<b>${esc(v.name)}</b>`}</td><td>${fmtD(x.date)}</td><td>${esc(x.desc || '')}${x.file ? ' 📎' : ''}</td><td class="n">${money(x.amt)}</td><td></td></tr>`).join('') + `<tr class="sub"><td colspan="3">סך הכל ${esc(v.name)}${v.up[y] ? ` <span class="up">⚠️ ${expPct(v.up[y])}</span>` : ''}</td><td class="n">${money(v.years[y])}</td><td class="n">${v.years[y - 1] ? money(v.years[y - 1]) : '—'}</td></tr>`).join('')}
+     </tbody><tfoot><tr><td colspan="3">סך הכל ${HEB.gem(y)}</td><td class="n">${money(tot)}</td><td class="n">${money(F.expenses.filter(x => x.hy === y - 1).reduce((s, x) => s + x.amt, 0))}</td></tr></tfoot></table></section>`; };
+  const w = window.open('', '_blank'); if (!w) { toast('⚠️ דער בלעטערער האט נישט געלאזט עפענען א פענצטער'); return; }
+  w.document.write(`<!doctype html><html dir="rtl"><head><meta charset="utf-8"><title>Dinner expenses</title><style>
+   body{font-family:Arial,sans-serif;color:#222;margin:0}.pg{padding:.5in;page-break-after:always}.hd{display:flex;gap:16px;align-items:center;border-bottom:3px solid #b8892b;padding-bottom:10px;margin-bottom:14px}
+   .hd img{width:70px}.hd h1{margin:0;color:#1d3557;font-size:22px}.hd p{margin:2px 0 0;color:#666;font-size:12px}table{width:100%;border-collapse:collapse;font-size:12.5px}th{background:#1d3557;color:#fff;padding:6px;text-align:right}
+   td{padding:5px 6px;border-bottom:1px solid #eee}.n{text-align:left;white-space:nowrap}tr.sub td{background:#faf7f0;font-weight:bold;border-bottom:2px solid #e6dfcf}tfoot td{font-weight:bold;font-size:14px;border-top:3px solid #1d3557}.up{color:#b3261e}
+   .bar{padding:10px;background:#eee;text-align:center}@media print{.bar{display:none}}</style></head><body><div class="bar"><button onclick="print()">🖨️ Print</button></div>${ys.map(page).join('')}</body></html>`);
+  w.document.close();
+}
+function expReportXls() {
+  const F = fundCalc(), V = expVendors(F), ys = expRepYears(F), sheets = [];
+  ys.forEach(y => {
+    const rows = [['פירמע', 'טאג', 'טאג (אידיש)', 'וואס', 'סכום', 'אינוואיס']];
+    V.filter(v => v.years[y]).forEach(v => { v.list.filter(x => x.hy === y).sort((a, b) => (a.date || '').localeCompare(b.date || '')).forEach(x => rows.push([v.name, x.date, hebD(x.date), x.desc || '', r2(x.amt), x.file ? x.file.name : ''])); rows.push(['סך הכל ' + v.name + (v.up[y] ? ' (' + expPct(v.up[y]) + ' מער ווי פאראיאר)' : ''), '', '', '', r2(v.years[y]), '']); });
+    rows.push(['סך הכל ' + HEB.gem(y), '', '', '', r2(F.expenses.filter(x => x.hy === y).reduce((s, x) => s + x.amt, 0)), '']);
+    sheets.push({ name: 'עקספענסעס ' + HEB.gem(y), rows });
+  });
+  const yrs = [...new Set(F.expenses.map(x => x.hy))].sort((a, b) => b - a);
+  sheets.push({ name: 'פירמעס לויט יאר', rows: [['פירמע'].concat(yrs.map(y => HEB.gem(y)))].concat(V.map(v => [v.name].concat(yrs.map(y => v.years[y] ? r2(v.years[y]) : '')))) });
+  xlsx(sheets, 'dinner-expenses-' + todayS() + '.xlsx');
+}
+function expForm(id, vendor) {
+  const x = id ? S.frexp[id] : { date: todayS(), vendor: vendor || '', desc: '', amt: '', hy: +ui.expY || 0 };
   const vendors = [...new Set(Object.values(S.frexp).filter(v => !v.del).map(v => v.vendor).filter(Boolean))];
   modal(`<h2>🍽️ ${id ? 'ענדער דינער עקספענס' : 'נייע דינער עקספענס'}</h2><div class="grid2">
    <label class="f">טאג${dateField('xd', x.date)}</label>

@@ -81,7 +81,7 @@ async function pullLog() {
   }
   return changed;
 }
-// Download a JLS data file always fresh (v1.53.1): the files used to be saved with Supabase's default 1-hour cache, so
+// Download a JLS data file always fresh (v1.54.1): the files used to be saved with Supabase's default 1-hour cache, so
 // another user's browser could show the old numbers for up to an hour after an import.
 async function jlsFile(path) {
   try {
@@ -110,7 +110,7 @@ function hebLast(a) {
   const lh = a.lh || (a.h ? a.h.trim().split(/\s+/).pop() : '');
   return lh ? '0' + lh + ' ' + (a.h || '') : '1' + (a.ln || a.n || '').toLowerCase() + ' ' + (a.n || '').toLowerCase();
 }
-// 🔍 Search that understands both keyboards (v1.53, owner): text typed with the keyboard on Hebrew/Yiddish while
+// 🔍 Search that understands both keyboards (v1.54, owner): text typed with the keyboard on Hebrew/Yiddish while
 // meaning English letters ("יקךךם" = "hello"), or English letters while meaning Yiddish ("nav" = "מאה"), is also tried through the other layout (standard Israeli layout). Niqqud and Yiddish ligatures
 // (ײ װ ױ) are ignored. qVars(raw) = the normalised text + its swapped twin; every search box tries both.
 const KB_PAIRS = "q/w'eקrרtאyטuוiןoםpפaשsדdגfכgעhיjחkלlךzזxסcבvהbנmצ;ף,ת.ץnמ";
@@ -467,7 +467,7 @@ function wire() {
 function setArea(a, keepView) {
   AREA = a; try { sessionStorage.setItem('yg_area', a); } catch (e) { }
   document.body.classList.toggle('area-tu', a === 'tu');
-  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.53</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.53</small>';
+  $('#logoTxt').innerHTML = a === 'tu' ? 'שכר לימוד<small>Tuition · v1.54</small>' : 'YG Fund<small>פאנדרעיזינג סיסטעם · v1.54</small>';
   $('#btnArea').style.display = canFund() && canView('tuition') ? '' : 'none';
   $('#btnArea').textContent = a === 'tu' ? '⇄ צו פאנדרעיזינג' : '⇄ צו שכר לימוד';
   setupUser();
@@ -492,7 +492,7 @@ function render() {
   document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x.dataset.v === view && (!x.dataset.a || x.dataset.a === AREA)));
   if (!JD) { vWelcome(); return; }
   counts();
-  ({ home: vHome, done: vDone, col: vCol, calling: vCalling, thome: vTuHome, tubill: vTuBill, tustmt: vTuStmt, tuition: vTuition, rcpt: vRcpt, jrep: vJrep, todo: vTodo, fund: vFund, shuls: vShuls, today: vToday, pledges: vPledges, accounts: vAccounts, reports: vReports, settings: vSettings }[view] || vHome)();
+  ({ home: vHome, done: vDone, col: vCol, calling: vCalling, thome: vTuHome, tubill: vTuBill, tustmt: vTuStmt, tuition: vTuition, rcpt: vRcpt, jrep: vJrep, todo: vTodo, fund: vFund, exp: vExp, shuls: vShuls, today: vToday, pledges: vPledges, accounts: vAccounts, reports: vReports, settings: vSettings }[view] || vHome)();
   applyPerms();
   colNav();
   initDateFields($('#main'));   // date boxes on a page (e.g. "רוף צוריק אום" in Calling mode), not only in windows
@@ -501,7 +501,7 @@ function render() {
 // ---------- which main sections each user may open (team.perms; null = everything; admins always everything) ----------
 const SECTIONS = [['accounts', '👥 אלע אקאונטס'], ['rcpt', '🧾 רעסיטס/סטעיטמענטס'], ['todo', '🗂️ אפיס ארבעט'], ['fund', '💵 פאנדרעיזינג חשבונות'], ['shuls', '🕍 שולן'], ['today', '📋 היינט צו בעטן'], ['pledges', '📞 פלעדזשעס'], ['reports', '📊 באריכטן'], ['jrep', '📑 רופארטס'], ['col', '📞 פאנדרעיזינג קאלעקשען'], ['tuition', '🎓 שכר לימוד (גאנצער טייל)']];
 const myPerms = () => { const t = TEAM.find(a => a.email.toLowerCase() === myEmail.toLowerCase()); return t && !t.is_admin && Array.isArray(t.perms) ? t.perms : null; };
-const canView = v => { if (v === 'calling') v = 'col'; if (TU_VIEWS.includes(v) || (AREA === 'tu' && v === 'col')) v = 'tuition'; return v === 'home' || v === 'settings' || v === 'done' || !myPerms() || myPerms().includes(v); };
+const canView = v => { if (v === 'calling') v = 'col'; if (v === 'exp') v = 'fund'; if (TU_VIEWS.includes(v) || (AREA === 'tu' && v === 'col')) v = 'tuition'; return v === 'home' || v === 'settings' || v === 'done' || !myPerms() || myPerms().includes(v); };
 const canFund = () => !myPerms() || myPerms().some(v => v !== 'tuition');
 function applyPerms() {
   document.querySelectorAll('nav [data-v]').forEach(b => { if (b.dataset.v !== 'settings') b.style.display = canView(b.dataset.v) && (!b.dataset.a || b.dataset.a === AREA) ? '' : 'none'; });
@@ -716,17 +716,17 @@ function vAccounts() {
   $('#main').innerHTML = `<div class="row"><div><h2>👥 אלע אקאונטס</h2><p class="sub">אלע ${JD.accounts.length.toLocaleString()} אקאונטס פון JLS. זוכט אויף ענגליש אדער לשון קודש, לויט טעלעפאן, אדרעס אדער נומער.</p></div><div class="spacer"></div><button class="btn ghost" onclick="csvAcc()">⬇ Excel</button></div>
   <div class="row"><input id="q" placeholder="🔍 Search..." value="${esc(ui.accQ)}" style="flex:1;min-width:240px;font-size:16px">
   <div class="chips">${[['all', 'אלע'], ['yg', 'YG נדבנים'], ['bal', 'מיט באלאנס'], ['vip', '⭐ VIP'], ['mine', 'מיינע'], ['once', '🚫 איינמאליגע'], ['active', 'אקטיוו']].map(([k, l]) => `<button class="chip ${ui.accF === k ? 'on' : ''}" onclick="ui.accF='${k}';ui.accN=100;vAccounts()">${l}</button>`).join('')}</div>
-  ${allTags().length ? `<select class="mini" onchange="ui.accTag=this.value;ui.accN=100;vAccounts()"><option value="">🏷️ אלע פלאגס</option>${allTags().map(t => `<option value="${esc(t)}" ${t === ui.accTag ? 'selected' : ''}>🏷️ ${esc(t)}</option>`).join('')}</select>` : ''}
+  ${allTags().length ? `<select class="mini" onchange="ui.accTag=this.value;ui.accN=100;vAccounts()"><option value="">🏷️ All flags</option>${allTags().map(t => `<option value="${esc(t)}" ${t === ui.accTag ? 'selected' : ''}>🏷️ ${esc(t)}</option>`).join('')}</select>` : ''}
   ${shulList().length ? `<select class="mini" onchange="ui.accShul=this.value;ui.accN=100;vAccounts()"><option value="">🕍 אלע שולן</option>${shulList().map(x => `<option value="${x.id}" ${x.id === ui.accShul ? 'selected' : ''}>🕍 ${esc(x.name)}</option>`).join('')}</select>` : ''}</div>
   <div class="row" style="margin-bottom:6px">${fltBar('acc', 'vAccounts()')}<span class="sub" style="margin:0">${L.length.toLocaleString()} געפונען · ריי:</span><div class="chips">${[['abc', 'א-ב (לעצטער נאמען)'], ['total', 'גרעסטע נדבנים']].map(([k, l]) => `<button class="chip ${ui.accSort === k ? 'on' : ''}" onclick="ui.accSort='${k}';vAccounts()">${l}</button>`).join('')}</div></div>
   ${(bulkList('acc', L.map(a => a.c)), bulkBar('acc'))}
-  <table class="acclist"><thead><tr><th>${selAllBox('acc')}</th><th>#</th><th>נאמען</th><th>טעלעפאן</th><th>אדרעס</th><th>YG סך הכל</th><th>לעצטע</th><th>באלאנס</th><th>ווייטער בעטן</th><th>שול</th></tr></thead><tbody>
+  <table class="acclist"><thead><tr><th>${selAllBox('acc')}</th><th>#</th><th>נאמען</th><th>טעלעפאן</th><th>אדרעס</th><th>YG סך הכל</th><th>לעצטע</th><th>באלאנס</th><th>ווייטער בעטן</th><th>שול</th><th>🏷️ Flag type</th></tr></thead><tbody>
   ${L.slice(0, ui.accN).map(a => { const g = IDX.yg.get(a.c), p = IDX.pl.get(a.c), k = ask(a.c), st = S.acct[a.c] || {}; return `<tr><td>${selBox('acc', a.c)}</td>
-   <td class="num" style="color:var(--muted)">${a.c}</td><td><a class="name" onclick="openAcct(${a.c})">${esc(a.h || a.n)}</a> <button class="nbtn" title="📝 נאטיץ" onclick="noteForm(${a.c})">📝</button> ${tagChips(a.c)} ${st.vip ? '⭐' : ''} ${a.x ? '<span class="tag gray">נישט אקטיוו</span>' : ''}<div class="heb">${esc(a.h ? a.n : '')}</div></td>
+   <td class="num" style="color:var(--muted)">${a.c}</td><td><a class="name" onclick="openAcct(${a.c})">${esc(a.h || a.n)}</a> <button class="nbtn" title="📝 נאטיץ" onclick="noteForm(${a.c})">📝</button> ${st.vip ? '⭐' : ''} ${a.x ? '<span class="tag gray">נישט אקטיוו</span>' : ''}<div class="heb">${esc(a.h ? a.n : '')}</div></td>
    <td class="num" style="font-size:13px">${a.ph[0] ? callBtn(a.ph[0][1], a.c) + ' ' + esc(a.ph[0][1]) : ''}</td><td style="font-size:13px"><span class="ltr">${esc(a.a)}</span></td>
    <td class="num">${g ? money(g.total) : ''}</td><td class="num" style="font-size:13px">${g && g.last ? fmtD(g.last) : ''}</td>
    <td class="num ${p && p.open > 0.009 ? 'bal' : ''}">${p && p.open > 0.009 ? money(p.open) : ''}</td>
-   <td style="font-size:13px">${k.next ? (k.next <= todayS() ? '<span class="tag late">היינט</span>' : fmtDual(k.next)) : ''}</td><td style="font-size:13px">${esc(shulName(st.shul))}</td></tr>`; }).join('') || '<tr><td colspan="10" class="empty">נישט געפונען</td></tr>'}
+   <td style="font-size:13px">${k.next ? (k.next <= todayS() ? '<span class="tag late">היינט</span>' : fmtDual(k.next)) : ''}</td><td style="font-size:13px">${esc(shulName(st.shul))}</td><td style="font-size:12px">${tagChips(a.c)}</td></tr>`; }).join('') || '<tr><td colspan="11" class="empty">נישט געפונען</td></tr>'}
   </tbody></table>${L.length > ui.accN ? `<div class="more"><button class="btn ghost" onclick="ui.accN+=200;vAccounts()">Show more</button></div>` : ''}`;
   const qi = $('#q'); qi.focus(); qi.setSelectionRange(qi.value.length, qi.value.length);
   let tm; qi.oninput = () => { clearTimeout(tm); tm = setTimeout(() => { ui.accQ = qi.value; ui.accN = 100; vAccounts(); }, 250); };
@@ -778,7 +778,7 @@ function openAcct(code) {
    <label class="f">ווייטער בעטן${dateField('an', st.nextAsk || '', { clear: true })}</label>
    <label class="f" style="grid-column:1/-1">✉️ אימעיל<input id="aem" type="email" style="direction:ltr" value="${esc(emailOf(code))}" placeholder="${esc((a.em || [])[0] || 'name@example.com')}"></label>
    <label class="f">אחראי<select id="aa"><option value="">נישט צוגעטיילט</option>${USERS().map(u => `<option ${u === st.assigned ? 'selected' : ''}>${esc(u)}</option>`).join('')}</select></label>
-   <div style="grid-column:1/-1"><div class="k" style="margin-bottom:4px">🏷️ פלאגס (וועלכע סארט מענטש)</div>${tagEditor(code)}</div>
+   <div style="grid-column:1/-1"><div class="k" style="margin-bottom:4px">🏷️ Flags</div>${tagEditor(code)}</div>
    <label class="f">🕍 געטראפן אין שול${shulSel('ash', st.shul || '')}</label>
    <label class="f">VIP<select id="av"><option value="">ניין</option><option value="1" ${st.vip ? 'selected' : ''}>⭐ יא</option></select></label>
    <label class="f" style="grid-column:1/-1">נאטיצן<textarea id="ao" rows="2">${esc(st.notes || '')}</textarea></label></div>
@@ -786,7 +786,7 @@ function openAcct(code) {
   <div class="tabs2">${[['pay', 'באצאלונגען'], ['pl', 'פלעדזשעס'], ['hist', 'היסטאריע (' + hist.length + ')'], ['tasks', 'ארבעטן (' + tasks.filter(t => !t[1].done).length + ')']].map(([kk, l]) => `<button class="${acctTab === kk ? 'on' : ''}" onclick="acctTab='${kk}';openAcct(${code})">${l}</button>`).join('')}</div>
   <div class="scroll">${tabBody[acctTab]}</div>`);
 }
-// 💳 On the account (owner, v1.53): active credit-card plans (JD.ccplans, schedule columns only) and held /
+// 💳 On the account (owner, v1.54): active credit-card plans (JD.ccplans, schedule columns only) and held /
 // post-dated checks (YG payments whose check date is still ahead) – the same things plCovered() looks at.
 function acctFuture(code) {
   const t = todayS(), camp = n => (JD.campaigns || {})[n] || (n ? '#' + n : '');
@@ -808,7 +808,7 @@ function acctFuture(code) {
 }
 async function saveAcct(code) {
   await emit('acct', code, { freq: $('#af').value, nextAsk: $('#an').value, assigned: $('#aa').value, vip: !!$('#av').value, notes: $('#ao').value, shul: $('#ash').value, email: $('#aem').value.trim().toLowerCase() === ((IDX.by.get(code) || {}).em || [])[0] ? '' : $('#aem').value.trim().toLowerCase() });
-  closeM(); render(); toast('✓ Saved');   // owner (v1.53): Save closes the account window
+  closeM(); render(); toast('✓ Saved');   // owner (v1.54): Save closes the account window
 }
 async function addNote(code) {
   const t = $('#hn').value.trim(); if (!t) return;
@@ -817,7 +817,7 @@ async function addNote(code) {
 
 // ---------- REPORTS ----------
 // Payments by Jewish year and month (refunds left out)
-// Years are shown only up to the current Jewish year (owner, v1.53): no next year from post-dated payments,
+// Years are shown only up to the current Jewish year (owner, v1.54): no next year from post-dated payments,
 // scheduled credit-card charges or bills already entered for later.
 const curHY = () => (HEB.parts(todayS()) || {}).y || 9999;
 function hebYears() {
@@ -1101,7 +1101,7 @@ function closeM() { $('#ov').classList.remove('on'); }
 
 const setHH = () => document.documentElement.style.setProperty('--hh', document.querySelector('header').offsetHeight + 'px');
 window.addEventListener('resize', setHH); window.addEventListener('load', setHH); setHH();
-// ---------- 🔄 new version on the website: update by itself (v1.53) ----------
+// ---------- 🔄 new version on the website: update by itself (v1.54) ----------
 // Every minute the page asks the server for index.html and compares <meta name="app-version">. When it changed:
 // if nobody is in the middle of something (no window open, not typing, no mouse/keys for 20 s) the page reloads by
 // itself and comes back to the same page; otherwise a small "🔄 נייע ווערסיע" button waits for a click.

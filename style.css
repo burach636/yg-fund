@@ -399,3 +399,11 @@ nav.incol #navuser{display:block}
 .cpd.sel[class]{background:var(--navy);color:#fff}
 #c_tl .tbl{border-collapse:collapse}#c_tl .tbl th,#c_tl .tbl td{padding:5px 6px;border-bottom:1px solid var(--line);text-align:left}#c_tl .tbl select{max-width:180px}
 .phn{direction:ltr;unicode-bidi:isolate;display:inline-block}
+
+.expgrid{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:16px;align-items:start}
+.expside{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;position:sticky;top:10px;max-height:calc(100vh - 140px);overflow-y:auto}
+.expvi{display:flex;gap:6px;align-items:center;padding:10px 12px;border-bottom:1px solid #f0ebe0;cursor:pointer;font-size:14px}
+.expvi b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.expvi i{font-style:normal;color:var(--muted);white-space:nowrap}
+.expvi:hover{background:#fffaf0}.expvi.on{background:var(--navy);color:#fff}.expvi.on i{color:#d9e1ee}
+.expyr{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px}
+@media(max-width:900px){.expgrid{grid-template-columns:1fr}.expside{position:static;max-height:none}}
