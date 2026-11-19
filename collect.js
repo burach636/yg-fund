@@ -4,7 +4,7 @@
 // Sub-lists (the sidebar turns into them): today = calls for today, cb = call back today, hold = on hold, all.
 // Per-account state: event kind `col`, id `<area>|<code>`: {hold, holdNote, cb (date), cbNote, out (last outcome),
 // outAt, outBy, pin (note everybody sees)}; every outcome also writes a `hist` note.
-const COL_OUT = [['noans', '📵 קיין ענטפער'], ['msg', '💬 מעסעדזש געלאזט'], ['prom', '🤝 צוגעזאגט'], ['paid', '✅ באצאלט'], ['check', '🗓️ שעק דעיטעד'],
+const COL_OUT = [['noans', '📵 קיין ענטפער'], ['msg', '💬 מעסעדזש געלאזט'], ['talk', '🗣️ גערעדט'], ['prom', '🤝 צוגעזאגט'], ['paid', '✅ באצאלט'], ['check', '🗓️ שעק דעיטעד'],
   ['plan', '📋 וויל א פלאן'], ['ref', '⛔ אפגעזאגט'], ['wrong', '☎️ פאלשער נאמבער'], ['note', '📝 נאר א נאטיץ']];
 const COL_TABS = [['today', '📞 קאלן היינט'], ['ask', '📋 היינט צו בעטן'], ['pl', '💳 פלעדזשעס'], ['cb', '🔁 היינט צוריק קאלן'], ['hold', '⏸ ON HOLD'], ['all', '📚 אלע אקאונטס'], ['every', '👥 אלע אקאונטס'], ['ign', '🚫 Ignored']];
 // v1.30: "every" (fund) = every JLS account, so a 🔎 filter can find people who never gave to YG (the other fund lists hold
