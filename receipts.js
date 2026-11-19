@@ -26,9 +26,29 @@ const rcPlCamps = () => new Set((SET().rcptPlCamps || []).map(Number));
 // Payments of the full-pledge campaigns are left out; their pledges (MCharges) become the receipts instead.
 function rcItems() {
   const pc = rcPlCamps();
-  const L = JD.payments.filter(p => validD(p[2]) && !p[9] && p[3] > 0 && IDX.by.has(p[1]) && !pc.has(+p[6]));
-  if (pc.size) JD.pledges.forEach(c => { const d = c[11] || c[2]; if (pc.has(+c[6]) && validD(d) && c[3] > 0 && IDX.by.has(c[1])) L.push(['pl' + c[0], c[1], d, c[3], 'פלעדזש', '', c[6], c[8], '', 0, c]); });
+  // owner (v1.53): whoever already got a receipt for a pledge (printed or e-mailed, key pl<ChargeNum>) gets no second
+  // receipt for the payments on it – payments of that account + campaign are skipped up to the receipted pledge total
+  // (JLS gives us no payment→pledge link, so account + campaign is the match; money beyond the pledge still gets one).
+  const cover = new Map();
+  JD.pledges.forEach(c => { const k = 'pl' + c[0], r = S.rcpt[k] || {}; if (c[6] && c[3] > 0 && (r.printed || r.emailed)) { const kk = c[1] + '|' + c[6]; cover.set(kk, (cover.get(kk) || 0) + c[3]); } });
+  const used = new Map(), covered = p => { const kk = p[1] + '|' + p[6], t = cover.get(kk); if (!t) return false; const u = (used.get(kk) || 0) + p[3]; if (u > t + 0.005) return false; used.set(kk, u); return true; };
+  const L = JD.payments.filter(p => validD(p[2]) && !p[9] && p[3] > 0 && IDX.by.has(p[1]) && !pc.has(+p[6])).sort((a, b) => a[2].localeCompare(b[2])).filter(p => (S.rcpt[rcKey(p)] || {}).printed || (S.rcpt[rcKey(p)] || {}).emailed || !covered(p));   // receipts already given stay listed
+  if (pc.size) JD.pledges.forEach(c => { const d = c[11] || c[2]; if (pc.has(+c[6]) && validD(d) && c[3] > 0 && IDX.by.has(c[1])) L.push(rcPlItem(c)); });
   return L;
+}
+// a pledge as a receipt item: the whole pledge amount, dated the pledge's entry date (key pl<ChargeNum>)
+const rcPlItem = c => ['pl' + c[0], c[1], c[11] || c[2], c[3], 'פלעדזש', '', c[6], c[8], '', 0, c];
+// 🎯 receipts for one campaign (owner, v1.53): ui.rc.camp = campaign; with ui.rc.byPl every pledge of that campaign
+// becomes a receipt for the full pledge amount – also when nothing or only part was paid – in all years.
+function rcCampItems(camp, byPl) {
+  if (byPl) return JD.pledges.filter(c => +c[6] === camp && c[3] > 0 && validD(c[11] || c[2]) && IDX.by.has(c[1])).map(rcPlItem);
+  return rcItems().filter(p => +p[6] === camp);
+}
+function rcCampOpts() {
+  const n = new Map();
+  JD.payments.forEach(p => { if (p[6]) n.set(+p[6], (n.get(+p[6]) || 0) + 1); });
+  JD.pledges.forEach(c => { if (c[6]) n.set(+c[6], (n.get(+c[6]) || 0) + 1); });
+  return [...n.keys()].sort((a, b) => b - a);   // JD.payments / JD.pledges hold only YG payments and pledges
 }
 function rcData(p) {
   const a = IDX.by.get(p[1]) || { n: '', h: '', a: '' }, s = SET(), suf = s.rcptSuffix != null ? s.rcptSuffix : 'הי"ו';
@@ -51,9 +71,10 @@ function rcList() {
   const q = (r.q || '').trim().toLowerCase(), words = q.split(/\s+/).filter(Boolean), qn = q.replace(/[$,\s]/g, '');
   const V = qVars(q), hit = p => { if (!words.length) return true; const a = IDX.by.get(p[1]); if (a && qHit(V, a._s)) return true;
     return /^\d+(\.\d+)?$/.test(qn) && (Math.abs(p[3] - +qn) < 0.005 || String(p[1]) === qn); };
-  if (words.length) return rcItems().filter(p => (r.all !== false || (p[2] >= r.from && p[2] <= r.to)) && hit(p))
+  const camp = +r.camp || 0, src = camp ? rcCampItems(camp, !!r.byPl) : rcItems(), inRange = p => (camp && r.byPl) || (p[2] >= r.from && p[2] <= r.to);
+  if (words.length) return src.filter(p => (r.all !== false || inRange(p)) && hit(p))
     .sort((a, b) => b[2].localeCompare(a[2]));
-  return rcItems().filter(p => p[2] >= r.from && p[2] <= r.to && (!r.hide || !rcPrinted(p)))
+  return src.filter(p => inRange(p) && (!r.hide || !rcPrinted(p)))
     .sort((a, b) => a[2].localeCompare(b[2]) || acctName(a[1]).localeCompare(acctName(b[1]), 'he'));
 }
 const rcIsSel = p => { const v = ui.rc.sel[rcKey(p)]; return v === undefined ? !rcPrinted(p) : v; };
@@ -72,6 +93,8 @@ function vRcpt() {
    <label class="f">פון${dateField('rcf', r.from)}</label><label class="f">ביז${dateField('rct', r.to)}</label>
    <button class="btn" onclick="ui.rc.from=$('#rcf').value||ui.rc.from;ui.rc.to=$('#rct').value||ui.rc.to;ui.rc.sel={};vRcpt()">Show</button>
    <div class="chips">${prev ? `<button class="chip" onclick="rcRange('${prev.from}','${prev.to}')">די לעצטע 2 וואכן</button>` : ''}${cur ? `<button class="chip" onclick="rcRange('${cur.from}','${todayS()}')">די יעצטיגע 2 וואכן</button>` : ''}<button class="chip" onclick="rcRange('${addMonths(todayS(), -12)}','${todayS()}');ui.rc.hide=false;vRcpt()">די לעצטע יאר</button><button class="chip" onclick="rcRange('1990-01-01','${todayS()}');ui.rc.hide=false;vRcpt()">אלע יארן</button><button class="chip" onclick="rcRange('${F.start}','${todayS()}')">אלע וואס זענען נאך נישט געדרוקט (${unprintedAll})</button></div></div>
+   <div class="row" style="margin:10px 0 0;align-items:center"><select class="mini" onchange="ui.rc.camp=this.value;ui.rc.sel={};vRcpt()"><option value="">🎯 אלע קאמפעינס</option>${rcCampOpts().map(n => `<option value="${n}" ${+r.camp === n ? 'selected' : ''}>#${n} ${esc((JD.campaigns || {})[n] || '')}</option>`).join('')}</select>
+    ${r.camp ? `<label style="font-size:13px;display:flex;gap:6px;align-items:center"><input type="checkbox" ${r.byPl ? 'checked' : ''} onchange="ui.rc.byPl=this.checked;ui.rc.sel={};vRcpt()"> 💳 א רעסיט פאר יעדן וואס האט א פלעדזש – לויט דעם פלעדזש סכום (אויך ווען ער האט נאך נישט באצאלט; אלע יארן)</label>` : ''}</div>
    <div class="row" style="margin:10px 0 0"><input id="rcq" placeholder="🔍 Search receipts: name, phone, #code or amount..." value="${esc(r.q || '')}" style="flex:1;min-width:260px;font-size:15px">
     <label style="font-size:13px;display:flex;gap:6px;align-items:center"><input type="checkbox" ${r.all !== false ? 'checked' : ''} onchange="ui.rc.all=this.checked;vRcpt()"> Search all years</label></div>
    <div class="row" style="margin:10px 0 0"><label style="font-size:13px;display:flex;gap:6px;align-items:center"><input type="checkbox" ${r.hide ? 'checked' : ''} onchange="ui.rc.hide=this.checked;vRcpt()"> באהאלט וואס איז שוין געדרוקט</label>
@@ -83,7 +106,7 @@ function vRcpt() {
   <table><thead><tr><th></th><th>טאג</th><th>נאמען</th><th>סכום</th><th>אדרעס</th><th>Received by</th><th></th></tr></thead><tbody>
   ${L.map((p, i) => { const d = rcData(p), a = IDX.by.get(p[1]); return `<tr style="${rcIsSel(p) ? '' : 'opacity:.5'}"><td><input type="checkbox" ${rcIsSel(p) ? 'checked' : ''} onchange="ui.rc.sel['${d.key}']=this.checked;vRcpt()"></td>
    <td class="num" style="font-size:13px">${fmtD(p[2])}</td><td><a class="name" onclick="openAcct(${p[1]})">${esc(a.h || a.n)}</a><div class="heb">${esc(a.h ? a.n : '')}</div></td>
-   <td class="num"><b>${money(d.amt)}</b>${p[10] ? `<br><span class="tag custom">פלעדזש</span> <small class="dim">באצאלט ${money(p[10][4])}</small>` : ''}</td><td style="font-size:13px">${a.a ? `<span class="ltr">${esc(a.a)}</span>` : '<span class="tag late">⚠️ קיין אדרעס</span>'}</td><td style="font-size:12px">${esc(d.by)}${emailOf(p[1]) ? `<br><span class="ltr dim">✉️ ${esc(emailOf(p[1]))}</span>` : ''}</td>
+   <td class="num"><b>${money(d.amt)}</b>${Array.isArray(p[10]) ? `<br><span class="tag custom">פלעדזש</span> <small class="dim">באצאלט ${money(p[10][4])}</small>` : ''}</td><td style="font-size:13px">${a.a ? `<span class="ltr">${esc(a.a)}</span>` : '<span class="tag late">⚠️ קיין אדרעס</span>'}</td><td style="font-size:12px">${esc(d.by)}${emailOf(p[1]) ? `<br><span class="ltr dim">✉️ ${esc(emailOf(p[1]))}</span>` : ''}</td>
    <td>${rcPrinted(p) ? `<span class="tag ok">✓ געדרוקט ${fmtD(rcPrinted(p))}</span>` : ''} ${d.edited ? '<span class="tag ask">✏️ געטוישט</span> ' : ''}${rcEmailed(p) ? `<span class="tag ok">✉️ ${fmtD(rcEmailed(p))}</span> ` : ''}<button class="btn ghost sm" title="שיק אין אימעיל" onclick="rcMailOne(${i})">✉️</button><button class="btn ghost sm" title="פרינט נאר די רעסיט (אויך אן אלטע)" onclick="rcPrintOne(${i})">🖨️</button><button class="btn ghost sm" title="טויש דעם טעקסט" onclick="rcEdit(${i})">✏️</button><button class="btn ghost sm" title="קוק אן" onclick="rcPreview(${i})">👁</button></td></tr>`; }).join('') || '<tr><td colspan="7" class="empty">קיין נדבות אין די טעג</td></tr>'}
   </tbody></table>
   <p class="sub" style="margin-top:10px">💡 נאר וואס איז אין JLS (ביז ${engD(calIso(new Date(JD.importedAt)))}). ביים דרוקן: Margins = None, Scale = 100%.</p>`;
